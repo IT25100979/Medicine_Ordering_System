@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediLink — Inventory &amp; Batch Tracking</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --pine:#1F3D33;
+            --pine-deep:#152A23;
+            --paper:#EEF3EA;
+            --paper-raised:#FFFFFF;
+            --ink:#1C231D;
+            --ink-soft:#5B655C;
+            --amber:#D98B3F;
+            --rust:#C4432B;
+            --sage-line:#C6D3C4;
+            --radius:2px;
+        }
+        *{box-sizing:border-box;}
+        body{
+            margin:0;
+            background:var(--paper);
+            color:var(--ink);
+            font-family:'IBM Plex Sans',sans-serif;
+            line-height:1.5;
+        }
+        .wrap{max-width:1040px;margin:0 auto;padding:0 24px 80px;}
+
+        header.label-band{
+            background:var(--pine);
+            color:var(--paper);
+            padding:36px 0 30px;
+            margin-bottom:40px;
+            position:relative;
+            overflow:hidden;
+        }
+        header.label-band::after{
+            content:"";
+            position:absolute;
+            left:0;right:0;bottom:0;
+            height:10px;
+            background-image:radial-gradient(circle at 8px 5px, var(--paper) 4px, transparent 4.5px);
+            background-size:16px 10px;
+            background-position:-4px 0;
+        }
+        .label-inner{max-width:1040px;margin:0 auto;padding:0 24px;display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+        .brand{font-family:'Fraunces',serif;font-weight:500;font-size:15px;letter-spacing:0.02em;opacity:0.85;}
+        h1{
+            font-family:'Fraunces',serif;
+            font-weight:500;
+            font-size:clamp(28px,4vw,40px);
+            margin:6px 0 4px;
+            letter-spacing:-0.01em;
+        }
+        .subhead{font-size:14.5px;opacity:0.8;max-width:46ch;}
+        .batch-id{
+            font-family:'IBM Plex Mono',monospace;
+            font-size:12.5px;
+            background:rgba(255,255,255,0.1);
+            border:1px solid rgba(255,255,255,0.25);
+            padding:6px 10px;
+            border-radius:var(--radius);
+            white-space:nowrap;
+        }
+
+        .lookup{
+            background:var(--paper-raised);
+            border:1px solid var(--sage-line);
+            border-radius:var(--radius);
+            padding:20px 22px;
+            display:flex;
+            gap:16px;
+            align-items:flex-end;
+            flex-wrap:wrap;
+            margin-bottom:32px;
+        }
+        .field{display:flex;flex-direction:column;gap:6px;}
+        .field label{font-size:12.5px;color:var(--ink-soft);font-weight:500;}
+        .field input{
+            font-family:'IBM Plex Mono',monospace;
+            font-size:15px;
+            padding:9px 11px;
+            border:1px solid var(--sage-line);
+            border-radius:var(--radius);
+            background:var(--paper);
+            color:var(--ink);
+            width:150px;
+        }
+        .field input:focus{outline:2px solid var(--pine);outline-offset:1px;}
+        button.primary{
+            font-family:'IBM Plex Sans',sans-serif;
+            font-weight:600;
+            font-size:14px;
+            background:var(--pine);
+            color:var(--paper);
+            border:none;
+            padding:11px 20px;
+            border-radius:var(--radius);
+            cursor:pointer;
+            transition:background 0.15s ease;
+        }
+        button.primary:hover{background:var(--pine-deep);}
+        button.primary:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+
+        section{margin-bottom:40px;}
+        .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px;border-bottom:1px solid var(--sage-line);padding-bottom:10px;}
+        .section-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:21px;margin:0;}
+        .section-head .pbi{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
+
+        table{width:100%;border-collapse:collapse;background:var(--paper-raised);border:1px solid var(--sage-line);border-radius:var(--radius);overflow:hidden;}
+        thead th{
+            text-align:left;
+            font-size:12px;
+            font-weight:600;
+            color:var(--ink-soft);
+            padding:10px 14px;
+            border-bottom:1px solid var(--sage-line);
+        }
+        tbody td{padding:12px 14px;font-size:14.5px;border-bottom:1px solid #EAEFE8;}
+        tbody tr:last-child td{border-bottom:none;}
+        tbody tr.locked{background:#FBF0EE;}
+        .tag{
+            display:inline-block;
+            font-family:'IBM Plex Mono',monospace;
+            font-size:11px;
+            padding:3px 7px;
+            border-radius:var(--radius);
+        }
+        .tag.ok{background:#E4EFE4;color:var(--pine);}
+        .tag.locked{background:#F4DAD4;color:var(--rust);}
+
+        .fefo-controls{display:flex;gap:12px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;}
+        .fefo-card{
+            background:var(--paper-raised);
+            border:1px solid var(--sage-line);
+            border-left:5px solid var(--amber);
+            border-radius:var(--radius);
+            padding:20px 22px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:20px;
+            flex-wrap:wrap;
+        }
+        .fefo-card .big{font-family:'Fraunces',serif;font-size:26px;font-weight:500;}
+        .fefo-card .meta{font-size:13px;color:var(--ink-soft);margin-top:4px;}
+        .fefo-card .qty{font-family:'IBM Plex Mono',monospace;font-size:15px;background:#F4E9DA;color:#8A5A1E;padding:8px 14px;border-radius:var(--radius);}
+
+        .alert-list{display:flex;flex-direction:column;gap:10px;}
+        .alert-row{
+            background:var(--paper-raised);
+            border:1px solid var(--sage-line);
+            border-left:5px solid var(--rust);
+            border-radius:var(--radius);
+            padding:14px 18px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:16px;
+        }
+        .alert-row .name{font-weight:600;font-size:15px;}
+        .alert-row .cat{font-size:13px;color:var(--ink-soft);}
+        .alert-row .thresh{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--rust);}
+
+        .state{
+            padding:26px 20px;
+            text-align:left;
+            background:var(--paper-raised);
+            border:1px dashed var(--sage-line);
+            border-radius:var(--radius);
+            color:var(--ink-soft);
+            font-size:14px;
+        }
+        .state.error{border-color:#E0B4AA;color:var(--rust);background:#FBF0EE;}
+
+        footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--sage-line);font-size:12px;color:var(--ink-soft);}
+
+        @media (prefers-reduced-motion: reduce){
+            button.primary{transition:none;}
+        }
+    </style>
+</head>
+<body>
+
+<header class="label-band">
+    <div class="label-inner">
+        <div>
+            <div class="brand">MediLink Pharmacy Services</div>
+            <h1>Inventory &amp; Batch Tracking</h1>
+            <div class="subhead">Real-time stock, FEFO picking suggestions, and low-stock alerts for pharmacy assistants.</div>
+        </div>
+        <div class="batch-id">F02 · SMART INVENTORY</div>
+    </div>
+</header>
+
+<div class="wrap">
+
+    <div class="lookup">
+        <div class="field">
+            <label for="medicineId">Medicine ID</label>
+            <input type="number" id="medicineId" placeholder="e.g. 1" min="1">
+        </div>
+        <button class="primary" id="loadBtn">Look up medicine</button>
+    </div>
+
+    <section id="stockSection">
+        <div class="section-head">
+            <h2>Real-time stock levels</h2>
+            <span class="pbi">PBI-05</span>
+        </div>
+        <div id="stockOutput" class="state">Enter a medicine ID above and click "Look up medicine" to see its batches.</div>
+    </section>
+
+    <section id="fefoSection">
+        <div class="section-head">
+            <h2>FEFO picking suggestion</h2>
+            <span class="pbi">PBI-06</span>
+        </div>
+        <div class="fefo-controls">
+            <div class="field">
+                <label for="fefoQty">Quantity needed</label>
+                <input type="number" id="fefoQty" placeholder="e.g. 10" min="1" value="1">
+            </div>
+            <button class="primary" id="fefoBtn">Suggest batch</button>
+        </div>
+        <div id="fefoOutput" class="state">Run a lookup and request a quantity to get the earliest-expiring batch to pick.</div>
+    </section>
+
+    <section id="alertSection">
+        <div class="section-head">
+            <h2>Low-stock alerts</h2>
+            <span class="pbi">PBI-07</span>
+        </div>
+        <div id="alertOutput" class="state">Loading current alerts…</div>
+    </section>
+
+    <footer>
+        Endpoints: <code>/api/inventory/medicine/{id}/stock</code> · <code>/api/inventory/medicine/{id}/fefo-suggestion?qty=</code> · <code>/api/inventory/low-stock-alerts</code>
+    </footer>
+
+</div>
+
+<script>
+    const API_BASE = '/api/inventory';
+
+    function escapeHtml(str){
+        return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+    }
+
+    function setState(el, message, isError){
+        el.className = 'state' + (isError ? ' error' : '');
+        el.textContent = message;
+    }
+
+    async function fetchJson(url){
+        const res = await fetch(url);
+        if(!res.ok){
+            const text = await res.text().catch(() => '');
+            throw new Error(text || `Request failed (${res.status})`);
+        }
+        return res.json();
+    }
+
+    async function loadStock(medicineId){
+        const out = document.getElementById('stockOutput');
+        setState(out, 'Loading stock levels…');
+        try{
+            const batches = await fetchJson(`${API_BASE}/medicine/${medicineId}/stock`);
+            if(!batches.length){
+                setState(out, `No batches found for medicine ID ${medicineId}.`);
+                return;
+            }
+            const rows = batches.map(b => `
+        <tr class="${b.locked ? 'locked' : ''}">
+          <td>${escapeHtml(b.batchNumber ?? b.id)}</td>
+          <td>${b.quantity}</td>
+          <td>${escapeHtml(b.expiryDate ?? '—')}</td>
+          <td><span class="tag ${b.locked ? 'locked' : 'ok'}">${b.locked ? 'LOCKED — EXPIRED' : 'AVAILABLE'}</span></td>
+        </tr>
+      `).join('');
+            out.outerHTML = `
+        <table id="stockOutput">
+          <thead>
+            <tr><th>Batch</th><th>Quantity</th><th>Expiry date</th><th>Status</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+        }catch(err){
+            setState(out, `Couldn't load stock: ${err.message}`, true);
+        }
+    }
+
+    async function loadFefo(medicineId, qty){
+        const out = document.getElementById('fefoOutput');
+        setState(out, 'Finding the earliest-expiring batch…');
+        try{
+            const batch = await fetchJson(`${API_BASE}/medicine/${medicineId}/fefo-suggestion?qty=${qty}`);
+            out.outerHTML = `
+        <div class="fefo-card" id="fefoOutput">
+          <div>
+            <div class="big">Batch ${escapeHtml(batch.batchNumber ?? batch.id)}</div>
+            <div class="meta">Expires ${escapeHtml(batch.expiryDate ?? '—')} · pick this one first</div>
+          </div>
+          <div class="qty">${batch.quantity} units available</div>
+        </div>`;
+        }catch(err){
+            setState(out, `Couldn't get a FEFO suggestion: ${err.message}`, true);
+        }
+    }
+
+    async function loadAlerts(){
+        const out = document.getElementById('alertOutput');
+        setState(out, 'Loading current alerts…');
+        try{
+            const medicines = await fetchJson(`${API_BASE}/low-stock-alerts`);
+            if(!medicines.length){
+                setState(out, 'No medicines are currently below their low-stock threshold.');
+                return;
+            }
+            const rows = medicines.map(m => `
+        <div class="alert-row">
+          <div>
+            <div class="name">${escapeHtml(m.name)}</div>
+            <div class="cat">${escapeHtml(m.category ?? '—')}${m.coldChain ? ' · cold-chain' : ''}</div>
+          </div>
+          <div class="thresh">below ${m.lowStockThreshold} units</div>
+        </div>
+      `).join('');
+            out.outerHTML = `<div class="alert-list" id="alertOutput">${rows}</div>`;
+        }catch(err){
+            setState(out, `Couldn't load low-stock alerts: ${err.message}`, true);
+        }
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', () => {
+        const id = document.getElementById('medicineId').value;
+        if(!id){ return; }
+        loadStock(id);
+    });
+
+    document.getElementById('fefoBtn').addEventListener('click', () => {
+        const id = document.getElementById('medicineId').value;
+        const qty = document.getElementById('fefoQty').value || 1;
+        if(!id){
+            setState(document.getElementById('fefoOutput'), 'Enter a medicine ID above first.', true);
+            return;
+        }
+        loadFefo(id, qty);
+    });
+
+    loadAlerts();
+</script>
+
+</body>
+</html>/
