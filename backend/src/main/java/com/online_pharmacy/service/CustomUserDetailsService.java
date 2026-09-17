@@ -1,6 +1,6 @@
 package com.online_pharmacy.service;
 
-import com.online_pharmacy.model.User;
+import com.mediorder.model.User;
 import com.online_pharmacy.repository.UserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,7 +26,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
-                user.getPassword(),
+                user.getPasswordHash(),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
     }

@@ -1,6 +1,6 @@
 package com.online_pharmacy.dto;
 
-import com.online_pharmacy.model.Role;
+import com.mediorder.model.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -66,6 +66,14 @@ public class RegisterRequest {
 
     public void setContactNumber(String contactNumber) {
         this.contactNumber = contactNumber;
+    }
+
+    public String getPhoneNumber() {
+        return contactNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.contactNumber = phoneNumber;
     }
 
     public Role getRole() {

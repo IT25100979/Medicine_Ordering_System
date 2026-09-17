@@ -1,6 +1,6 @@
 package com.online_pharmacy.dto;
 
-import com.online_pharmacy.model.Role;
+import com.mediorder.model.Role;
 
 import java.time.LocalDateTime;
 

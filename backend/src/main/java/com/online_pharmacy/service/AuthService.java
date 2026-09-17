@@ -5,8 +5,8 @@ import com.online_pharmacy.dto.AuthRequest;
 import com.online_pharmacy.dto.AuthResponse;
 import com.online_pharmacy.dto.RegisterRequest;
 import com.online_pharmacy.dto.UserResponse;
-import com.online_pharmacy.model.Role;
-import com.online_pharmacy.model.User;
+import com.mediorder.model.Role;
+import com.mediorder.model.User;
 import com.online_pharmacy.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -47,9 +47,10 @@ public class AuthService {
         User user = User.builder()
                 .fullName(request.getFullName().trim())
                 .email(request.getEmail().trim().toLowerCase())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .contactNumber(request.getContactNumber().trim())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .phoneNumber(request.getContactNumber().trim())
                 .role(userRole)
+                .createdAt(java.time.LocalDateTime.now())
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -100,10 +101,10 @@ public class AuthService {
 
     public UserResponse mapToUserResponse(User user) {
         return UserResponse.builder()
-                .userId(user.getUserId())
+                .userId(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
-                .contactNumber(user.getContactNumber())
+                .contactNumber(user.getPhoneNumber())
                 .role(user.getRole())
                 .createdAt(user.getCreatedAt())
                 .build();

@@ -45,13 +45,14 @@ export const AuthProvider = ({ children }) => {
     throw new Error('Invalid login response');
   };
 
-  const register = async (fullName, email, password) => {
+  const register = async (fullName, email, password, role = 'CUSTOMER', phoneNumber = '') => {
     const response = await client.post('/api/v1/auth/register', {
       fullName,
       email,
       password,
-      role: 'CUSTOMER',
-      contactNumber: '0000000000' // dummy default to pass backend validation if required
+      role: role || 'CUSTOMER',
+      contactNumber: phoneNumber || '0770000000',
+      phoneNumber: phoneNumber || '0770000000'
     });
     const authData = response.data.data;
     if (authData && authData.token) {

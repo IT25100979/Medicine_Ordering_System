@@ -68,6 +68,7 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/error"
                         ).permitAll()
+                        .requestMatchers("/api/v1/deliveries", "/api/v1/deliveries/**").hasAnyRole("DELIVERY_COORDINATOR", "ADMIN", "CHIEF_PHARMACIST", "OPERATIONS_MANAGER")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

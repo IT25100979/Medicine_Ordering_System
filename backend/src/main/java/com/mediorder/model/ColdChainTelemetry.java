@@ -4,8 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import com.mediorder.external.model.User;
-import com.mediorder.external.model.Order;
+
 @Entity
 @Table(name = "cold_chain_telemetry")
 @Getter

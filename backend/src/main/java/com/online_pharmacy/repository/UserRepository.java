@@ -1,6 +1,6 @@
 package com.online_pharmacy.repository;
 
-import com.online_pharmacy.model.User;
+import com.mediorder.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

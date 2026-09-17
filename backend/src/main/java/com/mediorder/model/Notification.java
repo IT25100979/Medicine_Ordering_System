@@ -3,7 +3,7 @@ package com.mediorder.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
-import com.mediorder.external.model.User;
+
 @Entity
 @Table(name = "notifications")
 @Getter
