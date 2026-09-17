@@ -64,6 +64,16 @@ public class InventoryController {
         return ResponseEntity.ok(ApiResponse.ok(batch, "Batch found"));
     }
 
+    @PutMapping("/batches/{id}")
+    @Operation(summary = "Update an existing inventory batch details, stock count, shelf location, or status")
+    public ResponseEntity<ApiResponse<BatchResponse>> updateBatch(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateBatchRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) String actorId) {
+        BatchResponse updated = batchService.updateBatch(id, request, actorId);
+        return ResponseEntity.ok(ApiResponse.ok(updated, "Batch updated successfully"));
+    }
+
     @PostMapping("/allocate-fefo")
     @Operation(summary = "Simulate non-destructive FEFO stock allocation for an order request")
     public ResponseEntity<ApiResponse<FefoAllocationPreviewResponse>> previewFefoAllocation(
@@ -131,5 +141,15 @@ public class InventoryController {
         }
 
         return ResponseEntity.ok(ApiResponse.ok(result, "Medicine stock catalog retrieved"));
+    }
+
+    @PutMapping("/medicines/{id}")
+    @Operation(summary = "Update an existing medicine item details, price, dosage, and reorder threshold")
+    public ResponseEntity<ApiResponse<Medicine>> updateMedicine(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateMedicineRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) String actorId) {
+        Medicine updated = batchService.updateMedicine(id, request, actorId);
+        return ResponseEntity.ok(ApiResponse.ok(updated, "Medicine updated successfully"));
     }
 }

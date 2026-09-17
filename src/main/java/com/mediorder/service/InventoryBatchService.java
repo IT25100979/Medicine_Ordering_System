@@ -2,6 +2,8 @@ package com.mediorder.service;
 
 import com.mediorder.dto.BatchRegistrationRequest;
 import com.mediorder.dto.BatchResponse;
+import com.mediorder.dto.UpdateBatchRequest;
+import com.mediorder.dto.UpdateMedicineRequest;
 import com.mediorder.exception.ResourceNotFoundException;
 import com.mediorder.model.AuditLog;
 import com.mediorder.model.BatchStatus;
@@ -189,6 +191,92 @@ public class InventoryBatchService {
 
         log.info("Batch expiry check completed. {} batches marked as EXPIRED and locked from dispensing.", updatedCount);
         return updatedCount;
+    }
+
+    @Transactional
+    public BatchResponse updateBatch(Long batchId, UpdateBatchRequest request, String updatedBy) {
+        InventoryBatch batch = batchRepository.findById(batchId)
+                .orElseThrow(() -> new ResourceNotFoundException("Batch not found with ID: " + batchId));
+
+        int oldQty = batch.getQuantityAvailable();
+        String oldShelf = batch.getShelfLocation();
+        LocalDate oldExpiry = batch.getExpiryDate();
+        BatchStatus oldStatus = batch.getStatus();
+
+        if (request.getQuantityAvailable() != null) {
+            batch.setQuantityAvailable(request.getQuantityAvailable());
+        }
+        if (request.getShelfLocation() != null) {
+            batch.setShelfLocation(request.getShelfLocation());
+        }
+        if (request.getExpiryDate() != null) {
+            batch.setExpiryDate(request.getExpiryDate());
+        }
+        if (request.getStatus() != null) {
+            batch.setStatus(request.getStatus());
+        }
+        if (request.getQuarantineReason() != null) {
+            batch.setQuarantineReason(request.getQuarantineReason());
+        }
+
+        // Auto calculate status based on updated expiry date if not quarantined/expired
+        if (batch.getStatus() == BatchStatus.ACTIVE || batch.getStatus() == BatchStatus.NEAR_EXPIRY) {
+            LocalDate today = LocalDate.now();
+            if (batch.getExpiryDate().isBefore(today.plusDays(1))) {
+                batch.setStatus(BatchStatus.EXPIRED);
+                batch.setQuarantineReason("Auto-expired based on updated expiry date");
+            } else {
+                long daysUntilExpiry = ChronoUnit.DAYS.between(today, batch.getExpiryDate());
+                batch.setStatus(daysUntilExpiry <= 30 ? BatchStatus.NEAR_EXPIRY : BatchStatus.ACTIVE);
+            }
+        }
+
+        InventoryBatch saved = batchRepository.save(batch);
+
+        auditLogRepository.save(new AuditLog(
+                "BATCH_UPDATED",
+                "InventoryBatch",
+                saved.getId().toString(),
+                updatedBy != null ? updatedBy : "pharmacist",
+                String.format("Batch %s updated: Qty %d->%d, Shelf '%s'->'%s', Expiry %s->%s, Status %s->%s",
+                        saved.getBatchNumber(), oldQty, saved.getQuantityAvailable(),
+                        oldShelf, saved.getShelfLocation(),
+                        oldExpiry, saved.getExpiryDate(),
+                        oldStatus, saved.getStatus())
+        ));
+
+        log.info("Batch {} updated successfully by {}", saved.getBatchNumber(), updatedBy);
+        return mapToBatchResponse(saved);
+    }
+
+    @Transactional
+    public Medicine updateMedicine(Long medicineId, UpdateMedicineRequest request, String updatedBy) {
+        Medicine medicine = medicineRepository.findById(medicineId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with ID: " + medicineId));
+
+        String oldName = medicine.getName();
+        medicine.setName(request.getName());
+        if (request.getGenericName() != null) medicine.setGenericName(request.getGenericName());
+        if (request.getCategory() != null) medicine.setCategory(request.getCategory());
+        if (request.getDosage() != null) medicine.setDosage(request.getDosage());
+        if (request.getUnitPrice() != null) medicine.setUnitPrice(request.getUnitPrice());
+        medicine.setRequiresPrescription(request.isRequiresPrescription());
+        medicine.setReorderThreshold(request.getReorderThreshold());
+        if (request.getDescription() != null) medicine.setDescription(request.getDescription());
+
+        Medicine saved = medicineRepository.save(medicine);
+
+        auditLogRepository.save(new AuditLog(
+                "MEDICINE_UPDATED",
+                "Medicine",
+                saved.getId().toString(),
+                updatedBy != null ? updatedBy : "pharmacist",
+                String.format("Medicine '%s' (ID: %d) details updated. Unit price: $%s, Reorder threshold: %d",
+                        oldName, saved.getId(), saved.getUnitPrice(), saved.getReorderThreshold())
+        ));
+
+        log.info("Medicine {} updated successfully by {}", saved.getName(), updatedBy);
+        return saved;
     }
 
     private BatchResponse mapToBatchResponse(InventoryBatch batch) {

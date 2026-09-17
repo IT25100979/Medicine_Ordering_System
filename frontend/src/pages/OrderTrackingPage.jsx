@@ -5,7 +5,8 @@ import OrderStepper from '../components/OrderStepper';
 import PackingSlipModal from '../components/PackingSlipModal';
 
 const NEXT_STATUS = {
-  PLACED: { next: 'VERIFIED', label: 'Verify Order' },
+  CLINICAL_REVIEW: { next: 'PACKED', label: 'Complete Review & Pack' },
+  PLACED: { next: 'PACKED', label: 'Complete Review & Pack' },
   VERIFIED: { next: 'PACKED', label: 'Mark as Packed' },
   PACKED: { next: 'OUT_FOR_DELIVERY', label: 'Dispatch Order' },
   OUT_FOR_DELIVERY: { next: 'DELIVERED', label: 'Mark as Delivered' },

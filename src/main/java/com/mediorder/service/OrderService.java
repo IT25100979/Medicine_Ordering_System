@@ -49,7 +49,7 @@ public class OrderService {
         order.setCustomerEmail(request.getCustomerEmail());
         order.setCustomerPhone(request.getCustomerPhone());
         order.setShippingAddress(request.getShippingAddress());
-        order.setStatus(OrderStatus.PLACED);
+        order.setStatus(OrderStatus.CLINICAL_REVIEW);
 
         BigDecimal totalAmount = BigDecimal.ZERO;
 
@@ -232,9 +232,8 @@ public class OrderService {
 
         boolean valid = false;
         switch (current) {
+            case CLINICAL_REVIEW:
             case PLACED:
-                valid = (next == OrderStatus.VERIFIED);
-                break;
             case VERIFIED:
                 valid = (next == OrderStatus.PACKED);
                 break;

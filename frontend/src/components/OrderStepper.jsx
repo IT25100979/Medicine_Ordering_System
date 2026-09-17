@@ -2,8 +2,7 @@ import React from 'react';
 import { CheckCircle2, Clock, PackageCheck, Truck, ShieldCheck, XCircle } from 'lucide-react';
 
 const STAGES = [
-  { key: 'PLACED', label: 'Order Placed', desc: 'FEFO stock allocated', icon: Clock },
-  { key: 'VERIFIED', label: 'Clinical Review', desc: 'Pharmacist verified', icon: ShieldCheck },
+  { key: 'CLINICAL_REVIEW', label: 'Clinical Review', desc: 'Pharmacist review & verification', icon: ShieldCheck },
   { key: 'PACKED', label: 'Dispensed & Packed', desc: 'Shelf scanned & bagged', icon: PackageCheck },
   { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', desc: 'Dispatched with courier', icon: Truck },
   { key: 'DELIVERED', label: 'Handover Complete', desc: 'Secure OTP verified', icon: CheckCircle2 },
@@ -32,7 +31,8 @@ export default function OrderStepper({ currentStatus, estimatedDispatch, estimat
     );
   }
 
-  const currentIndex = STAGES.findIndex((s) => s.key === currentStatus);
+  const normalizedStatus = (currentStatus === 'PLACED' || currentStatus === 'VERIFIED') ? 'CLINICAL_REVIEW' : currentStatus;
+  const currentIndex = STAGES.findIndex((s) => s.key === normalizedStatus);
 
   return (
     <div style={{ margin: '24px 0' }}>

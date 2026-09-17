@@ -1,10 +1,13 @@
 package com.mediorder.model;
 
 public enum OrderStatus {
-    PLACED,
-    VERIFIED,
+    CLINICAL_REVIEW,
     PACKED,
     OUT_FOR_DELIVERY,
     DELIVERED,
-    CANCELLED
+    CANCELLED,
+
+    // Legacy statuses for backward compatibility
+    PLACED,
+    VERIFIED
 }

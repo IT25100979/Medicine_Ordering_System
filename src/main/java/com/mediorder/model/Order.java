@@ -38,7 +38,7 @@ public class Order {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
-    private OrderStatus status = OrderStatus.PLACED;
+    private OrderStatus status = OrderStatus.CLINICAL_REVIEW;
 
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
