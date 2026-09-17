@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, PlusCircle, Sparkles, Moon, RefreshCw, Lock, Unlock, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { ShieldAlert, PlusCircle, Moon, RefreshCw, Lock, Unlock, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { inventoryApi } from '../api/inventoryApi';
 import BatchRegistrationModal from '../components/BatchRegistrationModal';
-import FefoSimulatorModal from '../components/FefoSimulatorModal';
 
 export default function InventoryBatchPage() {
   const [batches, setBatches] = useState([]);
@@ -17,7 +16,6 @@ export default function InventoryBatchPage() {
 
   // Modals
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [showSimulatorModal, setShowSimulatorModal] = useState(false);
   const [quarantineActionLoading, setQuarantineActionLoading] = useState({});
 
   useEffect(() => {
@@ -106,10 +104,6 @@ export default function InventoryBatchPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn btn-secondary" onClick={() => setShowSimulatorModal(true)}>
-            <Sparkles size={16} color="#38bdf8" />
-            <span>FEFO Simulator</span>
-          </button>
 
           <button className="btn btn-secondary" onClick={handleRunExpirySweep} disabled={loading}>
             <Moon size={16} color="#c084fc" />
@@ -310,13 +304,6 @@ export default function InventoryBatchPage() {
           medicines={medicines}
           onClose={() => setShowRegisterModal(false)}
           onBatchRegistered={fetchData}
-        />
-      )}
-
-      {showSimulatorModal && (
-        <FefoSimulatorModal
-          medicines={medicines}
-          onClose={() => setShowSimulatorModal(false)}
         />
       )}
     </div>
