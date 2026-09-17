@@ -143,6 +143,17 @@ public class InventoryController {
         return ResponseEntity.ok(ApiResponse.ok(result, "Medicine stock catalog retrieved"));
     }
 
+    @PostMapping("/medicines")
+    @Operation(summary = "Register a new medicine item into the catalog")
+    public ResponseEntity<ApiResponse<Medicine>> createMedicine(
+            @Valid @RequestBody CreateMedicineRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) String actorId) {
+        Medicine created = batchService.createMedicine(request, actorId);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(created, "Medicine registered successfully"));
+    }
+
     @PutMapping("/medicines/{id}")
     @Operation(summary = "Update an existing medicine item details, price, dosage, and reorder threshold")
     public ResponseEntity<ApiResponse<Medicine>> updateMedicine(

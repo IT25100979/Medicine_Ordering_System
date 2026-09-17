@@ -11,6 +11,7 @@ export const inventoryApi = {
   releaseBatch: (id) => api.patch(`/inventory/batches/${id}/release`),
   runExpiryCheck: () => api.post('/inventory/run-expiry-check'),
   getMedicinesWithStock: () => api.get('/inventory/medicines'),
+  createMedicine: (medData) => api.post('/inventory/medicines', medData),
   updateBatch: (id, batchData) => api.put(`/inventory/batches/${id}`, batchData),
   updateMedicine: (id, medData) => api.put(`/inventory/medicines/${id}`, medData),
 };

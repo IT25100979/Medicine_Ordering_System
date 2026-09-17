@@ -4,6 +4,7 @@ import { inventoryApi } from '../api/inventoryApi';
 import BatchRegistrationModal from '../components/BatchRegistrationModal';
 import EditBatchModal from '../components/EditBatchModal';
 import EditMedicineModal from '../components/EditMedicineModal';
+import AddMedicineModal from '../components/AddMedicineModal';
 
 export default function InventoryBatchPage() {
   const [batches, setBatches] = useState([]);
@@ -21,6 +22,7 @@ export default function InventoryBatchPage() {
 
   // Modals state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showAddMedicineModal, setShowAddMedicineModal] = useState(false);
   const [selectedBatchForEdit, setSelectedBatchForEdit] = useState(null);
   const [selectedMedicineForEdit, setSelectedMedicineForEdit] = useState(null);
   const [quarantineActionLoading, setQuarantineActionLoading] = useState({});
@@ -96,10 +98,17 @@ export default function InventoryBatchPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn btn-primary" onClick={() => setShowRegisterModal(true)}>
-            <PlusCircle size={16} />
-            <span>Register Batch</span>
-          </button>
+          {activeView === 'batches' ? (
+            <button className="btn btn-primary" onClick={() => setShowRegisterModal(true)}>
+              <PlusCircle size={16} />
+              <span>Register Batch</span>
+            </button>
+          ) : (
+            <button className="btn btn-primary" onClick={() => setShowAddMedicineModal(true)}>
+              <PlusCircle size={16} />
+              <span>Add New Medicine</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -427,6 +436,16 @@ export default function InventoryBatchPage() {
           onMedicineUpdated={() => {
             fetchData();
             setSuccessMsg(`Medicine ${selectedMedicineForEdit.name} updated successfully.`);
+          }}
+        />
+      )}
+
+      {showAddMedicineModal && (
+        <AddMedicineModal
+          onClose={() => setShowAddMedicineModal(false)}
+          onMedicineAdded={() => {
+            fetchData();
+            setSuccessMsg('New medicine added to catalog successfully.');
           }}
         />
       )}

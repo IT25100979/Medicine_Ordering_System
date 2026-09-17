@@ -2,6 +2,7 @@ package com.mediorder.service;
 
 import com.mediorder.dto.BatchRegistrationRequest;
 import com.mediorder.dto.BatchResponse;
+import com.mediorder.dto.CreateMedicineRequest;
 import com.mediorder.dto.UpdateBatchRequest;
 import com.mediorder.dto.UpdateMedicineRequest;
 import com.mediorder.exception.ResourceNotFoundException;
@@ -247,6 +248,35 @@ public class InventoryBatchService {
 
         log.info("Batch {} updated successfully by {}", saved.getBatchNumber(), updatedBy);
         return mapToBatchResponse(saved);
+    }
+
+    @Transactional
+    public Medicine createMedicine(CreateMedicineRequest request, String createdBy) {
+        Medicine medicine = new Medicine(
+                request.getName(),
+                request.getGenericName(),
+                request.getCategory(),
+                request.getDosage(),
+                request.getUnitPrice(),
+                request.isRequiresPrescription(),
+                request.getReorderThreshold()
+        );
+        if (request.getDescription() != null) {
+            medicine.setDescription(request.getDescription());
+        }
+        Medicine saved = medicineRepository.save(medicine);
+
+        auditLogRepository.save(new AuditLog(
+                "MEDICINE_REGISTERED",
+                "Medicine",
+                saved.getId().toString(),
+                createdBy != null ? createdBy : "pharmacist",
+                String.format("New medicine catalog item '%s' registered with unit price $%s",
+                        saved.getName(), saved.getUnitPrice())
+        ));
+
+        log.info("Registered new medicine {} (ID: {}) by {}", saved.getName(), saved.getId(), createdBy);
+        return saved;
     }
 
     @Transactional
