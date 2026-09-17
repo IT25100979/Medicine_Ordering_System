@@ -1,0 +1,22 @@
+meta {
+  name: Simulate FEFO Batch Allocation
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/inventory/allocate-fefo
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "medicineId": 1,
+    "quantity": 50
+  }
+}

@@ -1,0 +1,35 @@
+meta {
+  name: Place Order (FEFO Allocation)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "userId": "user_2test123456",
+    "customerName": "Kamal Perera",
+    "customerEmail": "kamal.perera@gmail.com",
+    "customerPhone": "+94 77 123 4567",
+    "shippingAddress": "No 45, Galle Road, Colombo 03",
+    "items": [
+      {
+        "medicineId": 1,
+        "quantity": 10
+      },
+      {
+        "medicineId": 2,
+        "quantity": 5
+      }
+    ]
+  }
+}

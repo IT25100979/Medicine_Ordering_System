@@ -1,0 +1,26 @@
+meta {
+  name: Register New Medicine Batch
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/inventory/batches
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "medicineId": 1,
+    "batchNumber": "BATCH-2026-PARA-05",
+    "manufactureDate": "2026-08-01",
+    "expiryDate": "2027-08-01",
+    "initialQuantity": 200,
+    "shelfLocation": "Aisle 1 - Shelf A3"
+  }
+}

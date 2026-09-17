@@ -1,0 +1,11 @@
+meta {
+  name: Trigger Nightly Expiry and Quarantine Sweep
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/inventory/run-expiry-check
+  body: none
+  auth: none
+}

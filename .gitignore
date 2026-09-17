@@ -30,3 +30,24 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+# Frontend
+frontend/.env
+frontend/.env.local
+frontend/node_modules/
+frontend/dist/
+
+# Backend / Spring Boot
+backend/src/main/resources/application.yml
+src/main/resources/application.yml
+backend/target/
+*.class
+
+# Bruno
+bruno/environments/local.bru
+
+# General
+target/
+node_modules/
+data/
+

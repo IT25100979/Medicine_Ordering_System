@@ -1,0 +1,11 @@
+meta {
+  name: Quarantine Batch
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{base_url}}/inventory/batches/1/quarantine?reason=Suspected discoloration during visual inspection
+  body: none
+  auth: none
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Cancel Order and Restock Batches
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/orders/1/cancel
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "reason": "Customer requested prescription dosage modification before dispatch"
+  }
+}

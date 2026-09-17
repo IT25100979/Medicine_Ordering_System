@@ -1,0 +1,22 @@
+meta {
+  name: Update Order Fulfillment Status
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{base_url}}/orders/1/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "newStatus": "VERIFIED",
+    "note": "Prescription verified by clinical pharmacist"
+  }
+}
