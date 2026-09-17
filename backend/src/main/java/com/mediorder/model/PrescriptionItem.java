@@ -11,6 +11,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class PrescriptionItem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,4 +29,11 @@ public class PrescriptionItem {
 
     @Column(nullable = false)
     private Integer quantity;
+
+    @Column(name = "permitted_quantity")
+    private Integer permittedQuantity;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private ItemDecision decision = ItemDecision.PENDING;
 }
