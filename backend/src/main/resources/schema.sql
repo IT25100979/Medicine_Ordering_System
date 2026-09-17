@@ -1,0 +1,131 @@
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    role ENUM('CUSTOMER', 'PHARMACIST', 'DELIVERY_RIDER', 'ADMIN') NOT NULL DEFAULT 'CUSTOMER',
+    phone_number VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS medicines (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    generic_name VARCHAR(255),
+    sku VARCHAR(100) NOT NULL UNIQUE,
+    requires_prescription BOOLEAN NOT NULL DEFAULT FALSE,
+    is_temperature_sensitive BOOLEAN NOT NULL DEFAULT FALSE,
+    min_temp DECIMAL(4,2),
+    max_temp DECIMAL(4,2),
+    unit_price DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS inventory_batches (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    medicine_id BIGINT NOT NULL,
+    batch_number VARCHAR(100) NOT NULL UNIQUE,
+    stock_quantity INT NOT NULL DEFAULT 0,
+    manufacturing_date DATE NOT NULL,
+    expiry_date DATE NOT NULL,
+    status ENUM('ACTIVE', 'EXPIRED', 'QUARANTINED') DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS prescriptions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    file_url VARCHAR(500) NOT NULL,
+    doctor_name VARCHAR(150),
+    status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+    verified_by BIGINT,
+    verified_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescription_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    prescription_id BIGINT NOT NULL,
+    medicine_id BIGINT NOT NULL,
+    prescribed_dosage VARCHAR(255),
+    quantity INT NOT NULL,
+    FOREIGN KEY (prescription_id) REFERENCES prescriptions(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    order_status ENUM('PLACED', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED') DEFAULT 'PLACED',
+    shipping_address TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    batch_id BIGINT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (batch_id) REFERENCES inventory_batches(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS deliveries (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL UNIQUE,
+    rider_id BIGINT,
+    status ENUM('ASSIGNED', 'PICKED_UP', 'EN_ROUTE', 'COMPLETED') DEFAULT 'ASSIGNED',
+    dispatched_at TIMESTAMP NULL,
+    delivered_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT,
+    FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS cold_chain_telemetry (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    delivery_id BIGINT NOT NULL,
+    device_id VARCHAR(100) NOT NULL,
+    temperature_recorded DECIMAL(5,2) NOT NULL,
+    humidity_recorded DECIMAL(5,2),
+    breach_flag BOOLEAN DEFAULT FALSE,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (delivery_id) REFERENCES deliveries(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    frequency_days INT NOT NULL DEFAULT 30,
+    next_refill_date DATE NOT NULL,
+    status ENUM('ACTIVE', 'PAUSED', 'CANCELLED') DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS subscription_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    subscription_id BIGINT NOT NULL,
+    medicine_id BIGINT NOT NULL,
+    quantity INT NOT NULL,
+    FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    recipient_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    channel ENUM('EMAIL', 'SMS', 'IN_APP') NOT NULL DEFAULT 'IN_APP',
+    is_read BOOLEAN DEFAULT FALSE,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
+);
