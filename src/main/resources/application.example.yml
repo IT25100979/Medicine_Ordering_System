@@ -6,8 +6,8 @@ spring:
     name: mediorder-backend
   datasource:
     url: jdbc:mysql://localhost:3306/mediorder_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
-    username: YOUR_DB_USERNAME
-    password: YOUR_DB_PASSWORD
+    username: root
+    password:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:

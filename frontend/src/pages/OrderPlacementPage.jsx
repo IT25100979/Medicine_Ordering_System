@@ -93,10 +93,10 @@ export default function OrderPlacementPage({ onOrderPlaced }) {
       {/* Header Banner */}
       <div style={{ marginBottom: '28px' }}>
         <h1 style={{ fontSize: '2rem', marginBottom: '8px' }}>
-          Medicine Catalog & <span className="gradient-text-emerald">FEFO Dispensing</span>
+          Medicine Catalog & <span className="gradient-text-emerald">Order Placement</span>
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-          Orders are automatically allocated from the earliest expiring valid batches using the FEFO algorithm.
+          Select medicines to place an order. Batches are automatically allocated by earliest expiry date (FEFO).
         </p>
       </div>
 
@@ -111,14 +111,14 @@ export default function OrderPlacementPage({ onOrderPlaced }) {
         <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '20px', borderRadius: '16px', marginBottom: '28px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
             <Check size={24} color="#34d399" />
-            <h3 style={{ color: '#34d399', fontSize: '1.2rem', margin: 0 }}>Order Confirmed & FEFO Batches Allocated!</h3>
+            <h3 style={{ color: '#34d399', fontSize: '1.2rem', margin: 0 }}>Order Placed Successfully!</h3>
           </div>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
             Order Number: <strong className="font-mono" style={{ color: '#ffffff' }}>{orderSuccess.orderNumber}</strong> — Total: <strong>${Number(orderSuccess.totalAmount).toFixed(2)}</strong>
           </p>
           <div style={{ marginTop: '12px', display: 'flex', gap: '10px' }}>
             <button className="btn btn-sm btn-primary" onClick={() => onOrderPlaced && onOrderPlaced(orderSuccess)}>
-              View Live Tracker Stepper →
+              Track Order →
             </button>
             <button className="btn btn-sm btn-secondary" onClick={() => setOrderSuccess(null)}>
               Place Another Order
@@ -224,12 +224,12 @@ export default function OrderPlacementPage({ onOrderPlaced }) {
         <div className="glass-panel" style={{ padding: '24px', position: 'sticky', top: '90px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px' }}>
             <ShoppingCart size={20} color="#10b981" />
-            <h3 style={{ fontSize: '1.15rem' }}>Prescription Cart</h3>
+            <h3 style={{ fontSize: '1.15rem' }}>Order Cart</h3>
           </div>
 
           {cartItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-              Your cart is empty. Add medicines from the catalog to begin order fulfillment.
+              Your cart is empty. Add medicines from the catalog to place an order.
             </div>
           ) : (
             <div>
@@ -248,7 +248,7 @@ export default function OrderPlacementPage({ onOrderPlaced }) {
               </div>
 
               <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '12px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Total (FEFO Dispense):</span>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Total Amount:</span>
                 <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981' }}>
                   ${totalAmount.toFixed(2)}
                 </span>

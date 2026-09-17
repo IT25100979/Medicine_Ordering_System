@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, PlusCircle, Moon, RefreshCw, Lock, Unlock, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { ShieldAlert, PlusCircle, RefreshCw, Lock, Unlock, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { inventoryApi } from '../api/inventoryApi';
 import BatchRegistrationModal from '../components/BatchRegistrationModal';
 
@@ -60,21 +60,6 @@ export default function InventoryBatchPage() {
     }
   };
 
-  const handleRunExpirySweep = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setSuccessMsg(null);
-      const res = await inventoryApi.runExpiryCheck();
-      setSuccessMsg(`Automated sweep complete: ${res.data?.expiredBatchesLocked || 0} expired batches locked.`);
-      fetchData();
-    } catch (err) {
-      setError(err.message || 'Failed to run automated expiry check');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // KPIs
   const totalBatches = batches.length;
   const activeStock = batches
@@ -96,20 +81,14 @@ export default function InventoryBatchPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', marginBottom: '6px' }}>
-            Pharmacy Assistant <span className="gradient-text-emerald">FEFO & Expiry Console</span>
+            Medicine Inventory & <span className="gradient-text-emerald">Batches</span>
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Automated First-Expired-First-Out batch queue, shelf coordinates, and automated expiry quarantine locks.
+            View medicine batches, expiration dates, and shelf locations for FEFO order dispensing.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-
-          <button className="btn btn-secondary" onClick={handleRunExpirySweep} disabled={loading}>
-            <Moon size={16} color="#c084fc" />
-            <span>Nightly Expiry Sweep</span>
-          </button>
-
           <button className="btn btn-primary" onClick={() => setShowRegisterModal(true)}>
             <PlusCircle size={16} />
             <span>Register Batch</span>
@@ -120,15 +99,15 @@ export default function InventoryBatchPage() {
       {/* KPI Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>
         <div className="glass-panel" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Registered Batches</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Batches</div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{totalBatches}</div>
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>Across all catalog SKUs</div>
+          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>Across all medicines</div>
         </div>
 
         <div className="glass-panel" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Available Dispensing Units</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Available Units</div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#10b981' }}>{activeStock}</div>
-          <div style={{ fontSize: '0.75rem', color: '#34d399', marginTop: '4px' }}>In active non-quarantined batches</div>
+          <div style={{ fontSize: '0.75rem', color: '#34d399', marginTop: '4px' }}>Ready for dispensing</div>
         </div>
 
         <div className="glass-panel" style={{ padding: '18px' }}>

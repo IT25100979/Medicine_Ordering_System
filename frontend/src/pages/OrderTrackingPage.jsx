@@ -5,13 +5,13 @@ import OrderStepper from '../components/OrderStepper';
 import PackingSlipModal from '../components/PackingSlipModal';
 
 const NEXT_STATUS = {
-  PLACED: { next: 'VERIFIED', label: 'Verify Order (Pharmacist)' },
-  VERIFIED: { next: 'PACKED', label: 'Pack & Scan (Dispensing)' },
-  PACKED: { next: 'OUT_FOR_DELIVERY', label: 'Dispatch to Courier' },
-  OUT_FOR_DELIVERY: { next: 'DELIVERED', label: 'Confirm OTP Handover' },
+  PLACED: { next: 'VERIFIED', label: 'Verify Order' },
+  VERIFIED: { next: 'PACKED', label: 'Mark as Packed' },
+  PACKED: { next: 'OUT_FOR_DELIVERY', label: 'Dispatch Order' },
+  OUT_FOR_DELIVERY: { next: 'DELIVERED', label: 'Mark as Delivered' },
 };
 
-export default function OrderTrackingPage({ initialOrder, currentRole }) {
+export default function OrderTrackingPage({ initialOrder }) {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(initialOrder || null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,7 +24,7 @@ export default function OrderTrackingPage({ initialOrder, currentRole }) {
 
   // Cancel modal
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('Customer requested prescription dosage modification');
+  const [cancelReason, setCancelReason] = useState('Customer requested order cancellation');
 
   useEffect(() => {
     fetchOrders();
@@ -123,10 +123,10 @@ export default function OrderTrackingPage({ initialOrder, currentRole }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', marginBottom: '6px' }}>
-            Real-Time <span className="gradient-text">Order Fulfillment Tracker</span>
+            Order <span className="gradient-text">Tracking & Management</span>
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Track end-to-end pharmacy dispensing stages and inspect manufacturer batch traceability.
+            Track customer orders and manage fulfillment stages.
           </p>
         </div>
 

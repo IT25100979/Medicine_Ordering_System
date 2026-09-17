@@ -64,7 +64,7 @@ export default function BatchRegistrationModal({ medicines, onClose, onBatchRegi
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Select Pharmaceutical SKU
+              Select Medicine
             </label>
             <select
               className="input-glass"
@@ -82,7 +82,7 @@ export default function BatchRegistrationModal({ medicines, onClose, onBatchRegi
 
           <div>
             <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Batch / Lot Serial Number
+              Batch Number
             </label>
             <input
               type="text"
@@ -109,7 +109,7 @@ export default function BatchRegistrationModal({ medicines, onClose, onBatchRegi
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Expiry Date (FEFO Sorted)
+                Expiry Date
               </label>
               <input
                 type="date"

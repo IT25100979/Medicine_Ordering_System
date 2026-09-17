@@ -6,7 +6,6 @@ import InventoryBatchPage from './pages/InventoryBatchPage';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('order');
-  const [currentRole, setCurrentRole] = useState('assistant');
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
 
   const handleOrderPlaced = (newOrder) => {
@@ -19,8 +18,6 @@ export default function App() {
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        currentRole={currentRole}
-        setCurrentRole={setCurrentRole}
       />
 
       <main className="container" style={{ flex: 1 }}>
@@ -31,7 +28,6 @@ export default function App() {
         {activeTab === 'tracking' && (
           <OrderTrackingPage
             initialOrder={selectedOrderForTracking}
-            currentRole={currentRole}
           />
         )}
 

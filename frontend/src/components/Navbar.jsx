@@ -1,7 +1,7 @@
 import React from 'react';
-import { Pill, ShoppingBag, Truck, ShieldAlert, Sparkles } from 'lucide-react';
+import { Pill, ShoppingBag, Truck, Package } from 'lucide-react';
 
-export default function Navbar({ activeTab, setActiveTab, currentRole, setCurrentRole }) {
+export default function Navbar({ activeTab, setActiveTab }) {
   return (
     <header style={{
       borderBottom: '1px solid var(--border-glass)',
@@ -28,9 +28,9 @@ export default function Navbar({ activeTab, setActiveTab, currentRole, setCurren
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>MediOrder</span>
-              <span className="badge badge-emerald" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>FEFO v1.0</span>
+              <span className="badge badge-emerald" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>Order System</span>
             </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>SE2030 Software Engineering</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Medicine Ordering &amp; FEFO Dispatch</span>
           </div>
         </div>
 
@@ -42,7 +42,7 @@ export default function Navbar({ activeTab, setActiveTab, currentRole, setCurren
             style={{ borderRadius: '10px', border: 'none' }}
           >
             <ShoppingBag size={16} />
-            <span>Order Medicine</span>
+            <span>Place Order</span>
           </button>
 
           <button
@@ -51,7 +51,7 @@ export default function Navbar({ activeTab, setActiveTab, currentRole, setCurren
             style={{ borderRadius: '10px', border: 'none' }}
           >
             <Truck size={16} />
-            <span>Order Tracker</span>
+            <span>Track Orders</span>
           </button>
 
           <button
@@ -59,35 +59,10 @@ export default function Navbar({ activeTab, setActiveTab, currentRole, setCurren
             className={`btn btn-sm ${activeTab === 'inventory' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ borderRadius: '10px', border: 'none' }}
           >
-            <ShieldAlert size={16} />
-            <span>FEFO & Batches</span>
+            <Package size={16} />
+            <span>Inventory Batches</span>
           </button>
         </nav>
-
-        {/* User Role Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            <span style={{ color: 'var(--text-muted)' }}>Role:</span>
-            <select
-              value={currentRole}
-              onChange={(e) => setCurrentRole(e.target.value)}
-              style={{
-                background: 'rgba(30, 41, 59, 0.8)',
-                color: '#ffffff',
-                border: '1px solid var(--border-glass-bright)',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                outline: 'none'
-              }}
-            >
-              <option value="customer">Patient / Customer</option>
-              <option value="assistant">Pharmacy Assistant (FEFO)</option>
-              <option value="pharmacist">Licensed Pharmacist</option>
-            </select>
-          </div>
-        </div>
       </div>
     </header>
   );
