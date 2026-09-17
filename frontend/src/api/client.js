@@ -23,11 +23,20 @@ api.interceptors.response.use(
     return response.data;
   },
   (error) => {
-    const errorMsg =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
-      'An unexpected network error occurred';
+    let errorMsg = null;
+    if (error.response?.data?.data && typeof error.response.data.data === 'object') {
+      const fieldErrors = Object.values(error.response.data.data);
+      if (fieldErrors.length > 0) {
+        errorMsg = fieldErrors.join(', ');
+      }
+    }
+    if (!errorMsg) {
+      errorMsg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        'An unexpected network error occurred';
+    }
     return Promise.reject(new Error(errorMsg));
   }
 );

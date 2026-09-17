@@ -17,8 +17,10 @@ export default function BatchRegistrationModal({ medicines, onClose, onBatchRegi
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.expiryDate) {
-      setError('Please select a valid expiry date in the future.');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (!formData.expiryDate || new Date(formData.expiryDate) <= today) {
+      setError('Expiry date must be a date in the future.');
       return;
     }
 
@@ -112,6 +114,7 @@ export default function BatchRegistrationModal({ medicines, onClose, onBatchRegi
               <input
                 type="date"
                 className="input-glass"
+                min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                 value={formData.expiryDate}
                 onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
                 required
