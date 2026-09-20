@@ -1,2 +1,13 @@
 package com.mediorder.model;
-public enum OrderStatus { PLACED, PROCESSING, IN_TRANSIT, DELIVERED, CANCELLED }
+
+public enum OrderStatus {
+    PLACED,
+    CLINICAL_REVIEW,
+    VERIFIED,
+    PROCESSING,
+    PACKED,
+    OUT_FOR_DELIVERY,
+    IN_TRANSIT,
+    DELIVERED,
+    CANCELLED
+}
