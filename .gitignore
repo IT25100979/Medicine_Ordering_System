@@ -1,53 +1,52 @@
-### IntelliJ IDEA ###
+# --- Maven / Spring Boot ---
+target/
+build/
+.maven/
+*.class
+*.log
+backend/target/
 out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-.kotlin
-/.idea
-
-
-### Eclipse ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
 bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-### VS Code ###
-.vscode/
-
-### Mac OS ###
-.DS_Store
-
-# Frontend
-frontend/.env
-frontend/.env.local
+# --- React / Vite / Node ---
+node_modules/
+dist/
+dist-ssr/
+*.local
 frontend/node_modules/
 frontend/dist/
+frontend/.env
+frontend/.env.local
 
-# Backend / Spring Boot
-backend/src/main/resources/application.yml
-src/main/resources/application.yml
-backend/target/
-*.class
+# --- IDE Settings (VS Code, Eclipse, IntelliJ) ---
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.springBeans
+.sts4-cache
+.apt_generated
+.factorypath
+/nbproject/private/
+/nbbuild/
+/.nb-gradle/
+.kotlin
 
-# Bruno
+# --- Environment & Secret Files ---
+.env
+**/application.yml
+!**/application.example.yml
+!**/application.yml.example
 bruno/environments/local.bru
 
-# General
-target/
-node_modules/
+# --- Operating System Files ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+.agents/
+.mcp.json
 data/
-

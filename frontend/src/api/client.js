@@ -1,44 +1,26 @@
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
+const client = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
-// Request interceptor to attach Clerk JWT token if available
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('clerk_token') || sessionStorage.getItem('clerk_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Response interceptor to unwrap data from standard envelope
-api.interceptors.response.use(
-  (response) => {
-    return response.data;
+// Request interceptor: attach JWT token if present
+client.interceptors.request.use(
+  (config) => {
+    const token =
+      localStorage.getItem('token') ||
+      localStorage.getItem('clerk_token') ||
+      sessionStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
   },
-  (error) => {
-    let errorMsg = null;
-    if (error.response?.data?.data && typeof error.response.data.data === 'object') {
-      const fieldErrors = Object.values(error.response.data.data);
-      if (fieldErrors.length > 0) {
-        errorMsg = fieldErrors.join(', ');
-      }
-    }
-    if (!errorMsg) {
-      errorMsg =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        'An unexpected network error occurred';
-    }
-    return Promise.reject(new Error(errorMsg));
-  }
+  (error) => Promise.reject(error)
 );
 
-export default api;
+export default client;

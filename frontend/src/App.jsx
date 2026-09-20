@@ -1,51 +1,69 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
-import OrderPlacementPage from './pages/OrderPlacementPage';
-import OrderTrackingPage from './pages/OrderTrackingPage';
-import InventoryBatchPage from './pages/InventoryBatchPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('order');
-  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ProfilePage from './pages/ProfilePage';
 
-  const handleOrderPlaced = (newOrder) => {
-    setSelectedOrderForTracking(newOrder);
-    setActiveTab('tracking');
-  };
+// Module Pages
+import PrescriptionPage from './pages/modules/PrescriptionPage';
+import InventoryPage from './pages/modules/InventoryPage';
+import OrderProcessingPage from './pages/modules/OrderProcessingPage';
+import ColdChainPage from './pages/modules/ColdChainPage';
+import SubscriptionsPage from './pages/modules/SubscriptionsPage';
+import DeliveryPage from './pages/modules/DeliveryPage';
 
+const App = () => {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900">
+          <Navbar />
+          <main className="flex-grow">
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
-      <main className="container" style={{ flex: 1 }}>
-        {activeTab === 'order' && (
-          <OrderPlacementPage onOrderPlaced={handleOrderPlaced} />
-        )}
+              {/* Protected Routes */}
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
 
-        {activeTab === 'tracking' && (
-          <OrderTrackingPage
-            initialOrder={selectedOrderForTracking}
-          />
-        )}
+              {/* Core Operational Modules */}
+              <Route path="/modules/prescription" element={<PrescriptionPage />} />
+              <Route path="/modules/inventory" element={<InventoryPage />} />
+              <Route path="/modules/orders" element={<OrderProcessingPage />} />
+              <Route path="/modules/cold-chain" element={<ColdChainPage />} />
+              <Route path="/modules/subscriptions" element={<SubscriptionsPage />} />
+              <Route path="/modules/delivery" element={<DeliveryPage />} />
+            </Routes>
+          </main>
 
-        {activeTab === 'inventory' && (
-          <InventoryBatchPage />
-        )}
-      </main>
-
-      <footer style={{ borderTop: '1px solid var(--border-glass)', padding: '24px 0', background: 'rgba(9, 13, 22, 0.95)', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-        <div className="container" style={{ padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            MediOrder — SE2030 Software Engineering | SLIIT IT25102867
-          </div>
-          <div>
-            Order Management &amp; FEFO (First-Expired-First-Out) Engine
-          </div>
+          <footer className="border-t border-gray-200 bg-white py-6 text-center text-xs text-gray-500">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-2">
+              <div>
+                MediOrder — Online Pharmacy &amp; Medicine Ordering System
+              </div>
+              <div>
+                Order Management &amp; FEFO (First-Expired-First-Out) Engine
+              </div>
+            </div>
+          </footer>
         </div>
-      </footer>
-    </div>
+      </BrowserRouter>
+    </AuthProvider>
   );
-}
+};
+
+export default App;
