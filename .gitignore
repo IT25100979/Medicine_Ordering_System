@@ -1,8 +1,12 @@
-### Maven ###
+### Maven / Spring Boot ###
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+build/
+.maven/
+*.class
+*.log
 
 ### IntelliJ IDEA ###
 out/
@@ -10,29 +14,32 @@ out/
 !**/src/test/**/out/
 .kotlin
 /.idea
+*.iml
+*.iws
+*.ipr
 
+# --- React / Vite / Node ---
+node_modules/
+dist/
+dist-ssr/
+*.local
 
-### Eclipse ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-### VS Code ###
+# --- IDE Settings (VS Code & IntelliJ) ---
 .vscode/
+.idea/
+.project
+.classpath
+.settings/
 
-### Mac OS ###
+# --- Environment & Secret Files ---
+.env
+**/application.yml
+!**/application.example.yml
+bruno/environments/local.bru
+
+# --- Operating System Files ---
 .DS_Store
+Thumbs.db
+Desktop.ini
+.agents/
+.mcp.json
