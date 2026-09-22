@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // Function 02 handlers - commented out for local testing only (files deleted in this branch)
+    /*
     @ExceptionHandler(BatchNotFoundException.class)
     public ResponseEntity<String> handleBatchNotFound(BatchNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
@@ -17,6 +19,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> handleInsufficientStock(InsufficientStockException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
+    */
 
     @ExceptionHandler(InvalidOrderStateException.class)
     public ResponseEntity<String> handleInvalidOrderState(InvalidOrderStateException ex) {
