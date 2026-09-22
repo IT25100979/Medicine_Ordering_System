@@ -1,4 +1,10 @@
 package com.medilink.entity;
 
-public class OrderStatus {
+public enum OrderStatus {
+    PENDING_VERIFICATION,
+    APPROVED,
+    PACKING,
+    DISPATCHED,
+    DELIVERED,
+    CANCELLED
 }
