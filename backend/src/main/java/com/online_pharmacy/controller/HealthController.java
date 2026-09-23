@@ -2,7 +2,6 @@ package com.online_pharmacy.controller;
 
 import com.online_pharmacy.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,7 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping({"/api/v1", "/api"})
-@CrossOrigin(origins = "*")
 public class HealthController {
 
     @GetMapping("/health")

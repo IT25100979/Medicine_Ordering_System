@@ -56,25 +56,27 @@ CREATE TABLE IF NOT EXISTS prescription_items (
     FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE RESTRICT
 );
 
+-- Order Processing (Function 03): authoritative 6-state Finite State Machine
+-- PENDING_VERIFICATION -> APPROVED -> PACKING -> DISPATCHED -> DELIVERED
+-- PENDING_VERIFICATION/APPROVED            -> CANCELLED (terminal)
+-- Customer reference is a plain LONG (no FK) mirroring the Order entity mapping.
 CREATE TABLE IF NOT EXISTS orders (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     customer_id BIGINT NOT NULL,
-    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    order_status ENUM('PLACED', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED') DEFAULT 'PLACED',
-    shipping_address TEXT NOT NULL,
+    status ENUM('PENDING_VERIFICATION', 'APPROVED', 'PACKING', 'DISPATCHED', 'DELIVERED', 'CANCELLED') NOT NULL DEFAULT 'PENDING_VERIFICATION',
+    partially_fulfilled BOOLEAN NOT NULL DEFAULT FALSE,
+    cancellation_reason VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE RESTRICT
+    updated_at TIMESTAMP NULL
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_id BIGINT NOT NULL,
-    batch_id BIGINT NOT NULL,
-    quantity INT NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL,
-    subtotal DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (batch_id) REFERENCES inventory_batches(id) ON DELETE RESTRICT
+    medicine_id BIGINT NOT NULL,
+    quantity_ordered INT NOT NULL DEFAULT 0,
+    quantity_fulfilled INT NOT NULL DEFAULT 0,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS deliveries (
