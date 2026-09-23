@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MediLink - Order Processing Test UI</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-dark: #0ea5e9;
+            --success: #22c55e;
+            --error: #ef4444;
+        }
+        * { box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 24px;
+        }
+        h1 {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+        .subtitle {
+            color: var(--muted);
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            width: auto;
+            margin-top: 0;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: color 0.15s, background 0.15s, border-color 0.15s;
+        }
+        .tab:hover {
+            color: var(--text);
+            background: #1e293b66;
+        }
+        .tab.active {
+            color: white;
+            background: var(--card);
+            border-bottom: 2px solid var(--accent-dark);
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+        }
+        .card h2 {
+            font-size: 16px;
+            margin: 0 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin: 10px 0 4px;
+        }
+        input, select, textarea {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        textarea {
+            min-height: 90px;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+        button {
+            margin-top: 14px;
+            width: 100%;
+            background: var(--accent-dark);
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        button:hover { background: var(--accent); }
+        button:active { transform: translateY(1px); }
+        .response {
+            margin-top: 12px;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 220px;
+            overflow-y: auto;
+            display: none;
+        }
+        .response.show { display: block; }
+        .response.ok { border-color: var(--success); }
+        .response.err { border-color: var(--error); background: #ef44440d; }
+        .items-box {
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 8px;
+        }
+        .item-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .item-row input { flex: 1; }
+        .small-btn {
+            width: auto;
+            padding: 6px 10px;
+            font-size: 12px;
+            margin-top: 0;
+            background: var(--border);
+        }
+        .small-btn:hover { background: #475569; }
+    </style>
+</head>
+<body>
+
+<h1>🩺 MediLink — Order Processing Test UI</h1>
+<div class="subtitle">Manage and track your medicine orders in real time.</div>
+
+<div class="tab-bar">
+    <button class="tab active" data-panel="create">Create Order</button>
+    <button class="tab" data-panel="get">Get Order</button>
+    <button class="tab" data-panel="status">Update Status</button>
+    <button class="tab" data-panel="customer">Orders by Customer</button>
+</div>
+
+<div class="tab-panel active" id="panel-create">
+    <div class="card">
+        <h2>➕ Create Order</h2>
+        <label>Customer ID</label>
+        <input id="createCustomerId" type="number" value="1" />
+
+        <label>Items</label>
+        <div class="items-box" id="itemsBox">
+            <div class="item-row">
+                <input placeholder="Medicine ID" class="itemMedicineId" type="number" value="1" />
+                <input placeholder="Quantity" class="itemQuantity" type="number" value="2" />
+            </div>
+        </div>
+        <button class="small-btn" onclick="addItemRow()" style="margin-top:8px;">+ Add another item</button>
+
+        <button onclick="createOrder()">Create Order</button>
+        <div id="createResponse" class="response"></div>
+    </div>
+</div>
+
+<!-- GET ORDER -->
+<div class="tab-panel" id="panel-get">
+    <div class="card">
+        <h2>🔍 Get Order</h2>
+        <label>Order ID</label>
+        <input id="getOrderId" type="number" value="1" />
+        <button onclick="getOrder()">Fetch Order</button>
+        <div id="getResponse" class="response"></div>
+    </div>
+</div>
+
+<!-- UPDATE STATUS -->
+<div class="tab-panel" id="panel-status">
+    <div class="card">
+        <h2>🔄 Update Status</h2>
+        <label>Order ID</label>
+        <input id="statusOrderId" type="number" value="1" />
+        <label>New Status</label>
+        <select id="newStatus">
+            <option value="PENDING_VERIFICATION">PENDING_VERIFICATION</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="PACKING">PACKING</option>
+            <option value="DISPATCHED">DISPATCHED</option>
+            <option value="DELIVERED">DELIVERED</option>
+            <option value="CANCELLED">CANCELLED</option>
+        </select>
+        <label>Reason (only needed for CANCELLED)</label>
+        <input id="statusReason" placeholder="e.g. Customer changed mind" />
+        <button onclick="updateStatus()">Update Status</button>
+        <div id="statusResponse" class="response"></div>
+    </div>
+</div>
+
+<!-- CUSTOMER ORDERS -->
+<div class="tab-panel" id="panel-customer">
+    <div class="card">
+        <h2>📋 Orders by Customer</h2>
+        <label>Customer ID</label>
+        <input id="customerOrdersId" type="number" value="1" />
+        <button onclick="getCustomerOrders()">Fetch Orders</button>
+        <div id="customerResponse" class="response"></div>
+    </div>
+</div>
+
+<script>
+    const BASE_URL = 'http://localhost:8080';
+
+    const AUTH_EMAIL = 'test@medilink.com';
+    const AUTH_PASSWORD = 'test123';
+
+    let authToken = null;
+
+    async function authenticate() {
+        try {
+            const res = await fetch(baseUrl() + '/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: AUTH_EMAIL, password: AUTH_PASSWORD })
+            });
+            const body = await res.json();
+            const token = body && body.data && body.data.token;
+            if (res.ok && token) {
+                authToken = token;
+            }
+        } catch (err) {}
+    }
+
+    function authOptions(options) {
+        options = options || {};
+        options.headers = options.headers || {};
+        options.headers['Authorization'] = 'Bearer ' + authToken;
+        return options;
+    }
+
+    function requireAuth(responseElId) {
+        if (!authToken) {
+            showResponse(responseElId, 'Something went wrong. Please try again later.', true);
+            return false;
+        }
+        return true;
+    }
+
+    document.querySelectorAll('.tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+            document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+            tab.classList.add('active');
+            document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+        });
+    });
+
+    function baseUrl() {
+        return BASE_URL.replace(/\/$/, '');
+    }
+
+    function addItemRow() {
+        const box = document.getElementById('itemsBox');
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+    <input placeholder="Medicine ID" class="itemMedicineId" type="number" />
+    <input placeholder="Quantity" class="itemQuantity" type="number" />
+  `;
+        box.appendChild(row);
+    }
+
+    function showResponse(elId, data, isError) {
+        const el = document.getElementById(elId);
+        el.classList.remove('ok', 'err');
+        el.classList.add('show', isError ? 'err' : 'ok');
+        try {
+            el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        } catch (e) {
+            el.textContent = String(data);
+        }
+    }
+
+    async function callApi(url, options, responseElId) {
+        let res;
+        try {
+            res = await fetch(url, options);
+        } catch (err) {
+            showResponse(responseElId, 'Something went wrong. Please try again later.', true);
+            return;
+        }
+        let body;
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            body = await res.json();
+        } else {
+            body = await res.text();
+        }
+        if (!res.ok) {
+            showResponse(responseElId, 'Something went wrong. Please try again later.', true);
+            return;
+        }
+        showResponse(responseElId, { status: res.status, body }, false);
+    }
+
+    function createOrder() {
+        if (!requireAuth('createResponse')) return;
+        const customerId = Number(document.getElementById('createCustomerId').value);
+        const medicineIds = document.querySelectorAll('.itemMedicineId');
+        const quantities = document.querySelectorAll('.itemQuantity');
+        const items = [];
+        for (let i = 0; i < medicineIds.length; i++) {
+            if (medicineIds[i].value && quantities[i].value) {
+                items.push({
+                    medicineId: Number(medicineIds[i].value),
+                    quantity: Number(quantities[i].value)
+                });
+            }
+        }
+        const payload = { customerId, items };
+        callApi(baseUrl() + '/api/orders', authOptions({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }), 'createResponse');
+    }
+
+    function getOrder() {
+        if (!requireAuth('getResponse')) return;
+        const id = document.getElementById('getOrderId').value;
+        callApi(baseUrl() + '/api/orders/' + id, authOptions({ method: 'GET' }), 'getResponse');
+    }
+
+    function updateStatus() {
+        if (!requireAuth('statusResponse')) return;
+        const id = document.getElementById('statusOrderId').value;
+        const newStatus = document.getElementById('newStatus').value;
+        const reason = document.getElementById('statusReason').value;
+        const payload = { newStatus };
+        if (reason) payload.reason = reason;
+        callApi(baseUrl() + '/api/orders/' + id + '/status', authOptions({
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }), 'statusResponse');
+    }
+
+    function getCustomerOrders() {
+        if (!requireAuth('customerResponse')) return;
+        const id = document.getElementById('customerOrdersId').value;
+        callApi(baseUrl() + '/api/orders/customer/' + id, authOptions({ method: 'GET' }), 'customerResponse');
+    }
+
+    authenticate();
+</script>
+
+</body>
+</html>

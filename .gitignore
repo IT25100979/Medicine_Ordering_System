@@ -1,9 +1,22 @@
-# --- Maven / Spring Boot ---
+### Maven / Spring Boot ###
 target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
 build/
 .maven/
 *.class
 *.log
+
+### IntelliJ IDEA ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+.kotlin
+/.idea
+*.iml
+*.iws
+*.ipr
 
 # --- React / Vite / Node ---
 node_modules/
@@ -14,9 +27,6 @@ dist-ssr/
 # --- IDE Settings (VS Code & IntelliJ) ---
 .vscode/
 .idea/
-*.iml
-*.iws
-*.ipr
 .project
 .classpath
 .settings/
