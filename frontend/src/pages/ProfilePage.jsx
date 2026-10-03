@@ -20,7 +20,7 @@ const ProfilePage = () => {
           </div>
           <div>
             <span className="block text-sm text-gray-500 font-medium">Role</span>
-            <span className="inline-block bg-teal-100 text-teal-800 text-xs px-2 py-1 rounded mt-1">
+            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mt-1">
               {user?.role || 'CUSTOMER'}
             </span>
           </div>

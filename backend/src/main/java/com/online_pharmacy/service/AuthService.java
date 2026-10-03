@@ -8,6 +8,7 @@ import com.online_pharmacy.dto.UserResponse;
 import com.mediorder.model.Role;
 import com.mediorder.model.User;
 import com.online_pharmacy.repository.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -74,17 +75,52 @@ public class AuthService {
                     )
             );
 
+            User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            if (user.getRole() == Role.ADMIN) {
+                throw new AccessDeniedException("Access denied: Administrator accounts must log in via the Admin Portal.");
+            }
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             String token = tokenProvider.generateToken(authentication);
-
-            User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
             return AuthResponse.builder()
                     .token(token)
                     .tokenType("Bearer")
                     .message("Login successful")
+                    .user(mapToUserResponse(user))
+                    .build();
+        } catch (BadCredentialsException ex) {
+            throw new BadCredentialsException("Invalid email or password");
+        }
+    }
+
+    public AuthResponse adminLogin(AuthRequest request) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail().trim().toLowerCase(),
+                            request.getPassword()
+                    )
+            );
+
+            User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            if (user.getRole() != Role.ADMIN) {
+                throw new AccessDeniedException("Access denied: Customer accounts cannot log in through the Admin Portal.");
+            }
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            String token = tokenProvider.generateToken(authentication);
+
+            return AuthResponse.builder()
+                    .token(token)
+                    .tokenType("Bearer")
+                    .message("Admin login successful")
                     .user(mapToUserResponse(user))
                     .build();
         } catch (BadCredentialsException ex) {

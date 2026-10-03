@@ -16,7 +16,7 @@ public class Delivery {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private Long userId;
 
     @Column(columnDefinition = "TEXT")
@@ -38,7 +38,27 @@ public class Delivery {
     private LocalDate finalDate;
 
     @Column(nullable = false)
-    private String status;
+    @Builder.Default
+    private String status = "PENDING";
+
+    @PrePersist
+    public void prePersist() {
+        if (this.status == null || this.status.trim().isEmpty()) {
+            this.status = "PENDING";
+        }
+        if (this.coldChainTag == null) {
+            this.coldChainTag = false;
+        }
+        if (this.userId == null) {
+            this.userId = 1L;
+        }
+        if (this.initialDate == null) {
+            this.initialDate = LocalDate.now();
+        }
+        if (this.finalDate == null) {
+            this.finalDate = this.initialDate.plusDays(2);
+        }
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

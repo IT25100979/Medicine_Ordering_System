@@ -87,7 +87,17 @@ CREATE TABLE IF NOT EXISTS deliveries (
     cold_chain_tag BOOLEAN DEFAULT FALSE,
     initial_date DATE,
     final_date DATE,
-    status VARCHAR(50) DEFAULT 'PENDING'
+);
+
+CREATE TABLE IF NOT EXISTS delivery_zones (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    city VARCHAR(255) NOT NULL,
+    postal_code VARCHAR(50) NOT NULL,
+    is_active INT NOT NULL DEFAULT 1,
+    delivery_fee DOUBLE NOT NULL,
+    estimated_delivery_time INT,
+    esitmated_delivery_time INT,
+    created_at DATE
 );
 
 CREATE TABLE IF NOT EXISTS cold_chain_telemetry (

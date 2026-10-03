@@ -6,8 +6,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import AdminLoginPage from './pages/AdminLoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import CatalogPage from './pages/CatalogPage';
 
 // Module Pages
 import PrescriptionPage from './pages/modules/PrescriptionPage';
@@ -23,11 +25,13 @@ const App = () => {
       <BrowserRouter>
         <div className="min-h-screen flex flex-col">
           <Navbar />
-          <main className="flex-grow bg-gray-50">
+          <main className="flex-grow bg-[#f9f9ff]">
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<HomePage />} />
+              <Route path="/catalog" element={<CatalogPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/login/admin" element={<AdminLoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               
               {/* Protected Routes */}
@@ -38,6 +42,7 @@ const App = () => {
               } />
 
               {/* Module Routes */}
+              <Route path="/prescription" element={<PrescriptionPage />} />
               <Route path="/modules/prescription" element={<PrescriptionPage />} />
               <Route path="/modules/inventory" element={<InventoryPage />} />
               <Route path="/modules/orders" element={<OrderProcessingPage />} />

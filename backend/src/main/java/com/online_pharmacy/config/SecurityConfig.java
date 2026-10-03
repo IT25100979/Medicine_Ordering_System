@@ -3,6 +3,7 @@ package com.online_pharmacy.config;
 import com.online_pharmacy.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -64,11 +65,32 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/health",
                                 "/api/v1/health",
-                                "/api/v1/auth/**",
                                 "/api/auth/**",
+                                "/api/v1/auth/**",
+                                "/api/delivery-zones",
+                                "/api/delivery-zones/**",
+                                "/api/v1/delivery-zones",
+                                "/api/v1/delivery-zones/**",
+                                "/api/prescriptions/files/**",
+                                "/api/v1/prescriptions/files/**",
+                                "/api/medicines",
+                                "/api/medicines/**",
+                                "/api/v1/medicines",
+                                "/api/v1/medicines/**",
                                 "/error"
                         ).permitAll()
-                        .requestMatchers("/api/v1/deliveries", "/api/v1/deliveries/**").hasAnyRole("DELIVERY_COORDINATOR", "ADMIN", "CHIEF_PHARMACIST", "OPERATIONS_MANAGER")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/deliveries",
+                                "/api/deliveries/**",
+                                "/api/v1/deliveries",
+                                "/api/v1/deliveries/**"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/deliveries",
+                                "/api/deliveries/**",
+                                "/api/v1/deliveries",
+                                "/api/v1/deliveries/**"
+                        ).hasAnyRole("DELIVERY_COORDINATOR", "ADMIN", "CHIEF_PHARMACIST", "OPERATIONS_MANAGER", "DELIVERY_RIDER", "COORDINATOR")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

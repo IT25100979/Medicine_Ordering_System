@@ -28,4 +28,19 @@ public class PrescriptionItem {
 
     @Column(nullable = false)
     private Integer quantity;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Prescription getPrescription() { return prescription; }
+    public void setPrescription(Prescription prescription) { this.prescription = prescription; }
+
+    public Medicine getMedicine() { return medicine; }
+    public void setMedicine(Medicine medicine) { this.medicine = medicine; }
+
+    public String getPrescribedDosage() { return prescribedDosage; }
+    public void setPrescribedDosage(String prescribedDosage) { this.prescribedDosage = prescribedDosage; }
+
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
 }

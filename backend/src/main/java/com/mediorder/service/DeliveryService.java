@@ -14,6 +14,9 @@ public class DeliveryService {
     private DeliveryRepository deliveryRepository;
 
     public Delivery createDelivery(Delivery delivery) {
+        if (delivery.getStatus() == null || delivery.getStatus().trim().isEmpty()) {
+            delivery.setStatus("PENDING");
+        }
         return deliveryRepository.save(delivery);
     }
 
@@ -24,7 +27,9 @@ public class DeliveryService {
     public Delivery updateDeliveryStatus(Long id, String status) {
         Delivery delivery = deliveryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Delivery not found with id: " + id));
-        delivery.setStatus(status);
+        if (status != null && !status.trim().isEmpty()) {
+            delivery.setStatus(status.trim().toUpperCase());
+        }
         return deliveryRepository.save(delivery);
     }
 
