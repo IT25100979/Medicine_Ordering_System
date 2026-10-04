@@ -37,7 +37,9 @@ public class CustomUserDetailsService implements UserDetailsService {
             authorities.add(new SimpleGrantedAuthority("DELIVERY_COORDINATOR"));
             authorities.add(new SimpleGrantedAuthority("ROLE_COORDINATOR"));
             authorities.add(new SimpleGrantedAuthority("COORDINATOR"));
-        } else if (roleName.equalsIgnoreCase("ADMIN")) {
+        } else if (roleName.equalsIgnoreCase("ADMIN")
+                || roleName.equalsIgnoreCase("OPERATIONS_MANAGER")
+                || roleName.equalsIgnoreCase("FINANCE_MANAGER")) {
             authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
             authorities.add(new SimpleGrantedAuthority("ADMIN"));
         }

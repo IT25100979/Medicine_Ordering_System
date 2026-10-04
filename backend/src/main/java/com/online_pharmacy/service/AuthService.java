@@ -78,7 +78,7 @@ public class AuthService {
             User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            if (user.getRole() == Role.ADMIN) {
+            if (user.getRole() != null && user.getRole().isAdminRole()) {
                 throw new AccessDeniedException("Access denied: Administrator accounts must log in via the Admin Portal.");
             }
 
@@ -109,7 +109,7 @@ public class AuthService {
             User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            if (user.getRole() != Role.ADMIN) {
+            if (user.getRole() == null || !user.getRole().isAdminRole()) {
                 throw new AccessDeniedException("Access denied: Customer accounts cannot log in through the Admin Portal.");
             }
 

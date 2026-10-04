@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getAdminDashboardRoute } from '../utils/roleRoutes';
 
 const AdminLoginPage = () => {
   const { adminLogin } = useAuth();
@@ -18,8 +19,9 @@ const AdminLoginPage = () => {
     setLoading(true);
 
     try {
-      await adminLogin(email, password);
-      navigate('/');
+      const authData = await adminLogin(email, password);
+      const destination = getAdminDashboardRoute(authData?.user?.role) || '/admin/catalog';
+      navigate(destination);
     } catch (err) {
       console.error('Admin login error', err);
       const msg = err.response?.data?.message || err.message || 'Invalid administrator credentials. Access denied.';

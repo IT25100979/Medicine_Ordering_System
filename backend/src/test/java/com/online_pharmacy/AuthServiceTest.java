@@ -137,4 +137,78 @@ public class AuthServiceTest {
         assertTrue(ex.getMessage().contains("Customer accounts cannot log in through the Admin Portal"));
         verify(tokenProvider, never()).generateToken(any());
     }
+
+    @Test
+    void testAdminLogin_Success_WhenOperationsManager() {
+        User opsUser = User.builder()
+                .id(3L)
+                .email("ops@example.com")
+                .fullName("Ops Lead")
+                .role(Role.OPERATIONS_MANAGER)
+                .phoneNumber("0773333333")
+                .build();
+        AuthRequest request = new AuthRequest("ops@example.com", "adminpass123");
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(userRepository.findByEmail("ops@example.com"))
+                .thenReturn(Optional.of(opsUser));
+        when(tokenProvider.generateToken(authentication))
+                .thenReturn("mock-ops-token");
+
+        AuthResponse response = authService.adminLogin(request);
+
+        assertNotNull(response);
+        assertEquals("mock-ops-token", response.getToken());
+        assertEquals(Role.OPERATIONS_MANAGER, response.getUser().getRole());
+    }
+
+    @Test
+    void testAdminLogin_Success_WhenFinanceManager() {
+        User finUser = User.builder()
+                .id(4L)
+                .email("finance@example.com")
+                .fullName("Finance Chief")
+                .role(Role.FINANCE_MANAGER)
+                .phoneNumber("0774444444")
+                .build();
+        AuthRequest request = new AuthRequest("finance@example.com", "adminpass123");
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(userRepository.findByEmail("finance@example.com"))
+                .thenReturn(Optional.of(finUser));
+        when(tokenProvider.generateToken(authentication))
+                .thenReturn("mock-fin-token");
+
+        AuthResponse response = authService.adminLogin(request);
+
+        assertNotNull(response);
+        assertEquals("mock-fin-token", response.getToken());
+        assertEquals(Role.FINANCE_MANAGER, response.getUser().getRole());
+    }
+
+    @Test
+    void testUserLogin_ThrowsAccessDenied_WhenFinanceManager() {
+        User finUser = User.builder()
+                .id(4L)
+                .email("finance@example.com")
+                .fullName("Finance Chief")
+                .role(Role.FINANCE_MANAGER)
+                .phoneNumber("0774444444")
+                .build();
+        AuthRequest request = new AuthRequest("finance@example.com", "adminpass123");
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(userRepository.findByEmail("finance@example.com"))
+                .thenReturn(Optional.of(finUser));
+
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class, () -> {
+            authService.login(request);
+        });
+
+        assertTrue(ex.getMessage().contains("Administrator accounts must log in via the Admin Portal"));
+        verify(tokenProvider, never()).generateToken(any());
+    }
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getAdminDashboardRoute } from '../utils/roleRoutes';
 
 const LoginPage = () => {
   const { login } = useAuth();
@@ -18,8 +19,13 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/');
+      const authData = await login(email, password);
+      const adminDest = getAdminDashboardRoute(authData?.user?.role);
+      if (adminDest) {
+        navigate(adminDest);
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       console.error('Login error', err);
       const msg = err.response?.data?.message || err.message || 'Invalid email or password. Please try again.';

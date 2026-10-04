@@ -8,7 +8,7 @@ const PrescriptionPage = () => {
   const fileInputRef = useRef(null);
 
   // Active view tab: 'upload' | 'my-prescriptions' | 'verification-queue' | 'retention'
-  const isStaff = user && ['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN', 'OPERATIONS_MANAGER'].includes(user.role);
+  const isStaff = user && ['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN', 'OPERATIONS_MANAGER', 'FINANCE_MANAGER'].includes(user.role);
   const [activeTab, setActiveTab] = useState(isStaff ? 'verification-queue' : 'upload');
 
   // --- Upload State ---

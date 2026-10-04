@@ -15,5 +15,11 @@ public interface MedicineRepository extends JpaRepository<Medicine, Long> {
 
     List<Medicine> findByRequiresPrescription(Boolean requiresPrescription);
 
+    List<Medicine> findByCategoryIgnoreCase(String category);
+
     Optional<Medicine> findBySku(String sku);
+
+    boolean existsBySku(String sku);
+
+    long countByStockQuantityLessThanEqual(Integer threshold);
 }

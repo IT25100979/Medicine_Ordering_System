@@ -175,19 +175,19 @@ const RegisterPage = () => {
                 <label className="block text-xs font-bold uppercase tracking-wider text-on-surface">
                   Account Role
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['CUSTOMER', 'PHARMACIST', 'ADMIN'].map((r) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {['CUSTOMER', 'PHARMACIST', 'ADMIN', 'OPERATIONS_MANAGER', 'FINANCE_MANAGER'].map((r) => (
                     <button
                       key={r}
                       type="button"
                       onClick={() => setRole(r)}
-                      className={`h-9 rounded-full text-xs font-bold uppercase tracking-wider border transition-colors ${
+                      className={`h-8 px-3 rounded-full text-[11px] font-bold uppercase tracking-wider border transition-colors ${
                         role === r
                           ? 'bg-black text-white border-black'
                           : 'bg-surface-container-low text-on-surface border-brand-border hover:bg-surface-container'
                       }`}
                     >
-                      {r}
+                      {r.replace('_', ' ')}
                     </button>
                   ))}
                 </div>

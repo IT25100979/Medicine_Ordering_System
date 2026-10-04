@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { isStaffRole, getAdminDashboardRoute, ADMIN_ROLE_LABELS, ADMIN_WORKSPACE_NAMES } from '../utils/roleRoutes';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -11,6 +12,83 @@ const Navbar = () => {
     return location.pathname.startsWith(path);
   };
 
+  const isAdmin = isAuthenticated && isStaffRole(user?.role);
+  const dashboardRoute = getAdminDashboardRoute(user?.role) || '/admin/catalog';
+  const roleLabel = ADMIN_ROLE_LABELS[user?.role] || user?.role || 'Staff';
+  const workspaceTitle = ADMIN_WORKSPACE_NAMES[user?.role] || 'Management Console';
+
+  // -------------------------------------------------------------
+  // ADMIN DASHBOARD TOPBAR (Strictly for Administrator / Staff Accounts)
+  // Completely removes regular user navigation panels, public links & storefront controls
+  // -------------------------------------------------------------
+  if (isAdmin) {
+    return (
+      <header className="fixed top-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 text-white">
+        <div className="h-16 max-w-[1536px] mx-auto px-4 md:px-8 flex items-center justify-between">
+          
+          {/* Left: Brand & Admin Console Identifier */}
+          <div className="flex items-center gap-3">
+            <Link
+              to={dashboardRoute}
+              className="font-sans text-xl font-black tracking-tight uppercase flex items-center gap-1.5 text-white group"
+            >
+              <span>PILLS</span>
+              <span className="w-2 h-2 rounded-full bg-amber-400 group-hover:scale-125 transition-transform"></span>
+            </Link>
+
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-extrabold uppercase tracking-widest">
+              <span className="material-symbols-outlined text-[12px]">security</span>
+              <span>ADMIN CONSOLE</span>
+            </span>
+          </div>
+
+          {/* Center: Current Workspace Context Indicator */}
+          <div className="hidden md:flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+              {workspaceTitle}
+            </span>
+          </div>
+
+          {/* Right: Assigned Dashboard Action, User Pill & Logout */}
+          <div className="flex items-center gap-3">
+            <Link
+              to={dashboardRoute}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full transition-all border ${
+                isActive(dashboardRoute)
+                  ? 'bg-amber-400 text-black border-amber-400 shadow-sm font-black'
+                  : 'bg-zinc-900 text-zinc-200 border-zinc-700 hover:bg-zinc-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">space_dashboard</span>
+              <span className="hidden sm:inline">My Dashboard</span>
+            </Link>
+
+            <div className="flex items-center gap-2 pl-2 border-l border-zinc-800">
+              <div className="inline-flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-xs font-semibold text-zinc-200">
+                <span className="max-w-[120px] truncate">{user?.fullName || 'Admin'}</span>
+                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-amber-400 text-black font-extrabold">
+                  {roleLabel}
+                </span>
+              </div>
+
+              <button
+                onClick={logout}
+                title="Log Out of Admin Console"
+                className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-red-500/20 hover:text-red-400 text-zinc-400 flex items-center justify-center transition-colors border border-zinc-800"
+              >
+                <span className="material-symbols-outlined text-[16px]">logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // REGULAR USER / CUSTOMER NAVBAR
+  // -------------------------------------------------------------
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/85 backdrop-blur-md border-b border-brand-border/60">
       <div className="h-20 max-w-[1280px] mx-auto px-4 md:px-8 flex items-center justify-between">

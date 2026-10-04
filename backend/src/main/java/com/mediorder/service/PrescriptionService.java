@@ -48,7 +48,7 @@ public class PrescriptionService {
     private boolean isStaffUser(User user) {
         if (user == null || user.getRole() == null) return false;
         Role r = user.getRole();
-        return r == Role.PHARMACIST || r == Role.CHIEF_PHARMACIST || r == Role.ADMIN || r == Role.OPERATIONS_MANAGER;
+        return r == Role.PHARMACIST || r == Role.CHIEF_PHARMACIST || r == Role.ADMIN || r == Role.OPERATIONS_MANAGER || r == Role.FINANCE_MANAGER;
     }
 
     public PrescriptionResponse uploadPrescription(

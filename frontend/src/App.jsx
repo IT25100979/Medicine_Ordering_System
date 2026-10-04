@@ -10,6 +10,9 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import CatalogPage from './pages/CatalogPage';
+import ProductDetailPage from './pages/ProductDetailPage';
+import OperationsCatalogDashboard from './pages/OperationsCatalogDashboard';
+import PharmacistPrescriptionDashboard from './pages/PharmacistPrescriptionDashboard';
 
 // Module Pages
 import PrescriptionPage from './pages/modules/PrescriptionPage';
@@ -30,6 +33,8 @@ const App = () => {
               {/* Public Routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/catalog" element={<CatalogPage />} />
+              <Route path="/catalog/:id" element={<ProductDetailPage />} />
+              <Route path="/product/:id" element={<ProductDetailPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/admin" element={<AdminLoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
@@ -38,6 +43,18 @@ const App = () => {
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/admin/catalog" element={
+                <ProtectedRoute allowedRoles={['OPERATIONS_MANAGER']}>
+                  <OperationsCatalogDashboard />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/admin/prescriptions" element={
+                <ProtectedRoute allowedRoles={['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN']}>
+                  <PharmacistPrescriptionDashboard />
                 </ProtectedRoute>
               } />
 

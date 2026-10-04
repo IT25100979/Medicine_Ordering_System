@@ -7,5 +7,10 @@ public enum Role {
     ADMIN,
     DELIVERY_COORDINATOR,
     CHIEF_PHARMACIST,
-    OPERATIONS_MANAGER
+    OPERATIONS_MANAGER,
+    FINANCE_MANAGER;
+
+    public boolean isAdminRole() {
+        return this != CUSTOMER;
+    }
 }

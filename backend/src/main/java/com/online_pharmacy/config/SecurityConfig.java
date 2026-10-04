@@ -73,12 +73,24 @@ public class SecurityConfig {
                                 "/api/v1/delivery-zones/**",
                                 "/api/prescriptions/files/**",
                                 "/api/v1/prescriptions/files/**",
+                                "/error"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/medicines/stats",
+                                "/api/v1/medicines/stats"
+                        ).hasRole("OPERATIONS_MANAGER")
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/medicines",
                                 "/api/medicines/**",
                                 "/api/v1/medicines",
-                                "/api/v1/medicines/**",
-                                "/error"
+                                "/api/v1/medicines/**"
                         ).permitAll()
+                        .requestMatchers(
+                                "/api/medicines",
+                                "/api/medicines/**",
+                                "/api/v1/medicines",
+                                "/api/v1/medicines/**"
+                        ).hasRole("OPERATIONS_MANAGER")
                         .requestMatchers(HttpMethod.GET,
                                 "/api/deliveries",
                                 "/api/deliveries/**",
@@ -90,7 +102,7 @@ public class SecurityConfig {
                                 "/api/deliveries/**",
                                 "/api/v1/deliveries",
                                 "/api/v1/deliveries/**"
-                        ).hasAnyRole("DELIVERY_COORDINATOR", "ADMIN", "CHIEF_PHARMACIST", "OPERATIONS_MANAGER", "DELIVERY_RIDER", "COORDINATOR")
+                        ).hasAnyRole("DELIVERY_COORDINATOR", "ADMIN", "CHIEF_PHARMACIST", "OPERATIONS_MANAGER", "FINANCE_MANAGER", "DELIVERY_RIDER", "COORDINATOR")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
