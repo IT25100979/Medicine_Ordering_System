@@ -61,7 +61,7 @@ public class MedicineController {
     }
 
     @PostMapping("/batch-price-update")
-    @PreAuthorize("hasRole('OPERATIONS_MANAGER')")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> batchPriceUpdate(
             @RequestParam BigDecimal percentageChange,
             @RequestParam(required = false) String category) {
@@ -70,5 +70,51 @@ public class MedicineController {
                 "message", "Successfully adjusted prices by " + percentageChange + "%",
                 "affectedCount", updatedCount
         ));
+    }
+
+    @PatchMapping("/{id}/stock")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'ADMIN')")
+    public ResponseEntity<Medicine> quickAdjustStock(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
+        Medicine updated = medicineService.quickAdjustStock(id, updates);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping("/{id}/stock")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'ADMIN')")
+    public ResponseEntity<Medicine> quickAdjustStockPut(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
+        Medicine updated = medicineService.quickAdjustStock(id, updates);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/{id}/quarantine")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'ADMIN')")
+    public ResponseEntity<Medicine> toggleQuarantine(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Boolean quarantined = body != null && body.containsKey("isQuarantined")
+                ? Boolean.valueOf(String.valueOf(body.get("isQuarantined")))
+                : null;
+        String reason = body != null && body.containsKey("reason")
+                ? String.valueOf(body.get("reason"))
+                : "Operational inspection";
+        Medicine updated = medicineService.toggleQuarantine(id, quarantined, reason);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/{id}/reorder")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> reorderStock(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body,
+            java.security.Principal principal) {
+        Integer quantity = body != null && body.containsKey("quantity") && body.get("quantity") != null
+                ? Integer.valueOf(String.valueOf(body.get("quantity")))
+                : null;
+        String notes = body != null && body.containsKey("notes")
+                ? String.valueOf(body.get("notes"))
+                : "";
+        String userEmail = principal != null ? principal.getName() : "system";
+        Map<String, Object> po = medicineService.createReorderPO(id, quantity, notes, userEmail);
+        return ResponseEntity.ok(po);
     }
 }

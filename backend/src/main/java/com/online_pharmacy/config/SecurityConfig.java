@@ -71,6 +71,10 @@ public class SecurityConfig {
                                 "/api/delivery-zones/**",
                                 "/api/v1/delivery-zones",
                                 "/api/v1/delivery-zones/**",
+                                "/api/cart",
+                                "/api/cart/**",
+                                "/api/v1/cart",
+                                "/api/v1/cart/**",
                                 "/api/prescriptions/files/**",
                                 "/api/v1/prescriptions/files/**",
                                 "/error"

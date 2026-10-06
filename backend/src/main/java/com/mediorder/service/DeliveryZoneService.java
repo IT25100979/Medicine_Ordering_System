@@ -23,16 +23,24 @@ public class DeliveryZoneService {
         return deliveryZoneRepository.findById(id);
     }
 
-    public Optional<DeliveryZone> checkCity(String city) {
-        if (city == null || city.trim().isEmpty()) {
+    public Optional<DeliveryZone> checkCity(String query) {
+        if (query == null || query.trim().isEmpty()) {
             return Optional.empty();
         }
-        String trimmed = city.trim();
+        String trimmed = query.trim();
         Optional<DeliveryZone> zone = deliveryZoneRepository.findByNormalizedCity(trimmed);
         if (zone.isPresent()) {
             return zone;
         }
-        return deliveryZoneRepository.findByCityIgnoreCase(trimmed);
+        zone = deliveryZoneRepository.findByCityIgnoreCase(trimmed);
+        if (zone.isPresent()) {
+            return zone;
+        }
+        zone = deliveryZoneRepository.findByPostalCodeIgnoreCase(trimmed);
+        if (zone.isPresent()) {
+            return zone;
+        }
+        return deliveryZoneRepository.findByCityOrPostalCode(trimmed);
     }
 
     public DeliveryZone saveDeliveryZone(DeliveryZone zone) {

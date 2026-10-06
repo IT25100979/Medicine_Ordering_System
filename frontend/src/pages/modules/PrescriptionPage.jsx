@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
 const PrescriptionPage = () => {
   const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (user && (user.role === 'PHARMACIST' || user.role === 'CHIEF_PHARMACIST')) {
+      navigate('/pharmacist_dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   // Active view tab: 'upload' | 'my-prescriptions' | 'verification-queue' | 'retention'
   const isStaff = user && ['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN', 'OPERATIONS_MANAGER', 'FINANCE_MANAGER'].includes(user.role);

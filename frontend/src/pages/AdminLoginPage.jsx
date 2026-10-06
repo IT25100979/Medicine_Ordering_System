@@ -32,8 +32,8 @@ const AdminLoginPage = () => {
   };
 
   return (
-    <div className="pt-20 min-h-screen flex flex-col justify-between bg-background">
-      <div className="w-full flex flex-col lg:flex-row min-h-[calc(100vh-5rem)]">
+    <div className="min-h-screen flex flex-col justify-between bg-background">
+      <div className="w-full flex flex-col lg:flex-row min-h-screen">
         
         {/* Left 2/3: Administrator & Clinical Operations Showcase */}
         <div className="relative w-full lg:w-2/3 h-64 sm:h-96 lg:h-auto min-h-[300px] lg:min-h-full overflow-hidden bg-gradient-to-br from-slate-950 via-zinc-900 to-black flex flex-col justify-between p-6 sm:p-10 lg:p-16 border-r border-zinc-800">
@@ -43,7 +43,7 @@ const AdminLoginPage = () => {
           <div className="relative z-10 self-start">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-sm text-white">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-              <span className="text-xs font-bold tracking-tight">PILLS • Operations & Administrative Console</span>
+              <span className="text-xs font-bold tracking-tight">PHARMA + • Operations & Administrative Console</span>
             </div>
           </div>
 

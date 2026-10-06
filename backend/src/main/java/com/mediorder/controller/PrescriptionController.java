@@ -52,9 +52,10 @@ public class PrescriptionController {
     public ResponseEntity<List<PrescriptionResponse>> getAllPrescriptions(
             @RequestParam(value = "status", required = false) PrescriptionStatus status,
             @RequestParam(value = "chronicOnly", required = false, defaultValue = "false") Boolean chronicOnly,
+            @RequestParam(value = "search", required = false) String search,
             Authentication authentication) {
 
-        return ResponseEntity.ok(prescriptionService.getAllPrescriptions(status, chronicOnly, authentication));
+        return ResponseEntity.ok(prescriptionService.getAllPrescriptions(status, chronicOnly, search, authentication));
     }
 
     @GetMapping("/{id}")

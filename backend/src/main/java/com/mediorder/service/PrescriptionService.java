@@ -2,10 +2,13 @@ package com.mediorder.service;
 
 import com.mediorder.dto.PrescriptionResponse;
 import com.mediorder.dto.PrescriptionVerificationRequest;
+import com.mediorder.model.Notification;
+import com.mediorder.model.NotificationChannel;
 import com.mediorder.model.Prescription;
 import com.mediorder.model.PrescriptionStatus;
 import com.mediorder.model.Role;
 import com.mediorder.model.User;
+import com.mediorder.repository.NotificationRepository;
 import com.mediorder.repository.PrescriptionRepository;
 import com.online_pharmacy.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +36,9 @@ public class PrescriptionService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired(required = false)
+    private NotificationRepository notificationRepository;
 
     @Value("${app.upload.auto-delete-rejected-files:false}")
     private boolean autoDeleteRejectedFiles;
@@ -85,6 +91,15 @@ public class PrescriptionService {
             PrescriptionStatus status,
             Boolean chronicOnly,
             Authentication authentication) {
+        return getAllPrescriptions(status, chronicOnly, null, authentication);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PrescriptionResponse> getAllPrescriptions(
+            PrescriptionStatus status,
+            Boolean chronicOnly,
+            String search,
+            Authentication authentication) {
 
         User currentUser = getAuthenticatedUser(authentication);
         List<Prescription> list;
@@ -98,6 +113,15 @@ public class PrescriptionService {
             }
         } else {
             // Staff: Pharmacist / Admin
+            if (search != null && !search.trim().isEmpty()) {
+                // When search is requested by staff, search across ALL prescriptions in the DB (Approved, Rejected, Pending, Chronic)
+                String q = search.trim().toLowerCase();
+                return prescriptionRepository.findAllByOrderByCreatedAtDesc().stream()
+                        .filter(p -> matchesPrescriptionSearch(p, q))
+                        .map(PrescriptionResponse::fromEntity)
+                        .collect(Collectors.toList());
+            }
+
             if (Boolean.TRUE.equals(chronicOnly)) {
                 list = prescriptionRepository.findByChronicSubscriptionTrueOrderByCreatedAtDesc();
             } else if (status != null) {
@@ -107,9 +131,27 @@ public class PrescriptionService {
             }
         }
 
+        if (search != null && !search.trim().isEmpty()) {
+            String q = search.trim().toLowerCase();
+            list = list.stream()
+                    .filter(p -> matchesPrescriptionSearch(p, q))
+                    .collect(Collectors.toList());
+        }
+
         return list.stream()
                 .map(PrescriptionResponse::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    private boolean matchesPrescriptionSearch(Prescription p, String q) {
+        if (p == null) return false;
+        boolean matchId = p.getId() != null && String.valueOf(p.getId()).contains(q);
+        boolean matchCustId = p.getCustomer() != null && p.getCustomer().getId() != null && String.valueOf(p.getCustomer().getId()).contains(q);
+        boolean matchCustEmail = p.getCustomer() != null && p.getCustomer().getEmail() != null && p.getCustomer().getEmail().toLowerCase().contains(q);
+        boolean matchCustName = p.getCustomer() != null && p.getCustomer().getFullName() != null && p.getCustomer().getFullName().toLowerCase().contains(q);
+        boolean matchDoctor = p.getDoctorName() != null && p.getDoctorName().toLowerCase().contains(q);
+        boolean matchStatus = p.getStatus() != null && p.getStatus().name().toLowerCase().contains(q);
+        return matchId || matchCustId || matchCustEmail || matchCustName || matchDoctor || matchStatus;
     }
 
     @Transactional(readOnly = true)
@@ -138,6 +180,10 @@ public class PrescriptionService {
         Prescription p = prescriptionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
 
+        if (p.getStatus() != PrescriptionStatus.PENDING) {
+            throw new IllegalStateException("Prescription #" + id + " has already been finalized as " + p.getStatus() + " and cannot be re-reviewed.");
+        }
+
         if (request.getStatus() == null) {
             throw new IllegalArgumentException("Verification status must be either APPROVED or REJECTED.");
         }
@@ -150,6 +196,24 @@ public class PrescriptionService {
 
         // Conditional Auto-Deletion Logic
         if (request.getStatus() == PrescriptionStatus.REJECTED) {
+            // Send user notification with rejection reason
+            if (p.getCustomer() != null && notificationRepository != null) {
+                String reasonText = (request.getRejectionReason() != null && !request.getRejectionReason().isBlank())
+                        ? request.getRejectionReason()
+                        : "Requirements not met";
+                String notesText = (request.getVerificationNotes() != null && !request.getVerificationNotes().isBlank())
+                        ? " - " + request.getVerificationNotes()
+                        : "";
+                Notification rejectionNotification = new Notification();
+                rejectionNotification.setRecipient(p.getCustomer());
+                rejectionNotification.setTitle("Prescription #" + p.getId() + " Review Notice: Rejected");
+                rejectionNotification.setMessage("Your prescription was reviewed and rejected. Reason: " + reasonText + notesText);
+                rejectionNotification.setChannel(NotificationChannel.IN_APP);
+                rejectionNotification.setIsRead(false);
+                rejectionNotification.setSentAt(LocalDateTime.now());
+                notificationRepository.save(rejectionNotification);
+            }
+
             // Chronic Subscription Check:
             // If chronicSubscription is TRUE, the prescription and its file MUST be preserved
             // until a pharmacist/administrator explicitly deletes it.
@@ -163,6 +227,17 @@ public class PrescriptionService {
                     p.setIsFileDeleted(true);
                     p.setFileUrl("[FILE_AUTO_DELETED_UPON_REJECTION]");
                 }
+            }
+        } else if (request.getStatus() == PrescriptionStatus.APPROVED) {
+            if (p.getCustomer() != null && notificationRepository != null) {
+                Notification approvalNotification = new Notification();
+                approvalNotification.setRecipient(p.getCustomer());
+                approvalNotification.setTitle("Prescription #" + p.getId() + " Approved");
+                approvalNotification.setMessage("Your prescription #" + p.getId() + " has been approved by our licensed clinical pharmacist and is cleared for dispensing.");
+                approvalNotification.setChannel(NotificationChannel.IN_APP);
+                approvalNotification.setIsRead(false);
+                approvalNotification.setSentAt(LocalDateTime.now());
+                notificationRepository.save(approvalNotification);
             }
         }
 

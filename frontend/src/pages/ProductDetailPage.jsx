@@ -380,7 +380,7 @@ const ProductDetailPage = () => {
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-emerald-700 text-[26px]">medical_services</span>
                 <div>
-                  <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">PILLS Doctor &amp; Pharmacist Quality Seal</p>
+                  <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">PHARMA + Doctor &amp; Pharmacist Quality Seal</p>
                   <p className="text-[11px] text-zinc-600">Every lot audited for cellular bioavailability and heavy-metal purity.</p>
                 </div>
               </div>
@@ -404,7 +404,7 @@ const ProductDetailPage = () => {
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className="text-[10px] uppercase tracking-widest text-emerald-800 font-extrabold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                    PILLS CLINICAL LAB • FORMULATED
+                    PHARMA + CLINICAL LAB • FORMULATED
                   </span>
                   <span className="text-[11px] text-zinc-500 font-mono">{product.sku || 'SKU-0914-MED'}</span>
                 </div>
@@ -441,11 +441,11 @@ const ProductDetailPage = () => {
               <div className="pt-2 border-t border-brand-border">
                 <div className="flex items-baseline gap-2.5">
                   <span className="text-3xl font-black text-brand-charcoal">
-                    ${unitPrice.toFixed(2)}
+                    LKR {unitPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   {product.msrp > unitPrice && (
                     <span className="text-base text-zinc-400 line-through">
-                      ${(product.msrp * sizeMultiplier).toFixed(2)}
+                      LKR {(product.msrp * sizeMultiplier).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   )}
                   <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
@@ -454,8 +454,8 @@ const ProductDetailPage = () => {
                 </div>
                 <p className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1">
                   <span>or 4 interest-free payments of</span>
-                  <strong className="text-black">${klarnaInstallment}</strong>
-                  <span>with Klarna / Afterpay</span>
+                  <strong className="text-black">LKR {(unitPrice / 4).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  <span>with installment plans</span>
                 </p>
               </div>
 
@@ -502,7 +502,7 @@ const ProductDetailPage = () => {
                   >
                     <p className="text-xs font-bold text-zinc-900">60 Units</p>
                     <p className="text-[10px] text-zinc-500">30-Day</p>
-                    <p className="text-xs font-black text-zinc-900 mt-1">${(product.price * 0.65).toFixed(2)}</p>
+                    <p className="text-xs font-black text-zinc-900 mt-1">LKR {(product.price * 0.65).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
 
                   <div
@@ -521,7 +521,7 @@ const ProductDetailPage = () => {
                     </span>
                     <p className="text-xs font-bold text-zinc-900">120 Units</p>
                     <p className="text-[10px] text-zinc-500">60-Day</p>
-                    <p className="text-xs font-black text-zinc-900 mt-1">${product.price.toFixed(2)}</p>
+                    <p className="text-xs font-black text-zinc-900 mt-1">LKR {product.price.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
 
                   <div
@@ -537,7 +537,7 @@ const ProductDetailPage = () => {
                   >
                     <p className="text-xs font-bold text-zinc-900">240 Units</p>
                     <p className="text-[10px] text-zinc-500">120-Day</p>
-                    <p className="text-xs font-black text-zinc-900 mt-1">${(product.price * 1.85).toFixed(2)}</p>
+                    <p className="text-xs font-black text-zinc-900 mt-1">LKR {(product.price * 1.85).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                 </div>
               </div>
@@ -560,7 +560,7 @@ const ProductDetailPage = () => {
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-zinc-900">One-Time Delivery</span>
-                      <span className="text-xs font-black text-zinc-900">${basePrice.toFixed(2)}</span>
+                      <span className="text-xs font-black text-zinc-900">LKR {basePrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <p className="text-[11px] text-zinc-500 mt-0.5">Standard single shipment with zero recurring obligation.</p>
                   </div>
@@ -585,7 +585,7 @@ const ProductDetailPage = () => {
                         <span>Subscribe &amp; Save 15%</span>
                         <span className="text-[9px] uppercase px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded font-black">Popular</span>
                       </span>
-                      <span className="text-xs font-black text-emerald-800">${(basePrice * 0.85).toFixed(2)}</span>
+                      <span className="text-xs font-black text-emerald-800">LKR {(basePrice * 0.85).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <p className="text-[11px] text-zinc-500 mt-0.5">Auto-refilled every 60 days. Pause or cancel anytime in your account.</p>
                   </div>
@@ -648,7 +648,7 @@ const ProductDetailPage = () => {
                     <span>Proceed to Checkout</span>
                   </span>
                   <span className="inline-flex items-center gap-2 font-black text-sm">
-                    <span>${totalPrice.toFixed(2)}</span>
+                    <span>LKR {totalPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
                       arrow_forward
                     </span>
@@ -906,11 +906,13 @@ const ProductDetailPage = () => {
                     <h4 className="text-xs font-black text-brand-charcoal truncate">{product.name}</h4>
                     <p className="text-[11px] text-zinc-500">{selectedSizeLabel} • {selectedForm}</p>
                     <p className="text-xs font-bold text-black mt-1">
-                      ${unitPrice.toFixed(2)} × {quantity} unit{quantity > 1 ? 's' : ''}
+                      LKR {unitPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} × {quantity} unit{quantity > 1 ? 's' : ''}
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-black text-brand-charcoal">${totalPrice.toFixed(2)}</span>
+                    <span className="text-sm font-black text-brand-charcoal">
+                      LKR {totalPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </div>
                 </div>
 
@@ -1024,15 +1026,15 @@ const ProductDetailPage = () => {
                 <div className="pt-2 border-t border-brand-border space-y-1.5 text-xs">
                   <div className="flex justify-between text-zinc-600">
                     <span>Subtotal ({quantity} items):</span>
-                    <span>${totalPrice.toFixed(2)}</span>
+                    <span>LKR {totalPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-emerald-800 font-semibold">
                     <span>Insulated Cold-Chain Shipping:</span>
-                    <span>$0.00 (Free)</span>
+                    <span>LKR 0.00 (Free)</span>
                   </div>
                   <div className="flex justify-between text-sm font-black text-black pt-1 border-t border-brand-border">
                     <span>Total Amount:</span>
-                    <span>${totalPrice.toFixed(2)}</span>
+                    <span>LKR {totalPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
@@ -1042,7 +1044,7 @@ const ProductDetailPage = () => {
                   className="w-full h-12 rounded-full bg-black hover:bg-zinc-800 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all active:scale-[0.99]"
                 >
                   <span className="material-symbols-outlined text-[16px] text-amber-400">lock</span>
-                  <span>Pay &amp; Complete Order (${totalPrice.toFixed(2)})</span>
+                  <span>Pay &amp; Complete Order (LKR {totalPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
                 </button>
               </form>
             )}
@@ -1089,7 +1091,7 @@ const ProductDetailPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-500">Amount Charged:</span>
-                    <span className="font-black text-black">${totalPrice.toFixed(2)}</span>
+                    <span className="font-black text-black">LKR {totalPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-emerald-800 font-semibold pt-1 border-t border-brand-border">
                     <span>Estimated Arrival:</span>

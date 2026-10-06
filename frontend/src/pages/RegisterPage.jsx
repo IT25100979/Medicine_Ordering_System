@@ -39,8 +39,8 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="pt-20 min-h-screen flex flex-col justify-between bg-background">
-      <div className="w-full flex flex-col lg:flex-row min-h-[calc(100vh-5rem)]">
+    <div className="min-h-screen flex flex-col justify-between bg-background">
+      <div className="w-full flex flex-col lg:flex-row min-h-screen">
         
         {/* Left 2/3: Clinical Visual Showcase */}
         <div className="relative w-full lg:w-2/3 h-64 sm:h-96 lg:h-auto min-h-[300px] lg:min-h-full overflow-hidden bg-gradient-to-br from-slate-900 via-brand-charcoal to-black flex flex-col justify-between p-6 sm:p-10 lg:p-16">
@@ -50,7 +50,7 @@ const RegisterPage = () => {
           <div className="relative z-10 self-start">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-sm text-white">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-xs font-bold tracking-tight">PILLS • Care Portal Onboarding</span>
+              <span className="text-xs font-bold tracking-tight">PHARMA + • Care Portal Onboarding</span>
             </div>
           </div>
 
@@ -87,14 +87,14 @@ const RegisterPage = () => {
 
             <div className="space-y-1 mb-5">
               <div className="flex items-center gap-1.5 text-black">
-                <span className="text-lg font-black tracking-tighter">PILLS</span>
+                <span className="text-lg font-black tracking-tighter">PHARMA +</span>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary-container"></span>
               </div>
               <h2 className="text-2xl font-black uppercase tracking-tight text-brand-charcoal">
                 Create your account
               </h2>
               <p className="text-xs text-on-surface-variant">
-                Join PILLS for streamlined prescription delivery and licensed pharmacist support.
+                Join PHARMA + for streamlined prescription delivery and licensed pharmacist support.
               </p>
             </div>
 

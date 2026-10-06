@@ -1,10 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { isStaffRole, getAdminDashboardRoute } from '../utils/roleRoutes';
+import client from '../api/client';
 
 const HomePage = () => {
   const { user, isAuthenticated } = useAuth();
+  const [dbProducts, setDbProducts] = useState({});
+
+  // Fetch live products for category 'Dietary & Vits' to link to actual database IDs
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCategoryProducts = async () => {
+      try {
+        const res = await client.get('/api/v1/medicines?category=Dietary%20%26%20Vits');
+        if (isMounted && res.data && Array.isArray(res.data)) {
+          const map = {};
+          res.data.forEach((p) => {
+            if (p.name) {
+              map[p.name.toLowerCase()] = p.id;
+            }
+          });
+          setDbProducts(map);
+        }
+      } catch (err) {
+        console.warn('Could not fetch live vitamins for landing page:', err);
+      }
+    };
+    fetchCategoryProducts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Helper to find DB ID by partial name
+  const getProductLink = (nameQuery, fallbackParam) => {
+    const key = Object.keys(dbProducts).find((k) => k.includes(nameQuery.toLowerCase()));
+    if (key && dbProducts[key]) {
+      return `/catalog/${dbProducts[key]}`;
+    }
+    return `/catalog?category=Dietary%20%26%20Vits${fallbackParam ? `&search=${fallbackParam}` : ''}`;
+  };
 
   // The landing page is strictly for regular customers and visitors.
   // Any logged-in administrator is automatically redirected into their specific dashboard.
@@ -14,7 +50,7 @@ const HomePage = () => {
   }
 
   return (
-    <div className="pt-24 pb-16 px-3 sm:px-5 md:px-8 max-w-[1580px] mx-auto selection:bg-black selection:text-white">
+    <div className="pt-28 pb-16 px-3 sm:px-5 md:px-8 max-w-[1580px] mx-auto selection:bg-black selection:text-white">
       {/* Master Canvas Container */}
       <main className="w-full bg-[#F6F7F9] rounded-[2.5rem] md:rounded-[3rem] p-4 sm:p-6 lg:p-8 shadow-2xl border border-white/70">
         <div className="space-y-8 lg:space-y-10">
@@ -507,13 +543,18 @@ const HomePage = () => {
           </section>
 
           {/* ========================================================= */}
-          {/* SECTION 6: DAILY ESSENTIALS & VITAMINS                    */}
+          {/* SECTION 6: DAILY ESSENTIALS & VITAMINS (2 Full Rows / 8 Items) */}
           {/* ========================================================= */}
           <section className="space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-xl font-extrabold uppercase tracking-tight text-gray-900">
-                Daily Essentials &amp; Vitamins
-              </h3>
+              <div>
+                <h3 className="text-xl font-extrabold uppercase tracking-tight text-gray-900">
+                  Daily Essentials &amp; Vitamins
+                </h3>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Clinical-grade daily formulations verified for cellular vitality and systemic health
+                </p>
+              </div>
               <Link
                 to="/catalog?category=Dietary%20%26%20Vits"
                 className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-black transition-colors flex items-center gap-1 group"
@@ -523,7 +564,11 @@ const HomePage = () => {
               </Link>
             </div>
 
+            {/* 8 Product Grid: 2 Rows x 4 Columns */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              
+              {/* ==================== ROW 1 ==================== */}
+
               {/* Item 1: Biotin Supplement */}
               <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
                 <div className="space-y-1">
@@ -540,7 +585,7 @@ const HomePage = () => {
                 <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
                   <p className="text-xs font-bold text-black">$56.00</p>
                   <Link
-                    to="/catalog?category=Dietary%20%26%20Vits"
+                    to={getProductLink('biotin', 'Biotin')}
                     className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
                   >
                     <span>Shop Now</span>
@@ -565,7 +610,7 @@ const HomePage = () => {
                 <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
                   <p className="text-xs font-bold text-black">$65.00</p>
                   <Link
-                    to="/catalog?category=Dietary%20%26%20Vits"
+                    to={getProductLink('goji', 'Goji')}
                     className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
                   >
                     <span>Shop Now</span>
@@ -590,7 +635,7 @@ const HomePage = () => {
                 <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
                   <p className="text-xs font-bold text-black">$84.00</p>
                   <Link
-                    to="/catalog?category=Dietary%20%26%20Vits"
+                    to={getProductLink('turmeric', 'Turmeric')}
                     className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
                   >
                     <span>Shop Now</span>
@@ -615,7 +660,7 @@ const HomePage = () => {
                 <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
                   <p className="text-xs font-bold text-black">$90.00</p>
                   <Link
-                    to="/catalog?category=Dietary%20%26%20Vits"
+                    to={getProductLink('cellular', 'Cellular')}
                     className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
                   >
                     <span>Shop Now</span>
@@ -623,6 +668,109 @@ const HomePage = () => {
                   </Link>
                 </div>
               </div>
+
+              {/* ==================== ROW 2 (NEW 2ND ROW) ==================== */}
+
+              {/* Item 5: Vitamin D3 + K2 (MK-7) */}
+              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
+                <div className="space-y-1">
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full inline-block">Immune &amp; Bone</span>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-amber-600 transition-colors">Vitamin D3 + K2</h4>
+                </div>
+                <div className="h-36 flex items-center justify-center py-2">
+                  <div className="w-16 h-28 bg-amber-50 rounded-2xl border-2 border-amber-300/70 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:rotate-2 transition-transform duration-300">
+                    <div className="w-10 h-3 bg-amber-200 rounded border border-amber-400" />
+                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-amber-800 uppercase shadow-xs">D3 + K2</div>
+                    <div className="w-6 h-1 bg-amber-400 rounded-full animate-pulse" />
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
+                  <p className="text-xs font-bold text-black">$38.00</p>
+                  <Link
+                    to={getProductLink('d3', 'Vitamin D3')}
+                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
+                  >
+                    <span>Shop Now</span>
+                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Item 6: Triple Strength Omega-3 */}
+              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
+                <div className="space-y-1">
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block">Heart &amp; Brain</span>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-blue-700 transition-colors">Omega-3 Fish Oil</h4>
+                </div>
+                <div className="h-36 flex items-center justify-center py-2">
+                  <div className="w-16 h-28 bg-blue-50 rounded-2xl border-2 border-blue-200/80 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-300">
+                    <div className="w-10 h-3 bg-blue-200 rounded border border-blue-300" />
+                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-blue-900 uppercase shadow-xs">Omega-3</div>
+                    <div className="w-6 h-1 bg-blue-400 rounded-full" />
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
+                  <p className="text-xs font-bold text-black">$48.00</p>
+                  <Link
+                    to={getProductLink('omega', 'Omega-3')}
+                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
+                  >
+                    <span>Shop Now</span>
+                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Item 7: Magnesium Glycinate */}
+              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
+                <div className="space-y-1">
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full inline-block">Sleep &amp; Muscle</span>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">Magnesium Chelate</h4>
+                </div>
+                <div className="h-36 flex items-center justify-center py-2">
+                  <div className="w-16 h-28 bg-purple-50 rounded-2xl border-2 border-purple-200/80 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:rotate-2 transition-transform duration-300">
+                    <div className="w-10 h-3 bg-purple-200 rounded border border-purple-300" />
+                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-purple-900 uppercase shadow-xs">Magnesium</div>
+                    <div className="w-6 h-1 bg-purple-400 rounded-full" />
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
+                  <p className="text-xs font-bold text-black">$34.00</p>
+                  <Link
+                    to={getProductLink('magnesium', 'Magnesium')}
+                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
+                  >
+                    <span>Shop Now</span>
+                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Item 8: Zinc Picolinate */}
+              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
+                <div className="space-y-1">
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full inline-block">Immune Shield</span>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-teal-700 transition-colors">Zinc Picolinate</h4>
+                </div>
+                <div className="h-36 flex items-center justify-center py-2">
+                  <div className="w-16 h-28 bg-teal-50 rounded-2xl border-2 border-teal-200/80 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-300">
+                    <div className="w-10 h-3 bg-teal-200 rounded border border-teal-300" />
+                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-teal-900 uppercase shadow-xs">Zinc 50mg</div>
+                    <div className="w-6 h-1 bg-teal-400 rounded-full" />
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
+                  <p className="text-xs font-bold text-black">$26.00</p>
+                  <Link
+                    to={getProductLink('zinc', 'Zinc')}
+                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
+                  >
+                    <span>Shop Now</span>
+                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+
             </div>
           </section>
 
@@ -670,7 +818,7 @@ const HomePage = () => {
             <div className="bg-white rounded-3xl p-6 border border-gray-200/80 flex flex-col justify-between min-h-[220px] hover:shadow-md transition-shadow group card-gleam">
               <div className="space-y-1">
                 <span className="text-[10px] uppercase font-bold tracking-widest text-gray-400">Social Media</span>
-                <h4 className="text-2xl font-extrabold text-black">@pills.co</h4>
+                <h4 className="text-2xl font-extrabold text-black">@pharma_plus</h4>
               </div>
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                 <div className="space-y-0.5">
@@ -691,8 +839,8 @@ const HomePage = () => {
           {/* ========================================================= */}
           <footer className="bg-[#F5F5CE] rounded-3xl p-8 sm:p-12 relative overflow-hidden border border-yellow-200/50">
             {/* Subtle Large Watermark Typography in Background */}
-            <div className="absolute -bottom-10 left-6 text-[110px] sm:text-[180px] font-black tracking-tighter text-black/5 pointer-events-none select-none uppercase">
-              PILLS
+            <div className="absolute -bottom-10 left-6 text-[100px] sm:text-[160px] font-black tracking-tighter text-black/5 pointer-events-none select-none uppercase">
+              PHARMA +
             </div>
 
             <div className="relative z-10 space-y-10">
@@ -701,7 +849,7 @@ const HomePage = () => {
                 <div className="space-y-2 text-center md:text-left">
                   <div className="flex items-center justify-center md:justify-start gap-2">
                     <span className="inline-block bg-black text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
-                      PILLS FOR PROVIDERS
+                      PHARMA + FOR PROVIDERS
                     </span>
                     <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
                       <span className="relative flex h-2 w-2">
@@ -744,9 +892,9 @@ const HomePage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pt-4 items-start">
                 {/* Col 1: Brand Info (4 cols) */}
                 <div className="lg:col-span-4 space-y-4">
-                  <div className="flex items-baseline space-x-3">
-                    <h2 className="text-3xl font-extrabold tracking-tight uppercase text-black">PILLS</h2>
-                    <span className="w-2.5 h-2.5 rounded-full bg-black animate-pulse" />
+                  <div className="flex items-baseline space-x-2">
+                    <h2 className="text-3xl font-extrabold tracking-tight uppercase text-black">PHARMA</h2>
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-sm font-black shadow-sm">+</span>
                   </div>
                   <p className="text-xs text-gray-800 font-medium leading-relaxed max-w-sm">
                     Quality medications delivered directly to your doorstep with speed, care, and clinical precision. Certified online pharmacy serving thousands nationwide.
@@ -829,7 +977,7 @@ const HomePage = () => {
                       </Link>
                     </li>
                     <li>
-                      <Link to="/catalog" className="hover:text-black transition-colors block">
+                      <Link to="/catalog?filter=offers" className="hover:text-black transition-colors block text-orange-600 font-bold">
                         Special Offers
                       </Link>
                     </li>
@@ -868,8 +1016,8 @@ const HomePage = () => {
                       <p className="text-[10px] text-gray-500">Mon-Fri 8am-8pm EST • 24/7 Hotline</p>
                     </div>
                     <div>
-                      <p className="font-bold text-black">care@pills.co</p>
-                      <p className="text-[10px] text-gray-500">General: support@pills.co</p>
+                      <p className="font-bold text-black">care@pharma-plus.com</p>
+                      <p className="text-[10px] text-gray-500">General: support@pharma-plus.com</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Clinical HQ</p>
@@ -905,7 +1053,7 @@ const HomePage = () => {
 
               {/* Copyright & Precision Signature Bar */}
               <div className="pt-2 border-t border-black/10 flex flex-col sm:flex-row justify-between items-center text-[10px] font-bold text-gray-600 uppercase tracking-widest gap-2">
-                <span>© 2025 PILLS HEALTH INC. ALL RIGHTS RESERVED.</span>
+                <span>© 2025 PHARMA + HEALTH INC. ALL RIGHTS RESERVED.</span>
                 <span>DESIGNED WITH CARE &amp; PRECISION</span>
               </div>
             </div>

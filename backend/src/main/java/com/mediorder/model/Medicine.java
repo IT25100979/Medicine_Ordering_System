@@ -3,6 +3,7 @@ package com.mediorder.model;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -61,6 +62,36 @@ public class Medicine {
     @Column(name = "reviews_count")
     private Integer reviewsCount = 50;
 
+    @Column(name = "batch_number", length = 100)
+    private String batchNumber;
+
+    @Column(name = "manufacturing_date")
+    private LocalDate manufacturingDate;
+
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
+
+    @Column(name = "shelf_location", length = 100)
+    private String shelfLocation = "Shelf A-01";
+
+    @Column(name = "allocated_stock")
+    private Integer allocatedStock = 0;
+
+    @Column(name = "reorder_level")
+    private Integer reorderLevel = 25;
+
+    @Column(name = "is_quarantined")
+    private Boolean isQuarantined = false;
+
+    @Column(name = "barcode", length = 100)
+    private String barcode;
+
+    @Column(name = "storage_requirement", length = 100)
+    private String storageRequirement = "Room Temperature (15°C - 25°C)";
+
+    @Column(name = "tags", length = 255)
+    private String tags;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -118,6 +149,42 @@ public class Medicine {
         if (this.reviewsCount == null) {
             this.reviewsCount = 50;
         }
+        if (this.allocatedStock == null) {
+            this.allocatedStock = 0;
+        }
+        if (this.reorderLevel == null) {
+            this.reorderLevel = 25;
+        }
+        if (this.isQuarantined == null) {
+            this.isQuarantined = false;
+        }
+        if (this.shelfLocation == null) {
+            this.shelfLocation = "Shelf A-01";
+        }
+        if (this.batchNumber == null && this.sku != null) {
+            this.batchNumber = "LOT-" + this.sku;
+        }
+        if (this.manufacturingDate == null) {
+            this.manufacturingDate = LocalDate.now().minusMonths(6);
+        }
+        if (this.expiryDate == null) {
+            this.expiryDate = LocalDate.now().plusMonths(18);
+        }
+        if (this.barcode == null && this.sku != null) {
+            this.barcode = "BC-" + this.sku.replace("SKU-", "");
+        }
+        if (this.storageRequirement == null) {
+            this.storageRequirement = Boolean.TRUE.equals(this.isTemperatureSensitive) 
+                ? "Cold Chain (2°C - 8°C)" 
+                : "Room Temperature (15°C - 25°C)";
+        }
+        if (this.tags == null) {
+            java.util.List<String> tagList = new java.util.ArrayList<>();
+            if (Boolean.TRUE.equals(this.requiresPrescription)) tagList.add("Rx");
+            else tagList.add("OTC");
+            if (Boolean.TRUE.equals(this.isTemperatureSensitive)) tagList.add("Cold Chain");
+            this.tags = String.join(", ", tagList);
+        }
     }
 
     public Long getId() { return id; }
@@ -174,6 +241,36 @@ public class Medicine {
     public Integer getReviewsCount() { return reviewsCount; }
     public void setReviewsCount(Integer reviewsCount) { this.reviewsCount = reviewsCount; }
 
+    public String getBatchNumber() { return batchNumber; }
+    public void setBatchNumber(String batchNumber) { this.batchNumber = batchNumber; }
+
+    public LocalDate getManufacturingDate() { return manufacturingDate; }
+    public void setManufacturingDate(LocalDate manufacturingDate) { this.manufacturingDate = manufacturingDate; }
+
+    public LocalDate getExpiryDate() { return expiryDate; }
+    public void setExpiryDate(LocalDate expiryDate) { this.expiryDate = expiryDate; }
+
+    public String getShelfLocation() { return shelfLocation; }
+    public void setShelfLocation(String shelfLocation) { this.shelfLocation = shelfLocation; }
+
+    public Integer getAllocatedStock() { return allocatedStock != null ? allocatedStock : 0; }
+    public void setAllocatedStock(Integer allocatedStock) { this.allocatedStock = allocatedStock; }
+
+    public Integer getReorderLevel() { return reorderLevel != null ? reorderLevel : 25; }
+    public void setReorderLevel(Integer reorderLevel) { this.reorderLevel = reorderLevel; }
+
+    public Boolean getIsQuarantined() { return isQuarantined != null ? isQuarantined : false; }
+    public void setIsQuarantined(Boolean isQuarantined) { this.isQuarantined = isQuarantined; }
+
+    public String getBarcode() { return barcode; }
+    public void setBarcode(String barcode) { this.barcode = barcode; }
+
+    public String getStorageRequirement() { return storageRequirement != null ? storageRequirement : "Room Temperature (15°C - 25°C)"; }
+    public void setStorageRequirement(String storageRequirement) { this.storageRequirement = storageRequirement; }
+
+    public String getTags() { return tags; }
+    public void setTags(String tags) { this.tags = tags; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
@@ -199,6 +296,16 @@ public class Medicine {
         private String imageUrl;
         private BigDecimal rating = new BigDecimal("4.8");
         private Integer reviewsCount = 50;
+        private String batchNumber;
+        private LocalDate manufacturingDate;
+        private LocalDate expiryDate;
+        private String shelfLocation = "Shelf A-01";
+        private Integer allocatedStock = 0;
+        private Integer reorderLevel = 25;
+        private Boolean isQuarantined = false;
+        private String barcode;
+        private String storageRequirement = "Room Temperature (15°C - 25°C)";
+        private String tags;
         private LocalDateTime createdAt;
 
         public MedicineBuilder id(Long id) { this.id = id; return this; }
@@ -218,6 +325,16 @@ public class Medicine {
         public MedicineBuilder imageUrl(String imageUrl) { this.imageUrl = imageUrl; return this; }
         public MedicineBuilder rating(BigDecimal rating) { this.rating = rating; return this; }
         public MedicineBuilder reviewsCount(Integer reviewsCount) { this.reviewsCount = reviewsCount; return this; }
+        public MedicineBuilder batchNumber(String batchNumber) { this.batchNumber = batchNumber; return this; }
+        public MedicineBuilder manufacturingDate(LocalDate manufacturingDate) { this.manufacturingDate = manufacturingDate; return this; }
+        public MedicineBuilder expiryDate(LocalDate expiryDate) { this.expiryDate = expiryDate; return this; }
+        public MedicineBuilder shelfLocation(String shelfLocation) { this.shelfLocation = shelfLocation; return this; }
+        public MedicineBuilder allocatedStock(Integer allocatedStock) { this.allocatedStock = allocatedStock; return this; }
+        public MedicineBuilder reorderLevel(Integer reorderLevel) { this.reorderLevel = reorderLevel; return this; }
+        public MedicineBuilder isQuarantined(Boolean isQuarantined) { this.isQuarantined = isQuarantined; return this; }
+        public MedicineBuilder barcode(String barcode) { this.barcode = barcode; return this; }
+        public MedicineBuilder storageRequirement(String storageRequirement) { this.storageRequirement = storageRequirement; return this; }
+        public MedicineBuilder tags(String tags) { this.tags = tags; return this; }
         public MedicineBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public Medicine build() {
@@ -239,6 +356,16 @@ public class Medicine {
             m.setImageUrl(this.imageUrl);
             m.setRating(this.rating != null ? this.rating : new BigDecimal("4.8"));
             m.setReviewsCount(this.reviewsCount != null ? this.reviewsCount : 50);
+            m.setBatchNumber(this.batchNumber);
+            m.setManufacturingDate(this.manufacturingDate);
+            m.setExpiryDate(this.expiryDate);
+            m.setShelfLocation(this.shelfLocation != null ? this.shelfLocation : "Shelf A-01");
+            m.setAllocatedStock(this.allocatedStock != null ? this.allocatedStock : 0);
+            m.setReorderLevel(this.reorderLevel != null ? this.reorderLevel : 25);
+            m.setIsQuarantined(this.isQuarantined != null ? this.isQuarantined : false);
+            m.setBarcode(this.barcode);
+            m.setStorageRequirement(this.storageRequirement != null ? this.storageRequirement : "Room Temperature (15°C - 25°C)");
+            m.setTags(this.tags);
             m.setCreatedAt(this.createdAt != null ? this.createdAt : LocalDateTime.now());
             return m;
         }

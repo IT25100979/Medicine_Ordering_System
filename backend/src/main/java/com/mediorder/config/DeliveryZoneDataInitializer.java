@@ -22,9 +22,13 @@ public class DeliveryZoneDataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        seedDeliveryZone(1L, "colombo01", "0100", 1, 500.0, 30, LocalDate.of(2026, 9, 18));
-        seedDeliveryZone(2L, "colombo14", "1400", 1, 500.0, 30, LocalDate.of(2026, 9, 18));
-        seedDeliveryZone(3L, "colombo09", "0900", 0, 1500.0, 120, LocalDate.of(2026, 9, 18));
+        seedDeliveryZone(1L, "Colombo 01", "0100", 1, 5.0, 30, LocalDate.of(2026, 9, 18));
+        seedDeliveryZone(2L, "Colombo 14", "1400", 1, 5.0, 30, LocalDate.of(2026, 9, 18));
+        seedDeliveryZone(3L, "Colombo 09", "0900", 0, 15.0, 120, LocalDate.of(2026, 9, 18));
+        seedDeliveryZone(4L, "Colombo 03", "0300", 1, 5.0, 35, LocalDate.of(2026, 9, 18));
+        seedDeliveryZone(5L, "Colombo 07", "0700", 1, 6.0, 25, LocalDate.of(2026, 9, 18));
+        seedDeliveryZone(6L, "New York", "10001", 1, 8.0, 45, LocalDate.of(2026, 9, 18));
+        seedDeliveryZone(7L, "Los Angeles", "90001", 1, 9.0, 50, LocalDate.of(2026, 9, 18));
         logger.info("Delivery zones data seeded successfully with requested records.");
     }
 

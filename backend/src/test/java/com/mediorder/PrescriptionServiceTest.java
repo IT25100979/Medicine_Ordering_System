@@ -25,6 +25,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,6 +47,9 @@ public class PrescriptionServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private com.mediorder.repository.NotificationRepository notificationRepository;
 
     @Mock
     private Authentication authentication;
@@ -173,5 +178,119 @@ public class PrescriptionServiceTest {
 
         verify(fileStorageService, times(1)).deleteFile("uuid_cancel.png");
         verify(prescriptionRepository, times(1)).delete(pendingRx);
+    }
+
+    @Test
+    void testVerifyPrescriptionThrowsWhenAlreadyFinalized() {
+        Prescription approvedRx = Prescription.builder()
+                .id(500L)
+                .customer(customer)
+                .status(PrescriptionStatus.APPROVED)
+                .build();
+
+        when(authentication.getName()).thenReturn("pharmacist@example.com");
+        when(userRepository.findByEmail("pharmacist@example.com")).thenReturn(Optional.of(pharmacist));
+        when(prescriptionRepository.findById(500L)).thenReturn(Optional.of(approvedRx));
+
+        PrescriptionVerificationRequest request = PrescriptionVerificationRequest.builder()
+                .status(PrescriptionStatus.REJECTED)
+                .rejectionReason("Doctor's seal not available")
+                .build();
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                prescriptionService.verifyPrescription(500L, request, authentication)
+        );
+
+        assertTrue(ex.getMessage().contains("already been finalized"));
+        verify(prescriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void testVerifyPrescriptionDispatchesRejectionNotification() {
+        Prescription pendingRx = Prescription.builder()
+                .id(600L)
+                .customer(customer)
+                .status(PrescriptionStatus.PENDING)
+                .build();
+
+        when(authentication.getName()).thenReturn("pharmacist@example.com");
+        when(userRepository.findByEmail("pharmacist@example.com")).thenReturn(Optional.of(pharmacist));
+        when(prescriptionRepository.findById(600L)).thenReturn(Optional.of(pendingRx));
+        when(prescriptionRepository.save(any(Prescription.class))).thenAnswer(i -> i.getArgument(0));
+
+        PrescriptionVerificationRequest request = PrescriptionVerificationRequest.builder()
+                .status(PrescriptionStatus.REJECTED)
+                .rejectionReason("Not clear photo")
+                .verificationNotes("Edges cut off")
+                .build();
+
+        PrescriptionResponse response = prescriptionService.verifyPrescription(600L, request, authentication);
+
+        assertEquals(PrescriptionStatus.REJECTED, response.getStatus());
+        verify(notificationRepository, times(1)).save(any(com.mediorder.model.Notification.class));
+    }
+
+    @Test
+    void testGetAllPrescriptionsWithSearchReturnsAllStatusesForStaff() {
+        Prescription pendingRx = Prescription.builder()
+                .id(701L)
+                .customer(customer)
+                .doctorName("Dr. John Watson")
+                .status(PrescriptionStatus.PENDING)
+                .build();
+
+        Prescription approvedRx = Prescription.builder()
+                .id(702L)
+                .customer(customer)
+                .doctorName("Dr. Gregory House")
+                .status(PrescriptionStatus.APPROVED)
+                .build();
+
+        Prescription rejectedRx = Prescription.builder()
+                .id(703L)
+                .customer(customer)
+                .doctorName("Dr. Leonard McCoy")
+                .status(PrescriptionStatus.REJECTED)
+                .build();
+
+        when(authentication.getName()).thenReturn("pharmacist@example.com");
+        when(userRepository.findByEmail("pharmacist@example.com")).thenReturn(Optional.of(pharmacist));
+        when(prescriptionRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(Arrays.asList(pendingRx, approvedRx, rejectedRx));
+
+        // When a pharmacist searches by patient email "customer@example.com",
+        // even if status parameter was PENDING, it must return ALL 3 prescriptions (PENDING, APPROVED, REJECTED)
+        List<PrescriptionResponse> results = prescriptionService.getAllPrescriptions(
+                PrescriptionStatus.PENDING,
+                false,
+                "customer@example.com",
+                authentication
+        );
+
+        assertEquals(3, results.size());
+        assertTrue(results.stream().anyMatch(r -> r.getStatus() == PrescriptionStatus.PENDING));
+        assertTrue(results.stream().anyMatch(r -> r.getStatus() == PrescriptionStatus.APPROVED));
+        assertTrue(results.stream().anyMatch(r -> r.getStatus() == PrescriptionStatus.REJECTED));
+    }
+
+    @Test
+    void testGetAllPrescriptionsWithSearchMatchesPrescriptionId() {
+        Prescription rx1 = Prescription.builder().id(801L).customer(customer).status(PrescriptionStatus.APPROVED).build();
+        Prescription rx2 = Prescription.builder().id(902L).customer(customer).status(PrescriptionStatus.REJECTED).build();
+
+        when(authentication.getName()).thenReturn("pharmacist@example.com");
+        when(userRepository.findByEmail("pharmacist@example.com")).thenReturn(Optional.of(pharmacist));
+        when(prescriptionRepository.findAllByOrderByCreatedAtDesc()).thenReturn(Arrays.asList(rx1, rx2));
+
+        List<PrescriptionResponse> results = prescriptionService.getAllPrescriptions(
+                null,
+                false,
+                "801",
+                authentication
+        );
+
+        assertEquals(1, results.size());
+        assertEquals(801L, results.get(0).getId());
+        assertEquals(PrescriptionStatus.APPROVED, results.get(0).getStatus());
     }
 }

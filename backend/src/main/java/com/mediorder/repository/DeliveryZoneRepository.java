@@ -13,6 +13,11 @@ public interface DeliveryZoneRepository extends JpaRepository<DeliveryZone, Long
 
     Optional<DeliveryZone> findByCityIgnoreCase(String city);
 
+    Optional<DeliveryZone> findByPostalCodeIgnoreCase(String postalCode);
+
     @Query("SELECT dz FROM DeliveryZone dz WHERE LOWER(REPLACE(dz.city, ' ', '')) = LOWER(REPLACE(:city, ' ', ''))")
     Optional<DeliveryZone> findByNormalizedCity(@Param("city") String city);
+
+    @Query("SELECT dz FROM DeliveryZone dz WHERE LOWER(REPLACE(dz.city, ' ', '')) = LOWER(REPLACE(:query, ' ', '')) OR LOWER(REPLACE(dz.postalCode, ' ', '')) = LOWER(REPLACE(:query, ' ', '')) OR LOWER(dz.city) LIKE LOWER(CONCAT('%', :query, '%'))")
+    Optional<DeliveryZone> findByCityOrPostalCode(@Param("query") String query);
 }
