@@ -37,7 +37,6 @@ const InventoryPage = () => {
   // Modals
   const [showAddMedicineModal, setShowAddMedicineModal] = useState(false);
   const [showAddBatchModal, setShowAddBatchModal] = useState(false);
-  const [showSimulatorModal, setShowSimulatorModal] = useState(false);
   const [showQuarantineModal, setShowQuarantineModal] = useState(false);
   const [selectedBatchForQuarantine, setSelectedBatchForQuarantine] = useState(null);
   const [quarantineReasonInput, setQuarantineReasonInput] = useState('');
@@ -63,12 +62,6 @@ const InventoryPage = () => {
     status: 'ACTIVE',
   });
 
-  // Simulator state
-  const [simMedicineId, setSimMedicineId] = useState('');
-  const [simQuantity, setSimQuantity] = useState(25);
-  const [simResult, setSimResult] = useState(null);
-  const [simLoading, setSimLoading] = useState(false);
-
   // Notification Toast
   const [toast, setToast] = useState(null);
 
@@ -92,7 +85,6 @@ const InventoryPage = () => {
       setMedicines(medicinesRes.data || []);
       if (medicinesRes.data?.length > 0 && !newBatch.medicineId) {
         setNewBatch((prev) => ({ ...prev, medicineId: medicinesRes.data[0].id }));
-        setSimMedicineId(medicinesRes.data[0].id);
       }
     } catch (err) {
       console.error('Failed to load inventory data:', err);
@@ -230,46 +222,6 @@ const InventoryPage = () => {
     }
   };
 
-  // Run FEFO Simulation
-  const handleRunSimulation = async (e) => {
-    e?.preventDefault();
-    if (!simMedicineId || simQuantity <= 0) return;
-
-    setSimLoading(true);
-    setSimResult(null);
-    try {
-      const res = await client.post('/api/v1/inventory/fefo/simulate', {
-        medicineId: parseInt(simMedicineId),
-        requestedQuantity: parseInt(simQuantity),
-      });
-      setSimResult(res.data);
-    } catch (err) {
-      console.error(err);
-      showToast(err.response?.data?.message || 'Simulation failed.', 'error');
-    } finally {
-      setSimLoading(false);
-    }
-  };
-
-  // Execute Real FEFO Deduction
-  const handleExecuteDeduction = async () => {
-    if (!simMedicineId || simQuantity <= 0) return;
-    if (!window.confirm(`Commit real deduction of ${simQuantity} unit(s) from inventory batches using FEFO?`)) return;
-
-    try {
-      await client.post('/api/v1/inventory/fefo/deduct', {
-        medicineId: parseInt(simMedicineId),
-        requestedQuantity: parseInt(simQuantity),
-      });
-      showToast(`Successfully deducted ${simQuantity} units via FEFO protocol!`);
-      setShowSimulatorModal(false);
-      fetchData();
-    } catch (err) {
-      console.error(err);
-      showToast(err.response?.data?.message || 'Deduction failed.', 'error');
-    }
-  };
-
   // Helper for Urgency Styles
   const getUrgencyBadge = (batch) => {
     const days = batch.daysUntilExpiry;
@@ -349,14 +301,6 @@ const InventoryPage = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => setShowSimulatorModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black font-extrabold text-xs uppercase tracking-wider hover:opacity-90 transition-all shadow-lg shadow-amber-500/20"
-            >
-              <Zap className="w-4 h-4" />
-              <span>FEFO Simulator</span>
-            </button>
-
             <button
               onClick={() => setShowAddMedicineModal(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 hover:border-zinc-500 text-white font-bold text-xs uppercase tracking-wider transition-all"
@@ -986,164 +930,7 @@ const InventoryPage = () => {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* MODAL 3: FEFO ALLOCATION & DISPATCH SIMULATOR                  */}
-      {/* ============================================================== */}
-      {showSimulatorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => {
-                setShowSimulatorModal(false);
-                setSimResult(null);
-              }}
-              className="absolute top-6 right-6 text-zinc-400 hover:text-white p-1"
-            >
-              <X className="w-5 h-5" />
-            </button>
 
-            <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <Zap className="w-4 h-4" />
-              <span>FEFO Sandbox Simulator</span>
-            </div>
-            <h2 className="text-2xl font-black text-white">Automated FEFO Dispatch Analyzer</h2>
-            <p className="text-zinc-400 text-xs mt-1">
-              Select a medicine and quantity to see how the algorithm automatically satisfies the order using earliest expiring active batches while bypassing expired and quarantined lots.
-            </p>
-
-            <form onSubmit={handleRunSimulation} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Target Medicine</label>
-                <select
-                  value={simMedicineId}
-                  onChange={(e) => setSimMedicineId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-amber-500 focus:outline-none"
-                >
-                  {medicines.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.genericName || m.sku})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Quantity to Dispense</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={simQuantity}
-                  onChange={(e) => setSimQuantity(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="sm:col-span-3">
-                <button
-                  type="submit"
-                  disabled={simLoading}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
-                >
-                  {simLoading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4 fill-black" />
-                      <span>Simulate FEFO Allocation Sequence</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {/* Simulation Results View */}
-            {simResult && (
-              <div className="mt-6 pt-6 border-t border-zinc-800 space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-950 border border-zinc-800">
-                  <div>
-                    <div className="text-xs font-bold text-zinc-400 uppercase">Allocation Status</div>
-                    <div className="text-lg font-black text-white flex items-center gap-2 mt-0.5">
-                      <span className={simResult.fullyFulfilled ? 'text-emerald-400' : 'text-amber-400'}>
-                        {simResult.totalFulfilledQuantity} / {simResult.requestedQuantity} Units Allocated
-                      </span>
-                      {simResult.fullyFulfilled ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                      ) : (
-                        <AlertTriangle className="w-5 h-5 text-amber-400" />
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[11px] font-black uppercase px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300">
-                      {simResult.dispatchStrategy}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Steps List */}
-                <div className="space-y-2.5">
-                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    Sequential Deduction Order:
-                  </div>
-
-                  {simResult.steps?.length === 0 ? (
-                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
-                      No active batches with stock available for this medicine.
-                    </div>
-                  ) : (
-                    simResult.steps?.map((step) => (
-                      <div
-                        key={step.stepNumber}
-                        className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="w-6 h-6 rounded-full bg-amber-400 text-black font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                            {step.stepNumber}
-                          </span>
-                          <div>
-                            <div className="font-mono font-bold text-white text-sm">
-                              {step.batchNumber}{' '}
-                              <span className="text-zinc-400 font-sans text-xs">
-                                ({step.shelfLocation})
-                              </span>
-                            </div>
-                            <div className="text-xs text-zinc-400 mt-0.5">
-                              Expiry: <span className="font-mono text-zinc-200">{step.expiryDate}</span> ({step.daysUntilExpiry} days remaining)
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 sm:text-right">
-                          <div>
-                            <div className="text-sm font-black text-emerald-400">
-                              - {step.allocatedFromBatch} Units
-                            </div>
-                            <div className="text-[11px] text-zinc-500">
-                              {step.batchRemainingAfter} units remaining
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {simResult.fullyFulfilled && (
-                  <div className="pt-2">
-                    <button
-                      onClick={handleExecuteDeduction}
-                      className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-                    >
-                      <FileCheck className="w-4 h-4" />
-                      <span>Commit Real FEFO Stock Deduction</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ============================================================== */}
       {/* MODAL 4: QUARANTINE REASON PROMPT                              */}
