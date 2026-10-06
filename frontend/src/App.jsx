@@ -58,6 +58,9 @@ const App = () => {
                 </ProtectedRoute>
               } />
 
+              <Route path="/admin/smart-inventory" element={<InventoryPage />} />
+              <Route path="/admin/inventory" element={<InventoryPage />} />
+
               {/* Module Routes */}
               <Route path="/prescription" element={<PrescriptionPage />} />
               <Route path="/modules/prescription" element={<PrescriptionPage />} />

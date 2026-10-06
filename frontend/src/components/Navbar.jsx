@@ -51,7 +51,24 @@ const Navbar = () => {
           </div>
 
           {/* Right: Assigned Dashboard Action, User Pill & Logout */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/modules/inventory"
+              id="admin-smart-inventory-btn"
+              className={`inline-flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase px-3 py-1.5 rounded-full transition-all border ${
+                isActive('/modules/inventory') || isActive('/admin/smart-inventory')
+                  ? 'bg-emerald-400 text-black border-emerald-400 shadow-sm font-black'
+                  : 'bg-zinc-900 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20 hover:border-emerald-400'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">inventory_2</span>
+              <span>Smart Inventory & FEFO</span>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+            </Link>
+
             <Link
               to={dashboardRoute}
               className={`inline-flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full transition-all border ${
@@ -133,6 +150,17 @@ const Navbar = () => {
             }`}
           >
             DELIVERY
+          </Link>
+          <Link
+            to="/modules/inventory"
+            className={`hidden lg:inline-flex items-center gap-1.5 text-xs font-extrabold tracking-wider uppercase transition-all px-3 py-1.5 rounded-full ${
+              isActive('/modules/inventory')
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>INVENTORY & FEFO</span>
           </Link>
         </nav>
 

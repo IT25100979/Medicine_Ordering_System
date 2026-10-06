@@ -78,19 +78,25 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/medicines/stats",
                                 "/api/v1/medicines/stats"
-                        ).hasRole("OPERATIONS_MANAGER")
+                        ).hasAnyRole("OPERATIONS_MANAGER", "PHARMACIST", "CHIEF_PHARMACIST", "ADMIN")
                         .requestMatchers(HttpMethod.GET,
                                 "/api/medicines",
                                 "/api/medicines/**",
                                 "/api/v1/medicines",
-                                "/api/v1/medicines/**"
+                                "/api/v1/medicines/**",
+                                "/api/inventory/**",
+                                "/api/v1/inventory/**"
                         ).permitAll()
+                        .requestMatchers(
+                                "/api/inventory/**",
+                                "/api/v1/inventory/**"
+                        ).hasAnyRole("OPERATIONS_MANAGER", "PHARMACIST", "CHIEF_PHARMACIST", "ADMIN")
                         .requestMatchers(
                                 "/api/medicines",
                                 "/api/medicines/**",
                                 "/api/v1/medicines",
                                 "/api/v1/medicines/**"
-                        ).hasRole("OPERATIONS_MANAGER")
+                        ).hasAnyRole("OPERATIONS_MANAGER", "PHARMACIST", "CHIEF_PHARMACIST", "ADMIN")
                         .requestMatchers(HttpMethod.GET,
                                 "/api/deliveries",
                                 "/api/deliveries/**",
