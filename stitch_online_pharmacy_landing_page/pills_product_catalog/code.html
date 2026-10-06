@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PILLS • Catalog - Vitamins &amp; Supplements</title>
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              charcoal: '#111827',
+              dark: '#0f172a',
+              blue: '#0284c7',
+              sky: '#38bdf8',
+              softblue: '#f0f9ff',
+              mint: '#ecfdf5',
+              vanilla: '#fbfbf7',
+              warmgray: '#f3f4f6',
+              border: '#e5e7eb',
+              accentYellow: '#fef3c7',
+            }
+          },
+          boxShadow: {
+            'soft-card': '0 8px 30px rgba(0,0,0,0.03)',
+            'subtle-hover': '0 14px 35px rgba(0,0,0,0.06)',
+            'pill': '0 2px 8px rgba(0,0,0,0.04)',
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles: Range Slider & Micro-Styling -->
+<style data-purpose="slider-and-inputs">
+    /* Range Slider Styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+    input[type=range]:focus {
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: #38bdf8;
+      border-radius: 9999px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #0284c7;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -6px;
+      box-shadow: 0 0 0 4px #e0f2fe;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 0 0 6px #bae6fd;
+    }
+    /* Custom Scrollbar for Smooth Feel */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f8fafc;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-[#fcfbf9] text-slate-900 font-sans antialiased min-h-screen selection:bg-sky-100 selection:text-sky-900">
+<!-- BEGIN: MasterPageWrapper -->
+<div class="max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-12 py-5">
+<!-- BEGIN: MainHeader -->
+<header class="w-full bg-white/70 backdrop-blur-md rounded-3xl border border-slate-200/80 px-6 lg:px-10 py-4 shadow-sm mb-6 transition-all" data-purpose="primary-navigation">
+<div class="flex items-center justify-between">
+<!-- Left Nav Links -->
+<nav aria-label="Main Navigation" class="hidden md:flex items-center space-x-7 text-xs font-bold tracking-wider text-slate-700 uppercase">
+<a class="hover:text-black transition-colors" href="#">Home</a>
+<a class="hover:text-black transition-colors" href="#">Request Order</a>
+<div class="relative group cursor-pointer flex items-center gap-1 hover:text-black transition-colors">
+<span>Special Offer</span>
+<svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-black" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<a class="inline-flex items-center px-3.5 py-1.5 rounded-full bg-slate-900 text-white font-bold tracking-wider hover:bg-black transition-all" href="#">
+            Shop Catalog
+          </a>
+</nav>
+<!-- Brand Center Logo (from SCREEN_5) -->
+<div class="flex items-center gap-1.5 justify-center">
+<a aria-label="PILLS Pharmacy Homepage" class="flex items-center gap-1 tracking-tighter" href="#">
+<span class="text-2xl lg:text-3xl font-black text-slate-900 uppercase">PILLS</span>
+<span class="w-2.5 h-2.5 rounded-full bg-black mt-1.5"></span>
+</a>
+</div>
+<!-- Right Utility Actions -->
+<div class="flex items-center space-x-3 sm:space-x-5 text-xs font-bold uppercase tracking-wider text-slate-700">
+<button class="hidden sm:inline-flex items-center gap-1.5 hover:text-black transition-colors" title="Search catalog" type="button">
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Search</span>
+</button>
+<a class="hidden sm:inline-block hover:text-black transition-colors" href="#">Account</a>
+<!-- Shopping Cart Badge -->
+<a aria-label="Shopping Cart with 4 items" class="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full hover:bg-slate-800 transition shadow-sm" href="#">
+<span class="text-[11px] font-extrabold tracking-wider">CART</span>
+<span class="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold">04</span>
+</a>
+<!-- Mobile Hamburger Trigger (Mobile Only) -->
+<button aria-label="Open menu" class="md:hidden p-1 text-slate-700 hover:text-black" type="button">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: SearchAndLocationBar (Adapted from IMAGE_2 + SCREEN_5 aesthetics) -->
+<section aria-label="Search and quick filters" class="mb-8" data-purpose="secondary-search-header">
+<div class="bg-white rounded-2xl md:rounded-3xl p-3 md:p-3.5 border border-slate-200/90 shadow-soft-card flex flex-col md:flex-row items-center gap-3">
+<!-- Category Dropdown Pill Button -->
+<div class="w-full md:w-auto">
+<button class="w-full md:w-auto inline-flex items-center justify-between md:justify-center gap-3 bg-slate-100/90 hover:bg-slate-200 text-slate-800 px-5 py-3 rounded-2xl text-xs font-bold tracking-wide transition" type="button">
+<span class="flex items-center gap-2">
+<svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>All Categories</span>
+</span>
+<svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+<!-- Location Selector Pill -->
+<div class="w-full md:w-auto">
+<div class="inline-flex items-center justify-between w-full md:w-56 px-4 py-2.5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white transition cursor-pointer text-xs">
+<div class="flex items-center gap-2 text-slate-700 font-medium">
+<svg class="w-4 h-4 text-sky-600 flex-shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="truncate">San Francisco, CA</span>
+</div>
+<svg class="w-3.5 h-3.5 text-slate-400 ml-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+<!-- Global Search Input with Pill Button -->
+<div class="flex-1 w-full relative flex items-center">
+<input class="w-full pl-4 pr-14 py-2.5 bg-slate-50 md:bg-transparent rounded-2xl md:rounded-xl border border-slate-200 md:border-0 focus:ring-2 focus:ring-sky-500 focus:bg-white text-xs md:text-sm text-slate-800 placeholder-slate-400 font-medium transition" placeholder="Search medications, vitamins, active ingredients..." type="text" value="Vitamins &amp; Dietary Supplements"/>
+<button aria-label="Execute search" class="absolute right-1.5 md:right-1 bg-sky-500 hover:bg-sky-600 text-white p-2 md:p-2.5 rounded-xl transition flex items-center justify-center shadow-sm" type="submit">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path></svg>
+</button>
+</div>
+</div>
+</section>
+<!-- END: SearchAndLocationBar -->
+<!-- BEGIN: BreadcrumbAndToolbar -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8" data-purpose="catalog-toolbar">
+<!-- Breadcrumb Hierarchy -->
+<nav aria-label="Breadcrumb" class="flex items-center space-x-2 text-xs font-semibold text-slate-400 tracking-wide">
+<a class="text-slate-600 hover:text-black transition-colors" href="#">Home</a>
+<span>&gt;</span>
+<a class="text-slate-600 hover:text-black transition-colors" href="#">Products</a>
+<span>&gt;</span>
+<span class="text-black font-bold">Vitamins &amp; Dietary</span>
+<span class="text-slate-300 font-normal">(&gt;)</span>
+<span class="bg-sky-50 text-sky-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Showing 9 of 148</span>
+</nav>
+<!-- Sort & Display Controls -->
+<div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+<span class="text-xs font-semibold text-slate-500 hidden sm:inline">Sort by:</span>
+<div class="relative">
+<select class="appearance-none bg-white border border-slate-200 text-slate-800 text-xs font-bold rounded-full pl-4 pr-9 py-2 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer shadow-sm transition">
+<option>Recommended</option>
+<option>Price: Low to High</option>
+<option>Price: High to Low</option>
+<option>Clinical Rating</option>
+<option>Newest Arrivals</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+</div>
+<!-- END: BreadcrumbAndToolbar -->
+<!-- BEGIN: TwoColumnCatalogLayout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-20" data-purpose="catalog-grid-wrapper">
+<!-- BEGIN: FilterSidebar -->
+<aside aria-label="Catalog filters" class="lg:col-span-3 w-full" data-purpose="filter-sidebar">
+<div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-soft-card space-y-7">
+<!-- Price Range Section -->
+<div>
+<div class="flex items-center justify-between mb-3">
+<h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Price Range</h3>
+<span class="text-[11px] font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full">$10 - $1,500</span>
+</div>
+<!-- Slider Control -->
+<div class="mt-4 px-1">
+<input aria-label="Price range filter" class="w-full" max="1500" min="10" type="range" value="450"/>
+<div class="flex justify-between items-center mt-3 text-xs font-bold text-slate-600">
+<span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60">$10</span>
+<span class="text-slate-400 font-mono text-[10px]">—</span>
+<span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60">$1500</span>
+</div>
+</div>
+</div>
+<div class="h-px bg-slate-100"></div>
+<!-- Vitamin Target Gender -->
+<div>
+<div class="flex items-center justify-between cursor-pointer group mb-3">
+<h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Vitamin Target Gender</h3>
+<svg class="w-4 h-4 text-slate-400 group-hover:text-black transition" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="space-y-2.5 pt-1 text-xs">
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input checked="" class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-800 font-semibold group-hover:text-black">Male</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">42</span>
+</label>
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-600 group-hover:text-black">Female</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">56</span>
+</label>
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-600 group-hover:text-black">Unisex &amp; Family</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">31</span>
+</label>
+</div>
+</div>
+<div class="h-px bg-slate-100"></div>
+<!-- Brand Filter -->
+<div>
+<div class="flex items-center justify-between cursor-pointer group mb-3">
+<h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Brands</h3>
+<svg class="w-4 h-4 text-slate-400 group-hover:text-black transition" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="space-y-2.5 pt-1 text-xs">
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input checked="" class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-800 font-semibold group-hover:text-black">PILLS Lab Clinical</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">19</span>
+</label>
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-600 group-hover:text-black">Nature's Life</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">24</span>
+</label>
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-600 group-hover:text-black">Suku Complete</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">12</span>
+</label>
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-600 group-hover:text-black">Naked Nutrition</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">8</span>
+</label>
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-600 group-hover:text-black">MedRelief Lab</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">14</span>
+</label>
+</div>
+</div>
+<div class="h-px bg-slate-100"></div>
+<!-- Item Form Filter -->
+<div>
+<div class="flex items-center justify-between cursor-pointer group mb-3">
+<h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Item Form</h3>
+<svg class="w-4 h-4 text-slate-400 group-hover:text-black transition" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="space-y-2.5 pt-1 text-xs">
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input checked="" class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-800 font-semibold group-hover:text-black">Capsule &amp; Softgel</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">74</span>
+</label>
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-600 group-hover:text-black">Organic Gummies</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">22</span>
+</label>
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-600 group-hover:text-black">Tincture / Syrup</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">15</span>
+</label>
+<label class="flex items-center space-x-3 cursor-pointer group">
+<input class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 transition cursor-pointer" type="checkbox"/>
+<span class="text-slate-600 group-hover:text-black">Pure Powder</span>
+<span class="ml-auto text-[10px] text-slate-400 font-mono">11</span>
+</label>
+</div>
+</div>
+<div class="h-px bg-slate-100"></div>
+<!-- Health Goal Filter Pills -->
+<div>
+<h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-3">Health Goal</h3>
+<div class="flex flex-wrap gap-2 text-[11px]">
+<span class="px-3 py-1 rounded-full bg-slate-900 text-white font-medium cursor-pointer">Immunity</span>
+<span class="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium cursor-pointer transition">Daily Vitality</span>
+<span class="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium cursor-pointer transition">Deep Sleep</span>
+<span class="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium cursor-pointer transition">Joints &amp; Bone</span>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="pt-2 space-y-3">
+<button class="w-full bg-black hover:bg-slate-800 text-white text-xs font-extrabold py-3.5 px-4 rounded-2xl tracking-wider transition shadow-sm" type="button">
+              UPDATE RESULTS
+            </button>
+<button class="w-full flex items-center justify-center gap-1.5 text-xs text-slate-500 hover:text-rose-600 font-semibold py-2 transition" type="button">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Reset All Filters</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- END: FilterSidebar -->
+<!-- BEGIN: MainProductGrid -->
+<main class="lg:col-span-9" data-purpose="product-catalog-results">
+<!-- Active Filter Indicator Badges -->
+<div class="flex flex-wrap items-center gap-2 mb-6 text-xs">
+<span class="text-slate-400 font-medium">Applied:</span>
+<span class="inline-flex items-center gap-1 bg-white border border-slate-200 px-3 py-1 rounded-full font-medium text-slate-700">
+            Male Target
+            <button class="hover:text-black">×</button>
+</span>
+<span class="inline-flex items-center gap-1 bg-white border border-slate-200 px-3 py-1 rounded-full font-medium text-slate-700">
+            Capsule Form
+            <button class="hover:text-black">×</button>
+</span>
+<span class="inline-flex items-center gap-1 bg-white border border-slate-200 px-3 py-1 rounded-full font-medium text-slate-700">
+            Under $450
+            <button class="hover:text-black">×</button>
+</span>
+<button class="text-sky-600 hover:underline font-bold text-[11px] ml-1">Clear all</button>
+</div>
+<!-- 3-Column Grid for Products -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Product Card 1: Vitamin C Capsules -->
+<article class="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between" data-purpose="product-card">
+<div>
+<!-- Bottle Graphic Container -->
+<div class="relative bg-gradient-to-b from-[#f7f9fb] to-[#edf2f7] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+<span class="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-slate-700 tracking-wider shadow-xs">Verified 100%</span>
+<!-- Bottle Graphic Mockup -->
+<div class="w-24 h-40 bg-amber-950 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border-2 border-amber-900/40 relative">
+<!-- Bottle Cap -->
+<div class="w-14 h-6 bg-slate-900 rounded-t-lg -mt-4 border-b border-white/20 shadow-sm"></div>
+<!-- Label -->
+<div class="w-full bg-gradient-to-b from-amber-400 to-amber-500 rounded-lg p-2 text-center my-auto shadow-inner text-amber-950">
+<span class="block text-[8px] font-black uppercase tracking-wider">PILLS CLINICAL</span>
+<span class="block text-xs font-black leading-tight mt-0.5">VITAMIN C</span>
+<span class="block text-[9px] font-bold">1000 MG</span>
+<div class="w-5 h-5 mx-auto my-1 rounded-full bg-white/80 flex items-center justify-center font-black text-[9px] text-amber-600">•</div>
+<span class="block text-[7px] tracking-tighter uppercase font-semibold">BIOFLAVONOIDS</span>
+</div>
+<div class="text-[7px] text-amber-200 font-mono">120 VEG CAPS</div>
+</div>
+</div>
+<!-- Product Details -->
+<div class="pt-5">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">IMMUNITY &amp; DEFENSE</span>
+<h2 class="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                  Vitamin C 1000mg Bioflavonoid
+                </h2>
+<p class="text-xs text-slate-500 mt-1 line-clamp-1">High-absorption ascorbic acid with rose hips</p>
+</div>
+</div>
+<!-- Price & Add Action -->
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block -mb-0.5">Price</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$30.50</span>
+</div>
+<button aria-label="Add Vitamin C to cart" class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white px-4 py-2.5 rounded-full text-xs font-bold transition duration-200" type="button">
+<span>Add to cart</span>
+<span class="text-sm leading-none font-bold">+</span>
+</button>
+</div>
+</article>
+<!-- Product Card 2: Kids Multi Gummies -->
+<article class="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between" data-purpose="product-card">
+<div>
+<!-- Bottle Graphic Container -->
+<div class="relative bg-gradient-to-b from-[#fbf8f5] to-[#f5ede4] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+<span class="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-emerald-700 tracking-wider shadow-xs">Organic</span>
+<!-- Bottle Graphic Mockup -->
+<div class="w-24 h-38 bg-rose-50 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border-2 border-rose-200 relative">
+<!-- Cap -->
+<div class="w-16 h-7 bg-red-600 rounded-t-xl -mt-5 shadow-sm"></div>
+<!-- Label -->
+<div class="w-full bg-white rounded-lg p-2 text-center my-auto shadow-inner border border-rose-100">
+<span class="block text-[7px] font-bold uppercase text-slate-400">MYKIND KIDS</span>
+<span class="block text-xs font-black text-rose-500 leading-tight">MULTI</span>
+<span class="block text-[8px] font-bold text-amber-500">GUMMIES</span>
+<div class="flex justify-center gap-1 mt-1">
+<span class="w-2 h-2 rounded-full bg-rose-400 inline-block"></span>
+<span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+</div>
+</div>
+<div class="text-[7px] text-slate-400 font-mono">60 CHEWABLES</div>
+</div>
+</div>
+<!-- Product Details -->
+<div class="pt-5">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">PEDIATRIC HEALTH</span>
+<h2 class="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                  Kids Multi Organic Gummies
+                </h2>
+<p class="text-xs text-slate-500 mt-1 line-clamp-1">Whole food fruit chewables with no added sucrose</p>
+</div>
+</div>
+<!-- Price & Add Action -->
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block -mb-0.5">Price</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$22.50</span>
+</div>
+<button aria-label="Add Kids Gummies to cart" class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white px-4 py-2.5 rounded-full text-xs font-bold transition duration-200" type="button">
+<span>Add to cart</span>
+<span class="text-sm leading-none font-bold">+</span>
+</button>
+</div>
+</article>
+<!-- Product Card 3: Mens Multi Naked -->
+<article class="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between" data-purpose="product-card">
+<div>
+<!-- Bottle Graphic Container -->
+<div class="relative bg-gradient-to-b from-[#f3f6f6] to-[#e7ecee] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+<span class="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-slate-800 tracking-wider shadow-xs">Top Rated</span>
+<!-- Bottle Graphic Mockup -->
+<div class="w-24 h-40 bg-zinc-900 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border border-zinc-700 relative">
+<!-- Cap -->
+<div class="w-14 h-6 bg-zinc-800 rounded-t-lg -mt-4 border-b border-white/10 shadow-sm"></div>
+<!-- Label -->
+<div class="w-full bg-zinc-800/90 border border-zinc-700 rounded-lg p-2 text-center my-auto shadow-inner text-white">
+<span class="block text-[8px] font-mono tracking-widest text-zinc-400 uppercase">NAKED</span>
+<span class="block text-xs font-black tracking-tight text-white mt-0.5">MEN'S MULTI</span>
+<span class="block text-[7px] text-zinc-400 uppercase mt-0.5 tracking-tighter">Bioactive Trace Minerals</span>
+</div>
+<div class="text-[7px] text-zinc-400 font-mono">90 CAPSULES</div>
+</div>
+</div>
+<!-- Product Details -->
+<div class="pt-5">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">MEN'S VITALITY</span>
+<h2 class="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                  Mens Multi Naked Daily
+                </h2>
+<p class="text-xs text-slate-500 mt-1 line-clamp-1">Formulated with Saw Palmetto, Zinc &amp; B-Complex</p>
+</div>
+</div>
+<!-- Price & Add Action -->
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block -mb-0.5">Price</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$35.50</span>
+</div>
+<button aria-label="Add Mens Multi to cart" class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white px-4 py-2.5 rounded-full text-xs font-bold transition duration-200" type="button">
+<span>Add to cart</span>
+<span class="text-sm leading-none font-bold">+</span>
+</button>
+</div>
+</article>
+<!-- Product Card 4: Nature's Life Daily -->
+<article class="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between" data-purpose="product-card">
+<div>
+<!-- Bottle Graphic Container -->
+<div class="relative bg-gradient-to-b from-[#f0f9ff] to-[#e0f2fe] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+<!-- Bottle Graphic Mockup -->
+<div class="w-24 h-40 bg-sky-900 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border border-sky-800 relative">
+<!-- Cap -->
+<div class="w-14 h-6 bg-sky-950 rounded-t-lg -mt-4 border-b border-white/20 shadow-sm"></div>
+<!-- Label -->
+<div class="w-full bg-gradient-to-b from-yellow-400 to-amber-400 rounded-lg p-2 text-center my-auto shadow-inner text-sky-950">
+<span class="block text-[7px] font-black uppercase tracking-wider">NATURE'S LIFE</span>
+<span class="block text-xs font-black leading-tight mt-0.5">DAILY MULTI</span>
+<span class="block text-[8px] font-extrabold text-sky-900">SOFTGELS</span>
+</div>
+<div class="text-[7px] text-sky-200 font-mono">100 SOFTGELS</div>
+</div>
+</div>
+<!-- Product Details -->
+<div class="pt-5">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">ESSENTIAL VITAMINS</span>
+<h2 class="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                  Nature's Life Daily Multivitamin
+                </h2>
+<p class="text-xs text-slate-500 mt-1 line-clamp-1">Balanced multi-nutrient with clinical lutein &amp; lycopene</p>
+</div>
+</div>
+<!-- Price & Add Action -->
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block -mb-0.5">Price</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$28.00</span>
+</div>
+<button aria-label="Add Natures Life to cart" class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white px-4 py-2.5 rounded-full text-xs font-bold transition duration-200" type="button">
+<span>Add to cart</span>
+<span class="text-sm leading-none font-bold">+</span>
+</button>
+</div>
+</article>
+<!-- Product Card 5: Suku Multi Gummy -->
+<article class="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between" data-purpose="product-card">
+<div>
+<!-- Bottle Graphic Container -->
+<div class="relative bg-gradient-to-b from-[#fbf5f8] to-[#f4e8ef] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+<span class="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-pink-700 tracking-wider shadow-xs">Sugar Free</span>
+<!-- Bottle Graphic Mockup -->
+<div class="w-24 h-40 bg-white/80 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border-2 border-pink-200 relative">
+<!-- Cap -->
+<div class="w-14 h-6 bg-slate-100 rounded-t-lg -mt-4 border border-slate-200 shadow-sm"></div>
+<!-- Label -->
+<div class="w-full bg-gradient-to-b from-teal-500 to-cyan-600 rounded-lg p-2 text-center my-auto shadow-inner text-white">
+<span class="block text-[8px] font-black tracking-widest uppercase">SUKU</span>
+<span class="block text-xs font-black tracking-tight mt-0.5">THE COMPLETE</span>
+<span class="block text-[9px] font-extrabold text-cyan-100">MULTI GUMMY</span>
+</div>
+<div class="text-[7px] text-slate-500 font-mono">60 CHEWS • ZERO SUGAR</div>
+</div>
+</div>
+<!-- Product Details -->
+<div class="pt-5">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">METABOLIC HEALTH</span>
+<h2 class="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                  Suku Complete Multi Gummy
+                </h2>
+<p class="text-xs text-slate-500 mt-1 line-clamp-1">Pectin based clean vitamins with CoQ10 &amp; Iodine</p>
+</div>
+</div>
+<!-- Price & Add Action -->
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block -mb-0.5">Price</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$32.00</span>
+</div>
+<button aria-label="Add Suku to cart" class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white px-4 py-2.5 rounded-full text-xs font-bold transition duration-200" type="button">
+<span>Add to cart</span>
+<span class="text-sm leading-none font-bold">+</span>
+</button>
+</div>
+</article>
+<!-- Product Card 6: Oregano Oil -->
+<article class="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between" data-purpose="product-card">
+<div>
+<!-- Bottle Graphic Container -->
+<div class="relative bg-gradient-to-b from-[#f0fdf4] to-[#dcfce7] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+<!-- Bottle Graphic Mockup -->
+<div class="w-24 h-40 bg-emerald-950 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border border-emerald-800 relative">
+<!-- Cap -->
+<div class="w-14 h-6 bg-emerald-700 rounded-t-lg -mt-4 border-b border-white/20 shadow-sm"></div>
+<!-- Label -->
+<div class="w-full bg-white rounded-lg p-2 text-center my-auto shadow-inner border border-emerald-200 text-emerald-950">
+<span class="block text-[7px] font-black uppercase text-slate-400">HERBAL RX</span>
+<span class="block text-[11px] font-black text-emerald-800 leading-tight">OREGANO</span>
+<span class="block text-[10px] font-bold text-amber-600">OIL EXTRACT</span>
+<span class="block text-[7px] text-slate-500 font-mono mt-0.5">4,000 MG EQUIV</span>
+</div>
+<div class="text-[7px] text-emerald-300 font-mono">150 SOFTGELS</div>
+</div>
+</div>
+<!-- Product Details -->
+<div class="pt-5">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">IMMUNE SUPPORT</span>
+<h2 class="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                  Wild Mediterranean Oregano Oil
+                </h2>
+<p class="text-xs text-slate-500 mt-1 line-clamp-1">Standardized to 80% Carvacrol for respiratory ease</p>
+</div>
+</div>
+<!-- Price & Add Action -->
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block -mb-0.5">Price</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$24.90</span>
+</div>
+<button aria-label="Add Oregano Oil to cart" class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white px-4 py-2.5 rounded-full text-xs font-bold transition duration-200" type="button">
+<span>Add to cart</span>
+<span class="text-sm leading-none font-bold">+</span>
+</button>
+</div>
+</article>
+<!-- Product Card 7: Biotin (from SCREEN_5) -->
+<article class="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between" data-purpose="product-card">
+<div>
+<!-- Bottle Graphic Container -->
+<div class="relative bg-gradient-to-b from-[#f0fdf9] to-[#ccfbf1] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+<span class="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-teal-700 tracking-wider shadow-xs">Clinical Grade</span>
+<!-- Bottle Graphic Mockup -->
+<div class="w-22 h-36 bg-white rounded-2xl shadow-xl flex flex-col items-center justify-center p-3 border-2 border-teal-200 text-center">
+<div class="w-12 h-4 bg-teal-100 rounded-t-md -mt-5 mb-3"></div>
+<span class="text-[8px] font-mono tracking-widest text-teal-600 uppercase font-bold">PILLS LAB</span>
+<span class="text-xs font-black text-slate-800 tracking-tight mt-1">BIOTIN</span>
+<span class="text-[9px] font-bold text-teal-500">5000 MCG</span>
+<div class="w-8 h-0.5 bg-teal-300 my-2"></div>
+<span class="text-[7px] text-slate-400 uppercase font-mono">Hair &amp; Nails</span>
+</div>
+</div>
+<!-- Product Details -->
+<div class="pt-5">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">CELLULAR BEAUTY</span>
+<h2 class="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                  Biotin 5000mcg High Potency
+                </h2>
+<p class="text-xs text-slate-500 mt-1 line-clamp-1">Keratin support for dermal regeneration and strength</p>
+</div>
+</div>
+<!-- Price & Add Action -->
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block -mb-0.5">Price</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$26.50</span>
+</div>
+<button aria-label="Add Biotin to cart" class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white px-4 py-2.5 rounded-full text-xs font-bold transition duration-200" type="button">
+<span>Add to cart</span>
+<span class="text-sm leading-none font-bold">+</span>
+</button>
+</div>
+</article>
+<!-- Product Card 8: RestEase Sleep Support (from SCREEN_5) -->
+<article class="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between" data-purpose="product-card">
+<div>
+<!-- Bottle Graphic Container -->
+<div class="relative bg-gradient-to-b from-[#f1f5f9] to-[#e2e8f0] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+<span class="absolute top-3 right-3 bg-slate-900 text-white text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full tracking-wider shadow-xs">Best Seller</span>
+<!-- Bottle Graphic Mockup -->
+<div class="w-22 h-36 bg-zinc-900 rounded-2xl shadow-xl flex flex-col items-center justify-center p-3 border border-zinc-700 text-center text-white">
+<div class="w-12 h-4 bg-zinc-800 rounded-t-md -mt-5 mb-3"></div>
+<span class="text-[7px] font-mono tracking-widest text-zinc-400 uppercase">RESTEASE</span>
+<span class="text-xs font-black text-amber-200 tracking-tight mt-1">SLEEP</span>
+<span class="text-[8px] font-bold text-zinc-300">SUPPORT</span>
+<div class="w-8 h-0.5 bg-zinc-600 my-2"></div>
+<span class="text-[7px] text-zinc-400 font-mono">NON-HABIT FORMING</span>
+</div>
+</div>
+<!-- Product Details -->
+<div class="pt-5">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">SLEEP RECOVERY</span>
+<h2 class="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                  RestEase Sleep Support Complex
+                </h2>
+<p class="text-xs text-slate-500 mt-1 line-clamp-1">Restful REM sleep blend with L-Theanine &amp; Magnesium</p>
+</div>
+</div>
+<!-- Price & Add Action -->
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block -mb-0.5">Price</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$34.00</span>
+</div>
+<button aria-label="Add RestEase to cart" class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white px-4 py-2.5 rounded-full text-xs font-bold transition duration-200" type="button">
+<span>Add to cart</span>
+<span class="text-sm leading-none font-bold">+</span>
+</button>
+</div>
+</article>
+<!-- Product Card 9: Turmeric Curcumin (from SCREEN_5) -->
+<article class="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between" data-purpose="product-card">
+<div>
+<!-- Bottle Graphic Container -->
+<div class="relative bg-gradient-to-b from-[#fefce8] to-[#fef08a]/40 rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+<!-- Bottle Graphic Mockup -->
+<div class="w-22 h-36 bg-white rounded-2xl shadow-xl flex flex-col items-center justify-center p-3 border-2 border-amber-200 text-center">
+<div class="w-12 h-4 bg-amber-100 rounded-t-md -mt-5 mb-3"></div>
+<span class="text-[8px] font-mono tracking-widest text-amber-600 uppercase font-bold">ORGANIC</span>
+<span class="text-xs font-black text-amber-900 tracking-tight mt-1">TURMERIC</span>
+<span class="text-[8px] font-bold text-amber-700">CURCUMIN C3</span>
+<div class="w-8 h-0.5 bg-amber-300 my-2"></div>
+<span class="text-[7px] text-slate-400 uppercase font-mono">BioPerine® 95%</span>
+</div>
+</div>
+<!-- Product Details -->
+<div class="pt-5">
+<span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">INFLAMMATION SUPPORT</span>
+<h2 class="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                  Turmeric Curcumin C3 Complex
+                </h2>
+<p class="text-xs text-slate-500 mt-1 line-clamp-1">Clinically proven joint mobility &amp; antioxidant defense</p>
+</div>
+</div>
+<!-- Price & Add Action -->
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block -mb-0.5">Price</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$42.00</span>
+</div>
+<button aria-label="Add Turmeric to cart" class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white px-4 py-2.5 rounded-full text-xs font-bold transition duration-200" type="button">
+<span>Add to cart</span>
+<span class="text-sm leading-none font-bold">+</span>
+</button>
+</div>
+</article>
+</div>
+<!-- END: Product Grid -->
+<!-- BEGIN: PaginationBar -->
+<nav aria-label="Catalog pagination" class="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white rounded-2xl p-4 border border-slate-200/90 shadow-soft-card" data-purpose="pagination">
+<div class="text-xs text-slate-500 font-medium">
+            Showing <span class="font-bold text-slate-900">1 - 9</span> of <span class="font-bold text-slate-900">148</span> products
+          </div>
+<div class="flex items-center space-x-1.5">
+<button class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 cursor-not-allowed text-xs font-bold" disabled="">
+              ←
+            </button>
+<button class="w-9 h-9 flex items-center justify-center rounded-xl bg-black text-white text-xs font-bold shadow-sm">
+              1
+            </button>
+<button class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition">
+              2
+            </button>
+<button class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition">
+              3
+            </button>
+<span class="w-6 text-center text-xs text-slate-400 font-mono">...</span>
+<button class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition">
+              12
+            </button>
+<button class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition">
+              →
+            </button>
+</div>
+</nav>
+<!-- END: PaginationBar -->
+</main>
+<!-- END: MainProductGrid -->
+</div>
+<!-- END: TwoColumnCatalogLayout -->
+<!-- BEGIN: WarmClinicalFooter (Directly from SCREEN_5) -->
+<footer class="mt-12 bg-[#f8f6ea] rounded-3xl p-6 sm:p-10 lg:p-12 border border-amber-100/80" data-purpose="brand-footer">
+<!-- Top Provider Banner Card -->
+<div class="bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 mb-12 shadow-sm border border-black/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6" data-purpose="provider-portal-card">
+<div>
+<div class="flex items-center gap-2 mb-2">
+<span class="bg-black text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded">PILLS FOR PROVIDERS</span>
+<span class="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              LIVE PHARMACIST ON CALL
+            </span>
+</div>
+<h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Hand us the script, we'll handle the rest.
+          </h3>
+<p class="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl">
+            Partner with our licensed pharmacy network for streamlined direct-to-patient dispatch, automated refills, and real-time adherence analytics.
+          </p>
+</div>
+<div class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+<a class="inline-flex items-center justify-center gap-2 bg-black hover:bg-slate-800 text-white font-bold text-xs px-6 py-3.5 rounded-full tracking-wider transition whitespace-nowrap" href="#">
+<span>PROVIDER PORTAL</span>
+<span>→</span>
+</a>
+<!-- MedRelief Card Preview Mini Mockup -->
+<div class="w-12 h-14 bg-amber-50 rounded-lg border-2 border-amber-800 p-1 flex flex-col items-center justify-between shadow-xs hidden sm:flex">
+<span class="text-[5px] font-bold text-amber-900">MEDRELIEF</span>
+<div class="w-6 h-1 bg-amber-200 rounded-full"></div>
+<span class="text-[4px] font-mono text-slate-500">|||| ||||</span>
+</div>
+</div>
+</div>
+<!-- Footer Columns -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12 border-b border-black/10">
+<!-- Col 1: Brand & Compliance Info -->
+<div class="lg:col-span-4 space-y-4">
+<div class="flex items-center gap-1">
+<span class="text-2xl font-black uppercase tracking-tight text-slate-900">PILLS</span>
+<span class="w-2.5 h-2.5 rounded-full bg-black mt-1"></span>
+</div>
+<p class="text-xs text-slate-600 leading-relaxed pr-4">
+            Quality medications delivered directly to your doorstep with speed, care, and clinical precision. Certified online pharmacy serving thousands nationwide.
+          </p>
+<!-- HIPAA and LegitScript Certified Capsule -->
+<div class="inline-flex items-center gap-2 bg-[#eef7f0] border border-emerald-200/60 text-emerald-900 px-3.5 py-1.5 rounded-full text-[11px] font-bold">
+<svg class="w-3.5 h-3.5 text-emerald-600" fill="currentColor" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path></svg>
+<span>HIPAA COMPLIANT &amp; LEGITSCRIPT CERTIFIED</span>
+</div>
+<!-- Social Media Icons -->
+<div class="pt-2">
+<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">JOIN OUR COMMUNITY</span>
+<div class="flex items-center space-x-2.5">
+<a aria-label="Instagram" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-700 hover:text-black hover:bg-slate-100 shadow-xs transition" href="#">
+<svg class="w-4 h-4" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"></path></svg>
+</a>
+<a aria-label="Twitter" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-700 hover:text-black hover:bg-slate-100 shadow-xs transition" href="#">
+<svg class="w-4 h-4" fill="currentColor" viewbox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"></path></svg>
+</a>
+<a aria-label="LinkedIn" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-700 hover:text-black hover:bg-slate-100 shadow-xs transition" href="#">
+<svg class="w-4 h-4" fill="currentColor" viewbox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"></path></svg>
+</a>
+<a aria-label="YouTube" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-700 hover:text-black hover:bg-slate-100 shadow-xs transition" href="#">
+<svg class="w-4 h-4" fill="currentColor" viewbox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"></path></svg>
+</a>
+</div>
+</div>
+</div>
+<!-- Col 2: Shop & Categories -->
+<div class="lg:col-span-3 space-y-3">
+<h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Shop &amp; Categories</h4>
+<ul class="space-y-2 text-xs text-slate-600 font-medium">
+<li><a class="hover:text-black transition-colors" href="#">Prescription Medicine</a></li>
+<li><a class="hover:text-black transition-colors" href="#">Surgical Products</a></li>
+<li><a class="hover:text-black transition-colors font-bold text-slate-900" href="#">Daily Vitamins &amp; Supps</a></li>
+<li><a class="hover:text-black transition-colors" href="#">Skin Care Treatments</a></li>
+<li><a class="hover:text-black transition-colors" href="#">Pain Relief Formulas</a></li>
+<li><a class="hover:text-black transition-colors" href="#">Sleep &amp; Wellness</a></li>
+</ul>
+</div>
+<!-- Col 3: Quick Links -->
+<div class="lg:col-span-2 space-y-3">
+<h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Quick Links</h4>
+<ul class="space-y-2 text-xs text-slate-600 font-medium">
+<li><a class="hover:text-black transition-colors" href="#">Request Order</a></li>
+<li><a class="hover:text-black transition-colors" href="#">Special Offers</a></li>
+<li><a class="hover:text-black transition-colors" href="#">Doctor Consultations</a></li>
+<li><a class="hover:text-black transition-colors" href="#">Refill Prescription</a></li>
+<li><a class="hover:text-black transition-colors" href="#">How It Works</a></li>
+<li><a class="hover:text-black transition-colors" href="#">Store Locator</a></li>
+</ul>
+</div>
+<!-- Col 4: Contact & Clinical Support -->
+<div class="lg:col-span-3 space-y-3">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-900">Contact &amp; Support</h4>
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+</div>
+<div class="bg-white/80 p-3.5 rounded-2xl border border-black/5 space-y-2 text-xs">
+<div>
+<span class="block text-slate-900 font-extrabold text-sm">+1 (800) 745-5789</span>
+<span class="text-[10px] text-slate-500">Mon-Fri 8am-8pm EST • 24/7 Hotline</span>
+</div>
+<div class="pt-1">
+<a class="font-bold text-sky-700 hover:underline block" href="mailto:care@pills.co">care@pills.co</a>
+<span class="text-[10px] text-slate-500">Clinical Support: support@pills.co</span>
+</div>
+<div class="pt-1 border-t border-slate-100 text-[11px] text-slate-500">
+<span class="font-bold text-slate-700 block">CLINICAL HQ</span>
+<span>450 Healthway Blvd, Suite 300<br/>San Francisco, CA 94107</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Legal Sub-navigation Links -->
+<div class="pt-8 flex flex-wrap items-center justify-between gap-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+<div class="flex flex-wrap gap-x-6 gap-y-2">
+<a class="hover:text-black transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-black transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-black transition-colors" href="#">HIPAA Compliance</a>
+<a class="hover:text-black transition-colors" href="#">Prescription Drug Disclaimer</a>
+<a class="hover:text-black transition-colors" href="#">Refund Policy</a>
+<a class="hover:text-black transition-colors" href="#">Cookie Settings</a>
+</div>
+<div class="text-slate-600 font-semibold">
+          VERIFIED LEGITSCRIPT PARTNER
+        </div>
+</div>
+<!-- FDA Disclaimer Note -->
+<div class="mt-6 pt-6 border-t border-black/10 text-[10px] text-slate-500 leading-relaxed max-w-5xl">
+        * Statements on this site have not been evaluated by the FDA for unprescribed dietary supplements. Prescription medicines are strictly dispensed by fully licensed, accredited partner pharmacies in compliance with state and federal regulations. In case of a medical emergency, call 911 immediately.
+      </div>
+<!-- Copyright & Precision Badge -->
+<div class="mt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
+<p>© 2025 PILLS HEALTH INC. ALL RIGHTS RESERVED.</p>
+<p class="font-semibold tracking-wide uppercase text-[10px]">DESIGNED WITH CARE &amp; PRECISION</p>
+</div>
+</footer>
+<!-- END: WarmClinicalFooter -->
+</div>
+<!-- END: MasterPageWrapper -->
+</body></html>
