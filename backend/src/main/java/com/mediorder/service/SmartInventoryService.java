@@ -225,7 +225,6 @@ public class SmartInventoryService {
         }
 
         // Recalculate status based on expiry if not quarantined
-        LocalDate today = LocalDate.now();
         if (batch.getStatus() != BatchStatus.QUARANTINED) {
             if (today.isAfter(batch.getExpiryDate())) {
                 batch.setStatus(BatchStatus.EXPIRED);
