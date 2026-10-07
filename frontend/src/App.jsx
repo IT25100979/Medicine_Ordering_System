@@ -83,6 +83,8 @@ const App = () => {
               <Route path="/modules/cold-chain" element={<ColdChainPage />} />
               <Route path="/modules/subscriptions" element={<SubscriptionsPage />} />
               <Route path="/modules/delivery" element={<DeliveryPage />} />
+              <Route path="/delivery" element={<DeliveryPage />} />
+              <Route path="/admin/delivery" element={<DeliveryPage />} />
             </Routes>
           </main>
         </div>

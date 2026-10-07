@@ -720,30 +720,32 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
       </aside>
 
       {/* ========================================================= */}
-      {/* TOP HEADER: Clean Dashboard Layout                        */}
-      {/* Logo on left, Log Out on right                            */}
+      {/* TOP HEADER: Pharma + Logo (left) & Logout Button (right)  */}
+      {/* Regular nav bar matching the Pharmacist Dashboard         */}
       {/* ========================================================= */}
       <header className="w-full bg-white border-b border-neutral-200/80 px-4 sm:px-6 lg:px-12 py-3.5 mb-6 shadow-xs">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           
-          <div className="flex items-center gap-3 pl-8 sm:pl-10">
-            <div>
-              <Link
-                to="/admin/catalog"
-                className="flex items-center gap-1 font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-black hover:opacity-90 transition-opacity"
-              >
-                <span>PHARMA</span>
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-black shadow-sm">
-                  +
-                </span>
-              </Link>
-              <div className="mt-0.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-[10px] font-bold tracking-wide shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>{activeTab === 'stocks' ? 'Stocks Management Active' : 'Catalog Management Active'}</span>
-              </div>
+          {/* Top Left: Pharma + Logo and Active Status Badge below it */}
+          <div>
+            <Link
+              to="/admin/catalog"
+              className="flex items-center gap-1 font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-black hover:opacity-90 transition-opacity"
+            >
+              <span>PHARMA</span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-black shadow-sm">
+                +
+              </span>
+            </Link>
+
+            {/* Active Status Badge placed just below the Pharma + logo */}
+            <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-[10px] font-bold tracking-wide shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>{activeTab === 'stocks' ? 'Stocks & Inventory Operations' : 'Catalog & Formulation Operations'}</span>
             </div>
           </div>
 
+          {/* Top Right: Logout Button */}
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -751,10 +753,11 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
                 logout();
                 navigate('/login/admin');
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="Log Out of Operations Console"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-zinc-100 hover:bg-red-50 text-neutral-700 hover:text-red-600 text-xs font-bold uppercase tracking-wider transition-colors border border-neutral-200 shadow-2xs cursor-pointer"
             >
-              <span>Log Out</span>
               <span className="material-symbols-outlined text-[16px]">logout</span>
+              <span className="hidden sm:inline">Log Out</span>
             </button>
           </div>
 

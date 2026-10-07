@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Check, 
@@ -21,7 +21,8 @@ import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
 const DeliveryPage = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   
   // Navigation tab state: 'all' | 'deliveries' | 'zones'
   const [activeTab, setActiveTab] = useState('all');
@@ -385,44 +386,85 @@ const DeliveryPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="flex items-center">
-          <Link to="/" className="inline-flex items-center text-blue-600 hover:text-blue-700 mr-4 font-medium">
-            <ArrowLeft className="w-5 h-5 mr-1" />
-            Back to Dashboard
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Delivery Management Dashboard</h1>
-        </div>
+    <div className="bg-[#fcfbf9] min-h-screen text-neutral-900 pb-16 font-sans">
+      {/* ========================================================= */}
+      {/* TOP HEADER: Pharma + Logo (left) & Logout Button (right)  */}
+      {/* Regular nav bar matching the Pharmacist Dashboard         */}
+      {/* ========================================================= */}
+      <header className="w-full bg-white border-b border-neutral-200/80 px-4 sm:px-6 lg:px-12 py-3.5 mb-6 shadow-xs">
+        <div className="max-w-[1536px] mx-auto flex items-center justify-between">
+          
+          {/* Top Left: Pharma + Logo and Active Status Badge below it */}
+          <div>
+            <Link
+              to="/modules/delivery"
+              className="flex items-center gap-1 font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-black hover:opacity-90 transition-opacity"
+            >
+              <span>PHARMA</span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-black shadow-sm">
+                +
+              </span>
+            </Link>
 
-        {/* User Role Indicator */}
-        <div className="flex items-center gap-3">
-          {isAuthenticated && user ? (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-              <Shield className="w-3.5 h-3.5 mr-1 text-blue-600" />
-              {user.fullName} ({user.role})
-            </span>
-          ) : (
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <span>Guest Mode</span>
-              <Link to="/login" className="text-blue-600 hover:underline font-medium">
-                Log In
-              </Link>
+            {/* Active Status Badge placed just below the Pharma + logo */}
+            <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-[10px] font-bold tracking-wide shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Fleet Dispatch & Delivery Tracking</span>
             </div>
-          )}
-          <button
-            onClick={() => {
-              fetchDeliveries();
-              fetchDeliveryZones();
-            }}
-            title="Refresh All Data"
-            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-600 transition"
-          >
-            <RefreshCw className={`w-4 h-4 ${deliveriesLoading || zonesLoading ? 'animate-spin text-blue-600' : ''}`} />
-          </button>
+          </div>
+
+          {/* Top Right: Logout Button */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                navigate('/login/admin');
+              }}
+              title="Log Out of Delivery Portal"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-zinc-100 hover:bg-red-50 text-neutral-700 hover:text-red-600 text-xs font-bold uppercase tracking-wider transition-colors border border-neutral-200 shadow-2xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">logout</span>
+              <span className="hidden sm:inline">Log Out</span>
+            </button>
+          </div>
+
         </div>
-      </div>
+      </header>
+
+      {/* Main Workspace Container */}
+      <div className="max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-12">
+        {/* Workspace Title: "Delivery Management Dashboard" & Refresh */}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
+              Delivery Management Dashboard
+            </h1>
+            <p className="text-xs text-neutral-500 mt-1">
+              Dispatch fleet shipments, manage geo-fenced delivery zones, and track real-time fulfillment timelines.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isAuthenticated && user && (
+              <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-800 border border-neutral-200">
+                <Shield className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                {user.fullName} ({user.role})
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                fetchDeliveries();
+                fetchDeliveryZones();
+              }}
+              title="Refresh All Data"
+              className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-black text-white flex items-center justify-center shadow-sm transition-all active:scale-95 cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${deliveriesLoading || zonesLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
 
       {/* Navigation View Switcher */}
       <div className="flex border-b border-gray-200 mb-8">
@@ -1076,6 +1118,7 @@ const DeliveryPage = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
