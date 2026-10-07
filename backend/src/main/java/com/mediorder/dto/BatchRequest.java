@@ -8,7 +8,6 @@ import java.time.LocalDate;
 
 public class BatchRequest {
 
-    @NotNull(message = "Medicine ID is required")
     private Long medicineId;
 
     @NotBlank(message = "Batch number is required")

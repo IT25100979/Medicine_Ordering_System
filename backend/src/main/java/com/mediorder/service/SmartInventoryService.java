@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -161,6 +162,83 @@ public class SmartInventoryService {
         long days = ChronoUnit.DAYS.between(today, saved.getExpiryDate());
         String urgency = days < 0 ? "EXPIRED" : (days <= 30 ? "CRITICAL_FEFO" : (days <= 90 ? "MODERATE" : "SAFE"));
         return toResponseDto(saved, days, urgency, 1);
+    }
+
+    /**
+     * Update full details of a batch (batch number, manufacturing date, expiry date, quantity, shelf location, status, quarantine reason)
+     */
+    @Transactional
+    public BatchResponse updateBatch(Long batchId, BatchRequest request) {
+        InventoryBatch batch = batchRepository.findById(batchId)
+                .orElseThrow(() -> new IllegalArgumentException("Batch not found with ID: " + batchId));
+
+        if (request.getBatchNumber() != null && !request.getBatchNumber().trim().isEmpty()) {
+            String newBatchNum = request.getBatchNumber().trim().toUpperCase();
+            if (!newBatchNum.equalsIgnoreCase(batch.getBatchNumber()) && batchRepository.existsByBatchNumber(newBatchNum)) {
+                throw new IllegalArgumentException("A batch with batch number '" + newBatchNum + "' already exists.");
+            }
+            batch.setBatchNumber(newBatchNum);
+        }
+
+        if (request.getManufacturingDate() != null) {
+            batch.setManufacturingDate(request.getManufacturingDate());
+        }
+
+        if (request.getExpiryDate() != null) {
+            batch.setExpiryDate(request.getExpiryDate());
+        }
+
+        if (batch.getManufacturingDate() != null && batch.getExpiryDate() != null) {
+            if (batch.getManufacturingDate().isAfter(batch.getExpiryDate())) {
+                throw new IllegalArgumentException("Manufacturing date cannot be after the expiry date.");
+            }
+        }
+
+        if (request.getInitialQuantity() != null && request.getInitialQuantity() > 0) {
+            int oldInitial = batch.getInitialQuantity() != null ? batch.getInitialQuantity() : 0;
+            int oldAvailable = batch.getQuantityAvailable() != null ? batch.getQuantityAvailable() : 0;
+            int diff = request.getInitialQuantity() - oldInitial;
+            batch.setInitialQuantity(request.getInitialQuantity());
+            int newAvailable = Math.max(0, oldAvailable + diff);
+            batch.setQuantityAvailable(newAvailable);
+            batch.setStockQuantity(newAvailable);
+        }
+
+        if (request.getShelfLocation() != null) {
+            batch.setShelfLocation(request.getShelfLocation().trim());
+        }
+
+        if (request.getStatus() != null) {
+            batch.setStatus(request.getStatus());
+        }
+
+        if (request.getQuarantineReason() != null) {
+            batch.setQuarantineReason(request.getQuarantineReason().trim());
+        } else if (batch.getStatus() == BatchStatus.ACTIVE) {
+            batch.setQuarantineReason(null);
+        }
+
+        // Recalculate status based on expiry if not quarantined
+        LocalDate today = LocalDate.now();
+        if (batch.getStatus() != BatchStatus.QUARANTINED) {
+            if (today.isAfter(batch.getExpiryDate())) {
+                batch.setStatus(BatchStatus.EXPIRED);
+            } else if (ChronoUnit.DAYS.between(today, batch.getExpiryDate()) <= 30) {
+                batch.setStatus(BatchStatus.NEAR_EXPIRY);
+            } else {
+                batch.setStatus(BatchStatus.ACTIVE);
+            }
+        }
+
+        batch.setUpdatedAt(LocalDateTime.now());
+        InventoryBatch saved = batchRepository.save(batch);
+
+        // Recalculate parent medicine total stock
+        syncMedicineStock(saved.getMedicine().getId());
+
+        long days = ChronoUnit.DAYS.between(today, saved.getExpiryDate());
+        String urgency = days < 0 ? "EXPIRED" : (days <= 30 ? "CRITICAL_FEFO" : (days <= 90 ? "MODERATE" : "SAFE"));
+        return toResponseDto(saved, days, urgency, null);
     }
 
     /**

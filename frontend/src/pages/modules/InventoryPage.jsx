@@ -46,6 +46,7 @@ const InventoryPage = () => {
   const [showAddMedicineModal, setShowAddMedicineModal] = useState(false);
   const [showEditMedicineModal, setShowEditMedicineModal] = useState(false);
   const [showAddBatchModal, setShowAddBatchModal] = useState(false);
+  const [showEditBatchModal, setShowEditBatchModal] = useState(false);
   const [showQuarantineModal, setShowQuarantineModal] = useState(false);
   const [selectedBatchForQuarantine, setSelectedBatchForQuarantine] = useState(null);
   const [quarantineReasonInput, setQuarantineReasonInput] = useState('');
@@ -62,6 +63,19 @@ const InventoryPage = () => {
     description: '',
     requiresPrescription: false,
     isTemperatureSensitive: false,
+  });
+
+  const [editingBatch, setEditingBatch] = useState({
+    id: null,
+    medicineId: null,
+    medicineName: '',
+    batchNumber: '',
+    initialQuantity: 0,
+    manufacturingDate: '',
+    expiryDate: '',
+    shelfLocation: '',
+    status: 'ACTIVE',
+    quarantineReason: '',
   });
 
   const [newMedicine, setNewMedicine] = useState({
@@ -377,6 +391,53 @@ const InventoryPage = () => {
       batchNumber: `BAT-${Date.now().toString().slice(-6)}`,
     }));
     setShowAddBatchModal(true);
+  };
+
+  // Open Edit Batch Modal
+  const handleOpenEditBatch = (batch) => {
+    setEditingBatch({
+      id: batch.id,
+      medicineId: batch.medicineId,
+      medicineName: batch.medicineName || '',
+      batchNumber: batch.batchNumber || '',
+      initialQuantity: batch.initialQuantity || batch.quantityAvailable || 0,
+      manufacturingDate: batch.manufacturingDate || '',
+      expiryDate: batch.expiryDate || '',
+      shelfLocation: batch.shelfLocation || '',
+      status: batch.status || 'ACTIVE',
+      quarantineReason: batch.quarantineReason || '',
+    });
+    setShowEditBatchModal(true);
+  };
+
+  // Submit Update Batch
+  const handleUpdateBatch = async (e) => {
+    e.preventDefault();
+    if (!editingBatch.batchNumber || !editingBatch.expiryDate || !editingBatch.manufacturingDate) {
+      showToast('Please provide batch number, manufacturing date, and expiry date.', 'error');
+      return;
+    }
+
+    try {
+      const payload = {
+        medicineId: editingBatch.medicineId,
+        batchNumber: editingBatch.batchNumber.trim().toUpperCase(),
+        initialQuantity: parseInt(editingBatch.initialQuantity, 10) || 1,
+        manufacturingDate: editingBatch.manufacturingDate,
+        expiryDate: editingBatch.expiryDate,
+        shelfLocation: editingBatch.shelfLocation ? editingBatch.shelfLocation.trim() : 'Default Aisle',
+        status: editingBatch.status,
+        quarantineReason: editingBatch.status === 'QUARANTINED' ? editingBatch.quarantineReason : null,
+      };
+
+      await client.put(`/api/v1/inventory/batches/${editingBatch.id}`, payload);
+      showToast(`Batch "${payload.batchNumber}" updated successfully!`);
+      setShowEditBatchModal(false);
+      fetchData();
+    } catch (err) {
+      console.error('Update batch error:', err);
+      showToast(err.response?.data?.message || 'Failed to update batch.', 'error');
+    }
   };
 
   // Helper for Urgency Styles
@@ -1050,6 +1111,14 @@ const InventoryPage = () => {
                           )}
 
                           <button
+                            onClick={() => handleOpenEditBatch(batch)}
+                            title="Edit Batch Details (Dates, Qty, Shelf)"
+                            className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors ml-1"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
                             onClick={() => handleDeleteBatch(batch.id, batch.batchNumber)}
                             title="Delete Batch"
                             className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-1"
@@ -1650,6 +1719,160 @@ const InventoryPage = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 2B: EDIT INVENTORY BATCH                                 */}
+      {/* ============================================================== */}
+      {showEditBatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
+            <button
+              onClick={() => setShowEditBatchModal(false)}
+              className="absolute top-6 right-6 text-zinc-400 hover:text-white p-1"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <Boxes className="w-4 h-4" />
+              <span>Batch Calibration</span>
+            </div>
+            <h2 className="text-2xl font-black text-white">Edit Inventory Batch</h2>
+            <p className="text-zinc-400 text-xs mt-1">
+              Modify manufacturing date, expiry date, inventory quantity, or warehouse location.
+            </p>
+
+            {/* Medicine Profile Pill */}
+            <div className="mt-4 p-3 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Target Medicine</span>
+                <div className="text-sm font-black text-white">{editingBatch.medicineName || 'Pharmaceutical Product'}</div>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono font-bold">
+                Batch ID #{editingBatch.id}
+              </span>
+            </div>
+
+            <form onSubmit={handleUpdateBatch} className="space-y-4 mt-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
+                    Batch Number <span className="text-emerald-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingBatch.batchNumber}
+                    onChange={(e) => setEditingBatch({ ...editingBatch, batchNumber: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
+                    Stock Quantity <span className="text-emerald-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editingBatch.initialQuantity}
+                    onChange={(e) =>
+                      setEditingBatch({ ...editingBatch, initialQuantity: parseInt(e.target.value, 10) || 0 })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
+                    Manufacturing Date <span className="text-emerald-400">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editingBatch.manufacturingDate}
+                    onChange={(e) => setEditingBatch({ ...editingBatch, manufacturingDate: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
+                    Expiry Date (FEFO) <span className="text-emerald-400">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editingBatch.expiryDate}
+                    onChange={(e) => setEditingBatch({ ...editingBatch, expiryDate: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Shelf Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Aisle 2 - Shelf B1"
+                    value={editingBatch.shelfLocation}
+                    onChange={(e) => setEditingBatch({ ...editingBatch, shelfLocation: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Batch Status</label>
+                  <select
+                    value={editingBatch.status}
+                    onChange={(e) => setEditingBatch({ ...editingBatch, status: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                  >
+                    <option value="ACTIVE">ACTIVE (FEFO Eligible)</option>
+                    <option value="QUARANTINED">QUARANTINED (Containment)</option>
+                    <option value="NEAR_EXPIRY">NEAR_EXPIRY (Flagged)</option>
+                    <option value="EXPIRED">EXPIRED (Halted)</option>
+                  </select>
+                </div>
+              </div>
+
+              {editingBatch.status === 'QUARANTINED' && (
+                <div>
+                  <label className="block text-xs font-bold text-purple-400 uppercase mb-1">
+                    Quarantine Containment Reason
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBatch.quarantineReason}
+                    onChange={(e) =>
+                      setEditingBatch({ ...editingBatch, quarantineReason: e.target.value })
+                    }
+                    placeholder="e.g. Visual inspection required, temperature breach"
+                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-purple-500/40 text-white text-sm focus:border-purple-500 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setShowEditBatchModal(false)}
+                  className="px-5 py-2.5 rounded-xl text-zinc-400 hover:text-white font-bold text-xs uppercase"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20"
+                >
+                  Save Batch Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -58,13 +58,25 @@ const App = () => {
                 </ProtectedRoute>
               } />
 
-              <Route path="/admin/smart-inventory" element={<InventoryPage />} />
-              <Route path="/admin/inventory" element={<InventoryPage />} />
+              <Route path="/admin/smart-inventory" element={
+                <ProtectedRoute allowedRoles={['OPERATIONS_MANAGER', 'PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN']}>
+                  <InventoryPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/inventory" element={
+                <ProtectedRoute allowedRoles={['OPERATIONS_MANAGER', 'PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN']}>
+                  <InventoryPage />
+                </ProtectedRoute>
+              } />
 
               {/* Module Routes */}
               <Route path="/prescription" element={<PrescriptionPage />} />
               <Route path="/modules/prescription" element={<PrescriptionPage />} />
-              <Route path="/modules/inventory" element={<InventoryPage />} />
+              <Route path="/modules/inventory" element={
+                <ProtectedRoute allowedRoles={['OPERATIONS_MANAGER', 'PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN']}>
+                  <InventoryPage />
+                </ProtectedRoute>
+              } />
               <Route path="/modules/orders" element={<OrderProcessingPage />} />
               <Route path="/modules/cold-chain" element={<ColdChainPage />} />
               <Route path="/modules/subscriptions" element={<SubscriptionsPage />} />

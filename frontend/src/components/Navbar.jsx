@@ -151,17 +151,6 @@ const Navbar = () => {
           >
             DELIVERY
           </Link>
-          <Link
-            to="/modules/inventory"
-            className={`hidden lg:inline-flex items-center gap-1.5 text-xs font-extrabold tracking-wider uppercase transition-all px-3 py-1.5 rounded-full ${
-              isActive('/modules/inventory')
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>INVENTORY & FEFO</span>
-          </Link>
         </nav>
 
         {/* Center Brand Logo */}

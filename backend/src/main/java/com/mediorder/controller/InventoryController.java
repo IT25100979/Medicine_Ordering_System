@@ -46,6 +46,13 @@ public class InventoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @PutMapping("/batches/{id}")
+    public ResponseEntity<BatchResponse> updateBatch(
+            @PathVariable Long id,
+            @Valid @RequestBody BatchRequest request) {
+        return ResponseEntity.ok(inventoryService.updateBatch(id, request));
+    }
+
     @PutMapping("/batches/{id}/status")
     public ResponseEntity<BatchResponse> updateBatchStatus(
             @PathVariable Long id,
