@@ -149,10 +149,18 @@ const ProductDetailPage = () => {
   };
 
   const handleAddToCart = () => {
+    if (product?.stockQuantity <= 0) {
+      showToast('This product is currently out of stock.', 'error');
+      return;
+    }
     showToast(`Added ${quantity}x "${product.name}" to your cart!`);
   };
 
   const handleOpenCheckout = () => {
+    if (product?.stockQuantity <= 0) {
+      showToast('Cannot proceed: this product is currently out of stock.', 'error');
+      return;
+    }
     setCheckoutStep('form');
     setShowCheckoutModal(true);
   };
@@ -199,9 +207,9 @@ const ProductDetailPage = () => {
           </nav>
 
           <div className="inline-flex items-center gap-2 self-start sm:self-auto bg-surface-container-low px-3.5 py-1.5 rounded-full shadow-sm border border-brand-border">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-[11px] text-zinc-900 font-bold tracking-wide uppercase">
-              Verified In-Stock • Dispensed from Hub 01
+            <span className={`w-2 h-2 rounded-full ${product.stockQuantity <= 0 ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></span>
+            <span className={`text-[11px] font-bold tracking-wide uppercase ${product.stockQuantity <= 0 ? 'text-red-700' : 'text-zinc-900'}`}>
+              {product.stockQuantity <= 0 ? 'Out of Stock • Awaiting Restock' : 'Verified In-Stock • Dispensed from Hub 01'}
             </span>
           </div>
         </div>
@@ -597,30 +605,41 @@ const ProductDetailPage = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-zinc-700">Quantity</span>
                   <span className="text-[11px] text-zinc-500 font-semibold flex items-center gap-1">
-                    <span className={`w-1.5 h-1.5 rounded-full ${product.stockQuantity <= 15 ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
-                    <span>{product.stockQuantity} units available</span>
+                    {product.stockQuantity <= 0 ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                        <span className="text-red-600 font-bold uppercase text-[10px]">0 units (Out of stock)</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className={`w-1.5 h-1.5 rounded-full ${product.stockQuantity <= 15 ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                        <span>{product.stockQuantity} units available</span>
+                      </>
+                    )}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-3">
                   {/* Stepper */}
-                  <div className="inline-flex items-center bg-surface-container-low rounded-full px-2 py-1 border border-brand-border shadow-inner">
+                  <div className={`inline-flex items-center bg-surface-container-low rounded-full px-2 py-1 border border-brand-border shadow-inner ${product.stockQuantity <= 0 ? 'opacity-50 pointer-events-none' : ''}`}>
                     <button
                       type="button"
                       aria-label="Decrease quantity"
                       onClick={() => handleQtyChange(-1)}
-                      className="w-9 h-9 rounded-full bg-white hover:bg-zinc-100 text-black font-extrabold text-base flex items-center justify-center active:scale-95 transition-all shadow-sm"
+                      disabled={product.stockQuantity <= 0}
+                      className="w-9 h-9 rounded-full bg-white hover:bg-zinc-100 text-black font-extrabold text-base flex items-center justify-center active:scale-95 transition-all shadow-sm disabled:opacity-50"
                     >
                       -
                     </button>
                     <span className="w-12 text-center text-sm font-black text-black">
-                      {quantity}
+                      {product.stockQuantity <= 0 ? 0 : quantity}
                     </span>
                     <button
                       type="button"
                       aria-label="Increase quantity"
                       onClick={() => handleQtyChange(1)}
-                      className="w-9 h-9 rounded-full bg-white hover:bg-zinc-100 text-black font-extrabold text-base flex items-center justify-center active:scale-95 transition-all shadow-sm"
+                      disabled={product.stockQuantity <= 0}
+                      className="w-9 h-9 rounded-full bg-white hover:bg-zinc-100 text-black font-extrabold text-base flex items-center justify-center active:scale-95 transition-all shadow-sm disabled:opacity-50"
                     >
                       +
                     </button>
@@ -630,30 +649,46 @@ const ProductDetailPage = () => {
                   <button
                     type="button"
                     onClick={handleAddToCart}
-                    className="flex-1 h-12 rounded-full bg-surface-container-low hover:bg-surface-container text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border border-brand-border transition-all active:scale-95"
+                    disabled={product.stockQuantity <= 0}
+                    className={`flex-1 h-12 rounded-full ${
+                      product.stockQuantity <= 0
+                        ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200'
+                        : 'bg-surface-container-low hover:bg-surface-container text-black border-brand-border active:scale-95 cursor-pointer'
+                    } text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all`}
                   >
                     <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span>
-                    <span>Add to Cart</span>
+                    <span>{product.stockQuantity <= 0 ? 'Unavailable' : 'Add to Cart'}</span>
                   </button>
                 </div>
 
                 {/* Primary CTA Button: PROCEED TO CHECKOUT */}
-                <button
-                  type="button"
-                  onClick={handleOpenCheckout}
-                  className="w-full h-14 rounded-full bg-black hover:bg-zinc-800 text-white font-black text-xs uppercase tracking-wider flex items-center justify-between px-6 shadow-xl transition-all active:scale-[0.99] group"
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-amber-400">lock</span>
-                    <span>Proceed to Checkout</span>
-                  </span>
-                  <span className="inline-flex items-center gap-2 font-black text-sm">
-                    <span>${totalPrice.toFixed(2)}</span>
-                    <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
-                      arrow_forward
+                {product.stockQuantity <= 0 ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full h-14 rounded-full bg-zinc-200 text-zinc-500 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-not-allowed border border-zinc-300 shadow-none"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">block</span>
+                    <span>Item Currently Out of Stock</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleOpenCheckout}
+                    className="w-full h-14 rounded-full bg-black hover:bg-zinc-800 text-white font-black text-xs uppercase tracking-wider flex items-center justify-between px-6 shadow-xl transition-all active:scale-[0.99] group"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-amber-400">lock</span>
+                      <span>Proceed to Checkout</span>
                     </span>
-                  </span>
-                </button>
+                    <span className="inline-flex items-center gap-2 font-black text-sm">
+                      <span>${totalPrice.toFixed(2)}</span>
+                      <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
+                        arrow_forward
+                      </span>
+                    </span>
+                  </button>
+                )}
               </div>
 
               {/* Dispatch Reassurance Box */}

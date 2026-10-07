@@ -31,6 +31,7 @@ const CatalogPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Medications');
   const [onlyRx, setOnlyRx] = useState(false);
+  const [inStockOnly, setInStockOnly] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,6 +42,7 @@ const CatalogPage = () => {
           const mapped = response.data.map((m) => {
             const cat = m.category || 'General';
             const fallbackImg = CLINICAL_FALLBACK_IMAGES[cat] || CLINICAL_FALLBACK_IMAGES['General'];
+            const actualStock = m.stockQuantity != null ? Number(m.stockQuantity) : 0;
             return {
               id: m.id,
               name: m.genericName || m.name,
@@ -52,8 +54,8 @@ const CatalogPage = () => {
               msrp: m.msrp ? Number(m.msrp) : (Number(m.unitPrice) || 25.0) * 1.2,
               requiresRx: Boolean(m.requiresPrescription),
               isChronic: Boolean(m.isTemperatureSensitive),
-              inStock: (m.stockQuantity || 0) > 0,
-              stockQuantity: m.stockQuantity != null ? m.stockQuantity : 45,
+              inStock: actualStock > 0,
+              stockQuantity: actualStock,
               imageUrl: m.imageUrl || fallbackImg,
               rating: m.rating ? Number(m.rating) : 4.8,
               reviewsCount: m.reviewsCount || 64,
@@ -85,7 +87,8 @@ const CatalogPage = () => {
       (p.brandName && p.brandName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesRx = onlyRx ? p.requiresRx : true;
-    return matchesCategory && matchesSearch && matchesRx;
+    const matchesInStock = inStockOnly ? p.inStock : true;
+    return matchesCategory && matchesSearch && matchesRx && matchesInStock;
   });
 
   return (
@@ -135,8 +138,18 @@ const CatalogPage = () => {
             ))}
           </div>
 
-          {/* Search Box & Rx Toggle */}
-          <div className="flex items-center gap-3">
+          {/* Search Box & Rx / In-Stock Toggles */}
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={inStockOnly}
+                onChange={(e) => setInStockOnly(e.target.checked)}
+                className="w-4 h-4 rounded text-black focus:ring-0 accent-black cursor-pointer"
+              />
+              <span>In-Stock Only</span>
+            </label>
+
             <label className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -224,9 +237,18 @@ const CatalogPage = () => {
                   </div>
 
                   {/* Stock Pill at Bottom Left */}
-                  <div className="absolute bottom-2 left-2.5 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-700 shadow-sm flex items-center gap-1">
-                    <span className={`w-1.5 h-1.5 rounded-full ${product.stockQuantity <= 15 ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
-                    <span>{product.stockQuantity} in stock</span>
+                  <div className="absolute bottom-2 left-2.5 bg-white/95 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-sm flex items-center gap-1 border border-black/5">
+                    {product.stockQuantity <= 0 ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                        <span className="text-red-600 font-extrabold uppercase tracking-wider text-[9px]">Out of Stock</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className={`w-1.5 h-1.5 rounded-full ${product.stockQuantity <= 15 ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                        <span className="text-zinc-700 font-semibold">{product.stockQuantity} in stock</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -283,9 +305,13 @@ const CatalogPage = () => {
                     e.stopPropagation();
                     navigate(`/catalog/${product.id}`);
                   }}
-                  className="bg-black group-hover:bg-zinc-800 text-white text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-full transition-all flex items-center gap-1 shadow-sm"
+                  className={`${
+                    product.inStock
+                      ? 'bg-black group-hover:bg-zinc-800 text-white'
+                      : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200'
+                  } text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-full transition-all flex items-center gap-1 shadow-sm`}
                 >
-                  <span>View &amp; Buy</span>
+                  <span>{product.inStock ? 'View & Buy' : 'Details'}</span>
                   <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                 </button>
               </div>
