@@ -129,11 +129,13 @@ public class SmartInventoryService {
             throw new IllegalArgumentException("A batch with batch number '" + request.getBatchNumber().trim() + "' already exists.");
         }
 
+        LocalDate today = LocalDate.now();
+        if (request.getManufacturingDate().isAfter(today)) {
+            throw new IllegalArgumentException("Manufacturing date cannot be in the future.");
+        }
         if (request.getManufacturingDate().isAfter(request.getExpiryDate())) {
             throw new IllegalArgumentException("Manufacturing date cannot be after the expiry date.");
         }
-
-        LocalDate today = LocalDate.now();
         BatchStatus initialStatus = request.getStatus() != null ? request.getStatus() : BatchStatus.ACTIVE;
         if (today.isAfter(request.getExpiryDate())) {
             initialStatus = BatchStatus.EXPIRED;
@@ -180,7 +182,11 @@ public class SmartInventoryService {
             batch.setBatchNumber(newBatchNum);
         }
 
+        LocalDate today = LocalDate.now();
         if (request.getManufacturingDate() != null) {
+            if (request.getManufacturingDate().isAfter(today)) {
+                throw new IllegalArgumentException("Manufacturing date cannot be in the future.");
+            }
             batch.setManufacturingDate(request.getManufacturingDate());
         }
 

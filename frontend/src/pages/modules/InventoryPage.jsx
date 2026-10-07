@@ -191,6 +191,17 @@ const InventoryPage = () => {
       const createdMed = res.data;
 
       if (createInitialBatch) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const mfgDate = initialBatchData.manufacturingDate || todayStr;
+        if (mfgDate > todayStr) {
+          showToast('Manufacturing date cannot be in the future.', 'error');
+          return;
+        }
+        if (initialBatchData.expiryDate && mfgDate > initialBatchData.expiryDate) {
+          showToast('Manufacturing date cannot be after expiry date.', 'error');
+          return;
+        }
+
         try {
           const batchNum =
             initialBatchData.batchNumber && initialBatchData.batchNumber.trim()
@@ -200,7 +211,7 @@ const InventoryPage = () => {
             medicineId: createdMed.id,
             batchNumber: batchNum,
             initialQuantity: parseInt(initialBatchData.initialQuantity) || 100,
-            manufacturingDate: initialBatchData.manufacturingDate || new Date().toISOString().split('T')[0],
+            manufacturingDate: mfgDate,
             expiryDate:
               initialBatchData.expiryDate ||
               new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -242,8 +253,19 @@ const InventoryPage = () => {
   // Handle Create Batch
   const handleCreateBatch = async (e) => {
     e.preventDefault();
-    if (!newBatch.medicineId || !newBatch.batchNumber || !newBatch.expiryDate) {
+    if (!newBatch.medicineId || !newBatch.batchNumber || !newBatch.expiryDate || !newBatch.manufacturingDate) {
       showToast('Please complete all batch fields.', 'error');
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (newBatch.manufacturingDate > todayStr) {
+      showToast('Manufacturing date cannot be in the future.', 'error');
+      return;
+    }
+
+    if (newBatch.manufacturingDate > newBatch.expiryDate) {
+      showToast('Manufacturing date cannot be after expiry date.', 'error');
       return;
     }
 
@@ -415,6 +437,17 @@ const InventoryPage = () => {
     e.preventDefault();
     if (!editingBatch.batchNumber || !editingBatch.expiryDate || !editingBatch.manufacturingDate) {
       showToast('Please provide batch number, manufacturing date, and expiry date.', 'error');
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (editingBatch.manufacturingDate > todayStr) {
+      showToast('Manufacturing date cannot be in the future.', 'error');
+      return;
+    }
+
+    if (editingBatch.manufacturingDate > editingBatch.expiryDate) {
+      showToast('Manufacturing date cannot be after expiry date.', 'error');
       return;
     }
 
@@ -1596,6 +1629,7 @@ const InventoryPage = () => {
                   <input
                     type="date"
                     required
+                    max={new Date().toISOString().split('T')[0]}
                     value={newBatch.manufacturingDate}
                     onChange={(e) => setNewBatch({ ...newBatch, manufacturingDate: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
@@ -1795,6 +1829,7 @@ const InventoryPage = () => {
                   <input
                     type="date"
                     required
+                    max={new Date().toISOString().split('T')[0]}
                     value={editingBatch.manufacturingDate}
                     onChange={(e) => setEditingBatch({ ...editingBatch, manufacturingDate: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
