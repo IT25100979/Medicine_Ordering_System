@@ -1,17 +1,7 @@
 import React from 'react';
-import { Link, Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { isStaffRole, getAdminDashboardRoute } from '../utils/roleRoutes';
+import { Link } from 'react-router-dom';
 
 const HomePage = () => {
-  const { user, isAuthenticated } = useAuth();
-
-  // The landing page is strictly for regular customers and visitors.
-  // Any logged-in administrator is automatically redirected into their specific dashboard.
-  if (isAuthenticated && isStaffRole(user?.role)) {
-    const targetDashboard = getAdminDashboardRoute(user.role) || '/admin/catalog';
-    return <Navigate to={targetDashboard} replace />;
-  }
 
   return (
     <div className="pt-24 pb-16 px-3 sm:px-5 md:px-8 max-w-[1580px] mx-auto selection:bg-black selection:text-white">

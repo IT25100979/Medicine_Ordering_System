@@ -17,11 +17,13 @@ const Navbar = () => {
   const roleLabel = ADMIN_ROLE_LABELS[user?.role] || user?.role || 'Staff';
   const workspaceTitle = ADMIN_WORKSPACE_NAMES[user?.role] || 'Management Console';
 
+  // Only show the dark Admin Topbar when actively viewing Admin Workspace / Inventory pages
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/modules/inventory';
+
   // -------------------------------------------------------------
-  // ADMIN DASHBOARD TOPBAR (Strictly for Administrator / Staff Accounts)
-  // Completely removes regular user navigation panels, public links & storefront controls
+  // ADMIN DASHBOARD TOPBAR (Strictly inside Admin Workspace routes)
   // -------------------------------------------------------------
-  if (isAdmin) {
+  if (isAdmin && isAdminRoute) {
     return (
       <header className="fixed top-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 text-white">
         <div className="h-16 max-w-[1536px] mx-auto px-4 md:px-8 flex items-center justify-between">
@@ -29,7 +31,8 @@ const Navbar = () => {
           {/* Left: Brand & Admin Console Identifier */}
           <div className="flex items-center gap-3">
             <Link
-              to={dashboardRoute}
+              to="/"
+              title="Visit Storefront / Home"
               className="font-sans text-xl font-black tracking-tight uppercase flex items-center gap-1.5 text-white group"
             >
               <span>PILLS</span>
@@ -176,6 +179,16 @@ const Navbar = () => {
 
           {isAuthenticated ? (
             <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Link
+                  to={dashboardRoute}
+                  className="inline-flex items-center gap-1.5 bg-black hover:bg-zinc-800 text-white px-3 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all shadow-sm"
+                  title="Go to Admin Dashboard"
+                >
+                  <span className="material-symbols-outlined text-[15px]">space_dashboard</span>
+                  <span className="hidden sm:inline">DASHBOARD</span>
+                </Link>
+              )}
               <Link
                 to="/profile"
                 className="inline-flex items-center gap-1.5 bg-surface-container-low hover:bg-surface-container px-3 py-1.5 rounded-full text-xs font-bold text-on-surface transition-all border border-brand-border"
