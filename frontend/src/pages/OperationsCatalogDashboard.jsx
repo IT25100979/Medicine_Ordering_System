@@ -709,6 +709,18 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
               )}
             </button>
 
+            {/* 3. Cold Chain Management Option */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsDrawerOpen(false);
+                navigate('/admin/cold-chain');
+              }}
+              className="flex items-center gap-3 px-4 py-3 rounded-full font-bold text-xs tracking-wide transition-all cursor-pointer text-left bg-white/80 hover:bg-white text-neutral-700 hover:text-black"
+            >
+              <span className="material-symbols-outlined text-[20px]">ac_unit</span>
+              <span className="flex-1">Cold Chain Management</span>
+            </button>
           </nav>
         </div>
 

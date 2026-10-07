@@ -8,7 +8,7 @@ export const ADMIN_DASHBOARD_ROUTES = {
   OPERATIONS_MANAGER: '/admin/catalog',
   PHARMACIST: '/pharmacist_dashboard',
   CHIEF_PHARMACIST: '/pharmacist_dashboard',
-  DELIVERY_COORDINATOR: '/modules/delivery',
+  DELIVERY_COORDINATOR: '/admin/cold-chain',
   DELIVERY_RIDER: '/modules/delivery',
   ADMIN: '/admin/catalog',
   FINANCE_MANAGER: '/admin/catalog',
