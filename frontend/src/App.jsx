@@ -63,6 +63,12 @@ const App = () => {
                 </ProtectedRoute>
               } />
 
+              <Route path="/admin/cold-chain" element={
+                <ProtectedRoute allowedRoles={['OPERATIONS_MANAGER', 'ADMIN', 'DELIVERY_COORDINATOR']}>
+                  <ColdChainPage />
+                </ProtectedRoute>
+              } />
+
               <Route path="/pharmacist_dashboard" element={
                 <ProtectedRoute allowedRoles={['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN']}>
                   <PharmacistPrescriptionDashboard />

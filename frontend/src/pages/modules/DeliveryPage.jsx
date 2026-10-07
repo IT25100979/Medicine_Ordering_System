@@ -501,6 +501,13 @@ const DeliveryPage = () => {
           <MapPin className="w-4 h-4" />
           Delivery Zones Management ({deliveryZones.length})
         </button>
+        <Link
+          to="/admin/cold-chain"
+          className="py-3 px-5 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-2"
+        >
+          <Shield className="w-4 h-4 text-emerald-600" />
+          Cold Chain Management
+        </Link>
       </div>
 
       {/* ========================================================================= */}
