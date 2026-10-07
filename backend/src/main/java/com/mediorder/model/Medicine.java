@@ -40,8 +40,17 @@ public class Medicine {
     @Column(name = "category")
     private String category = "General";
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
+    @Column(name = "reorder_threshold", nullable = false)
+    private Integer reorderThreshold = 10;
+
+    @Column(name = "dosage", length = 100)
+    private String dosage;
+
     @Column(name = "stock_quantity")
-    private Integer stockQuantity = 100;
+    private Integer stockQuantity = 0;
 
     @Column(name = "msrp", precision = 10, scale = 2)
     private BigDecimal msrp;
@@ -82,7 +91,7 @@ public class Medicine {
         this.maxTemp = maxTemp;
         this.unitPrice = unitPrice != null ? unitPrice : BigDecimal.ZERO;
         this.category = category != null ? category : "General";
-        this.stockQuantity = stockQuantity != null ? stockQuantity : 100;
+        this.stockQuantity = stockQuantity != null ? stockQuantity : 0;
         this.msrp = msrp;
         this.cogs = cogs;
         this.description = description;
@@ -106,8 +115,14 @@ public class Medicine {
         if (this.category == null) {
             this.category = "General";
         }
+        if (this.isActive == null) {
+            this.isActive = true;
+        }
+        if (this.reorderThreshold == null) {
+            this.reorderThreshold = 10;
+        }
         if (this.stockQuantity == null) {
-            this.stockQuantity = 100;
+            this.stockQuantity = 0;
         }
         if (this.unitPrice == null) {
             this.unitPrice = BigDecimal.ZERO;
@@ -119,6 +134,15 @@ public class Medicine {
             this.reviewsCount = 50;
         }
     }
+
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive != null ? isActive : true; }
+
+    public Integer getReorderThreshold() { return reorderThreshold; }
+    public void setReorderThreshold(Integer reorderThreshold) { this.reorderThreshold = reorderThreshold != null ? reorderThreshold : 10; }
+
+    public String getDosage() { return dosage; }
+    public void setDosage(String dosage) { this.dosage = dosage; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -232,7 +256,7 @@ public class Medicine {
             m.setMaxTemp(this.maxTemp);
             m.setUnitPrice(this.unitPrice != null ? this.unitPrice : BigDecimal.ZERO);
             m.setCategory(this.category != null ? this.category : "General");
-            m.setStockQuantity(this.stockQuantity != null ? this.stockQuantity : 100);
+            m.setStockQuantity(this.stockQuantity != null ? this.stockQuantity : 0);
             m.setMsrp(this.msrp);
             m.setCogs(this.cogs);
             m.setDescription(this.description);

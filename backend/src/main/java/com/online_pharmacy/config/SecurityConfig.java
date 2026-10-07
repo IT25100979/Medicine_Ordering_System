@@ -73,30 +73,20 @@ public class SecurityConfig {
                                 "/api/v1/delivery-zones/**",
                                 "/api/prescriptions/files/**",
                                 "/api/v1/prescriptions/files/**",
+                                "/api/medicines",
+                                "/api/medicines/**",
+                                "/api/v1/medicines",
+                                "/api/v1/medicines/**",
+                                "/api/inventory",
+                                "/api/inventory/**",
+                                "/api/v1/inventory",
+                                "/api/v1/inventory/**",
                                 "/error"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/medicines/stats",
                                 "/api/v1/medicines/stats"
-                        ).hasAnyRole("OPERATIONS_MANAGER", "PHARMACIST", "CHIEF_PHARMACIST", "ADMIN")
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/medicines",
-                                "/api/medicines/**",
-                                "/api/v1/medicines",
-                                "/api/v1/medicines/**",
-                                "/api/inventory/**",
-                                "/api/v1/inventory/**"
                         ).permitAll()
-                        .requestMatchers(
-                                "/api/inventory/**",
-                                "/api/v1/inventory/**"
-                        ).hasAnyRole("OPERATIONS_MANAGER", "PHARMACIST", "CHIEF_PHARMACIST", "ADMIN")
-                        .requestMatchers(
-                                "/api/medicines",
-                                "/api/medicines/**",
-                                "/api/v1/medicines",
-                                "/api/v1/medicines/**"
-                        ).hasAnyRole("OPERATIONS_MANAGER", "PHARMACIST", "CHIEF_PHARMACIST", "ADMIN")
                         .requestMatchers(HttpMethod.GET,
                                 "/api/deliveries",
                                 "/api/deliveries/**",

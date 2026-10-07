@@ -19,6 +19,9 @@ public class MedicineService {
     @Autowired
     private MedicineRepository medicineRepository;
 
+    @Autowired(required = false)
+    private com.mediorder.repository.InventoryBatchRepository batchRepository;
+
     @PostConstruct
     public void seedInitialCatalogIfEmpty() {
         if (medicineRepository.count() == 0) {
@@ -108,6 +111,7 @@ public class MedicineService {
         if (medicine.getCategory() == null || medicine.getCategory().trim().isEmpty()) {
             medicine.setCategory("Dietary & Vits");
         }
+        medicine.setStockQuantity(0);
         medicine.setCreatedAt(LocalDateTime.now());
         return medicineRepository.save(medicine);
     }
@@ -137,6 +141,12 @@ public class MedicineService {
 
     public void deleteMedicine(Long id) {
         Medicine existing = getMedicineById(id);
+        if (batchRepository != null) {
+            List<com.mediorder.model.InventoryBatch> batches = batchRepository.findByMedicineIdOrderByExpiryDateAsc(id);
+            if (batches != null && !batches.isEmpty()) {
+                batchRepository.deleteAll(batches);
+            }
+        }
         medicineRepository.delete(existing);
     }
 
