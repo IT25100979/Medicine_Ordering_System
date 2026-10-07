@@ -91,7 +91,18 @@ const Navbar = () => {
   // Visible only on common pages: landing, catalog, inside cart, offer, product pages.
   // Suppressed on auth pages and dedicated pharmacist dashboard.
   // =============================================================
-  const suppressedRoutes = ['/login', '/login/admin', '/register', '/pharmacist_dashboard', '/admin/prescriptions', '/admin/catalog'];
+  const suppressedRoutes = [
+    '/login',
+    '/login/admin',
+    '/register',
+    '/pharmacist_dashboard',
+    '/admin/prescriptions',
+    '/admin/catalog',
+    '/admin/stocks',
+    '/modules/delivery',
+    '/delivery',
+    '/admin/delivery',
+  ];
   if (suppressedRoutes.some((route) => location.pathname === route || location.pathname.startsWith(route + '/'))) {
     return null;
   }
