@@ -170,24 +170,41 @@ const RegisterPage = () => {
                 </div>
               </div>
 
-              {/* Role Picker */}
-              <div className="space-y-1">
+              {/* Role Picker Boxes */}
+              <div className="space-y-1.5">
                 <label className="block text-xs font-bold uppercase tracking-wider text-on-surface">
-                  Account Role
+                  Select Role
                 </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {['CUSTOMER', 'PHARMACIST', 'ADMIN', 'OPERATIONS_MANAGER', 'FINANCE_MANAGER'].map((r) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'CUSTOMER', label: 'Register as Customer', icon: 'person', desc: 'Patient storefront & orders' },
+                    { id: 'PHARMACIST', label: 'Register as Pharmacist', icon: 'medical_services', desc: 'Prescriptions & dosage review' },
+                    { id: 'OPERATIONS_MANAGER', label: 'Register as Operations', icon: 'inventory_2', desc: 'Stocks & FEFO batch control' },
+                    { id: 'DELIVERY_RIDER', label: 'Register as Rider', icon: 'two_wheeler', desc: 'Courier fleet & OTP delivery' },
+                    { id: 'FINANCE_MANAGER', label: 'Register as Finance', icon: 'payments', desc: 'Billing audits & settlements' },
+                    { id: 'SYSTEM_ADMIN', label: 'Register as Admin', icon: 'admin_panel_settings', desc: 'System governance & telemetry' },
+                  ].map((r) => (
                     <button
-                      key={r}
+                      key={r.id}
                       type="button"
-                      onClick={() => setRole(r)}
-                      className={`h-8 px-3 rounded-full text-[11px] font-bold uppercase tracking-wider border transition-colors ${
-                        role === r
-                          ? 'bg-black text-white border-black'
+                      onClick={() => setRole(r.id)}
+                      className={`p-2.5 rounded-xl text-left border transition-all flex flex-col justify-between ${
+                        role === r.id
+                          ? 'bg-black text-white border-black shadow-sm'
                           : 'bg-surface-container-low text-on-surface border-brand-border hover:bg-surface-container'
                       }`}
                     >
-                      {r.replace('_', ' ')}
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className={`material-symbols-outlined text-[15px] ${role === r.id ? 'text-amber-400' : 'text-zinc-600'}`}>
+                          {r.icon}
+                        </span>
+                        <span className="text-[11px] font-extrabold leading-tight">
+                          {r.label}
+                        </span>
+                      </div>
+                      <span className={`text-[9px] ${role === r.id ? 'text-zinc-300' : 'text-zinc-500'} line-clamp-1`}>
+                        {r.desc}
+                      </span>
                     </button>
                   ))}
                 </div>

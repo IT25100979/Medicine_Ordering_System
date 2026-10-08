@@ -16,7 +16,7 @@ export const CLINICAL_FALLBACK_IMAGES = {
 };
 
 // Initial Catalog Items matching the Stitch Product Catalog Screen
-const CATALOG_ITEMS = [
+export const CATALOG_ITEMS = [
   {
     id: 1,
     title: 'Vitamin C 1000mg Bioflavonoid',
@@ -967,7 +967,8 @@ const CatalogPage = () => {
                       className="group bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft-card hover:shadow-subtle-hover transition-all duration-300 flex flex-col justify-between"
                       data-purpose="product-card"
                     >
-                      <div>
+                      {/* Clickable Product Header leading to Product Page */}
+                      <Link to={`/product/${product.id}`} className="block group/link cursor-pointer">
                         {/* Bottle Graphic Container */}
                         <BottleGraphic item={product} />
 
@@ -976,38 +977,48 @@ const CatalogPage = () => {
                           <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
                             {product.subtitle}
                           </span>
-                          <h2 className="text-base font-bold text-slate-900 mt-1 leading-snug group-hover:text-sky-700 transition-colors">
+                          <h2 className="text-base font-bold text-slate-900 mt-1 leading-snug group-hover/link:text-sky-700 transition-colors">
                             {product.title}
                           </h2>
                           <p className="text-xs text-slate-500 mt-1 line-clamp-1">
                             {product.description}
                           </p>
                         </div>
-                      </div>
+                      </Link>
 
-                      {/* Price & Add Action */}
-                      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                        <div>
+                      {/* Price & Actions: See More and Add to Cart */}
+                      <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
                           <span className="text-xs text-slate-400 block -mb-0.5">Price</span>
                           <span className="text-xl font-extrabold text-slate-900 tracking-tight">
                             LKR {product.price.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          aria-label={`Add ${product.title} to cart`}
-                          onClick={() => handleAddToCart(product)}
-                          className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-bold transition duration-200 active:scale-95 ${
-                            isAdded
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-sky-50 hover:bg-sky-500 text-sky-700 hover:text-white'
-                          }`}
-                        >
-                          <span>{isAdded ? 'Added!' : 'Add to cart'}</span>
-                          <span className="text-sm leading-none font-bold">
-                            {isAdded ? '✓' : '+'}
-                          </span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={`/product/${product.id}`}
+                            className="flex-1 text-center py-2.5 px-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition active:scale-95 flex items-center justify-center gap-1 shadow-2xs"
+                            title={`View dossier and details for ${product.title}`}
+                          >
+                            <span>See More</span>
+                            <span className="text-xs leading-none">→</span>
+                          </Link>
+                          <button
+                            type="button"
+                            aria-label={`Add ${product.title} to cart`}
+                            onClick={() => handleAddToCart(product)}
+                            className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-full text-xs font-bold transition duration-200 active:scale-95 shadow-xs ${
+                              isAdded
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-black hover:bg-slate-800 text-white'
+                            }`}
+                          >
+                            <span>{isAdded ? 'Added!' : 'Add to Cart'}</span>
+                            <span className="text-sm leading-none font-bold">
+                              {isAdded ? '✓' : '+'}
+                            </span>
+                          </button>
+                        </div>
                       </div>
                     </article>
                   );
