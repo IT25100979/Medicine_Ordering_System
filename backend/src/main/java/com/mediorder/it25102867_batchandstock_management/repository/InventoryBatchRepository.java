@@ -14,6 +14,9 @@ import java.util.Optional;
 @Repository
 public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, Long> {
     Optional<InventoryBatch> findByBatchNumber(String batchNumber);
+    List<InventoryBatch> findAllByBatchNumber(String batchNumber);
+    List<InventoryBatch> findAllByOrderByBatchNumberAscIdAsc();
+    List<InventoryBatch> findByMedicineId(Long medicineId);
     List<InventoryBatch> findByMedicineIdOrderByExpiryDateAsc(Long medicineId);
     List<InventoryBatch> findByMedicineIdAndStatusOrderByExpiryDateAsc(Long medicineId, BatchStatus status);
     List<InventoryBatch> findByStatusOrderByExpiryDateAsc(BatchStatus status);

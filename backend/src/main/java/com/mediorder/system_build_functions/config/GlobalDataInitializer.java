@@ -70,6 +70,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
         seedDemoUsers();
         seedFeatureFlags();
         seedSuppliers();
+        seedInventoryBatches();
         seedColdChainTags();
     }
 
@@ -161,43 +162,122 @@ public class GlobalDataInitializer implements CommandLineRunner {
         }
     }
 
+    private void seedInventoryBatches() {
+        if (inventoryBatchRepository.count() == 0) {
+            List<Medicine> medicines = medicineRepository.findAll();
+            if (medicines.isEmpty()) return;
+
+            int totalMeds = medicines.size();
+            for (int i = 0; i < totalMeds; i++) {
+                Medicine m = medicines.get(i);
+                int batchIndex = (i % 5) + 1;
+                String batchNumber = "Batch " + batchIndex + " (BAT-2026-00" + batchIndex + ")";
+
+                BatchStatus status;
+                if (batchIndex == 1 || batchIndex == 5) {
+                    status = BatchStatus.LIVE;
+                } else {
+                    status = BatchStatus.COLD_CHAIN_REVIEW;
+                }
+
+                LocalDate mfg = LocalDate.now().minusMonths((i % 4) + 1);
+                LocalDate exp = LocalDate.now().plusMonths(12 + (i % 18));
+                int qty = (m.getStockQuantity() != null && m.getStockQuantity() > 0) ? m.getStockQuantity() : 100;
+
+                InventoryBatch b = InventoryBatch.builder()
+                        .batchNumber(batchNumber)
+                        .medicine(m)
+                        .qtyReceived(qty + 20)
+                        .stockQuantity(qty)
+                        .qtyReserved(i % 5)
+                        .arrivedDate(LocalDate.now().minusWeeks((i % 3) + 1))
+                        .manufacturingDate(mfg)
+                        .expiryDate(exp)
+                        .status(status)
+                        .qcNotes(status == BatchStatus.LIVE ? "QC verified and approved for live dispensing." : "Awaiting Chief Pharmacist cold chain & condition tagging review.")
+                        .qcPassedBy(status == BatchStatus.LIVE ? "Dr. John Pharmacist" : null)
+                        .createdAt(LocalDateTime.now().minusDays((i % 10) + 1))
+                        .build();
+
+                inventoryBatchRepository.save(b);
+            }
+            log.info("Seeded inventory batches for all {} medicines across Batch 1 to Batch 5.", totalMeds);
+        }
+    }
+
     private void seedColdChainTags() {
         List<Medicine> medicines = medicineRepository.findAll();
-        for (Medicine m : medicines) {
+        for (int i = 0; i < medicines.size(); i++) {
+            Medicine m = medicines.get(i);
             if (coldChainTagRepository.findByMedicineId(m.getId()).isEmpty()) {
-                ColdChainSection section = Boolean.TRUE.equals(m.getIsTemperatureSensitive()) 
-                        ? ColdChainSection.REFRIGERATED 
-                        : ColdChainSection.AMBIENT;
+                int mode = i % 5;
+                ColdChainSection section;
+                MedicineIntensity intensity;
+                SecurityLevel sec;
+                BigDecimal minTemp;
+                BigDecimal maxTemp;
+                String actions;
+                String status;
 
-                MedicineIntensity intensity = Boolean.TRUE.equals(m.getRequiresPrescription()) 
-                        ? MedicineIntensity.HIGH 
-                        : MedicineIntensity.LOW;
-
-                SecurityLevel sec = Boolean.TRUE.equals(m.getRequiresPrescription()) 
-                        ? SecurityLevel.TAMPER_EVIDENT 
-                        : SecurityLevel.STANDARD;
-
-                String actions = Boolean.TRUE.equals(m.getIsTemperatureSensitive())
-                        ? "Insulated Carrier Box, Dual Cold Gel Packs, Temperature Data Logger, Keep Upright"
-                        : "Standard Ambient Packaging";
+                if (mode == 0) {
+                    section = ColdChainSection.AMBIENT;
+                    intensity = MedicineIntensity.LOW;
+                    sec = SecurityLevel.STANDARD;
+                    minTemp = new BigDecimal("15.00");
+                    maxTemp = new BigDecimal("25.00");
+                    actions = "Standard Ambient Packaging, Keep Dry";
+                    status = "APPROVED";
+                } else if (mode == 1) {
+                    section = ColdChainSection.COOL_ROOM;
+                    intensity = MedicineIntensity.MEDIUM;
+                    sec = SecurityLevel.STANDARD;
+                    minTemp = new BigDecimal("8.00");
+                    maxTemp = new BigDecimal("15.00");
+                    actions = "Insulated Bubble Wrap, Single Cold Pad, Avoid Sunlight";
+                    status = "PENDING_REVIEW";
+                } else if (mode == 2) {
+                    section = ColdChainSection.REFRIGERATED;
+                    intensity = MedicineIntensity.HIGH;
+                    sec = SecurityLevel.TAMPER_EVIDENT;
+                    minTemp = new BigDecimal("2.00");
+                    maxTemp = new BigDecimal("8.00");
+                    actions = "Insulated Box, Ice Pack, Keep Upright, Signature Required, Max Transit 12h";
+                    status = "PENDING_REVIEW";
+                } else if (mode == 3) {
+                    section = ColdChainSection.FROZEN;
+                    intensity = MedicineIntensity.CRITICAL;
+                    sec = SecurityLevel.LOCKED;
+                    minTemp = new BigDecimal("-25.00");
+                    maxTemp = new BigDecimal("-10.00");
+                    actions = "VIP Shipper Box, Dry Ice PCM, Temperature Logger, Signature Required, No Leave At Door";
+                    status = "PENDING_DUAL_REVIEW";
+                } else {
+                    section = ColdChainSection.CONTROLLED_VAULT;
+                    intensity = MedicineIntensity.CRITICAL;
+                    sec = SecurityLevel.CONTROLLED_SUBSTANCE;
+                    minTemp = new BigDecimal("15.00");
+                    maxTemp = new BigDecimal("25.00");
+                    actions = "Tamper-evident Security Bag, Dual Pharmacist Verification Seal, ID/Age Check, Signature Required";
+                    status = "PENDING_DUAL_REVIEW";
+                }
 
                 ColdChainTag tag = ColdChainTag.builder()
                         .medicine(m)
                         .section(section)
-                        .storageTempMin(Boolean.TRUE.equals(m.getIsTemperatureSensitive()) ? new BigDecimal("2.00") : new BigDecimal("15.00"))
-                        .storageTempMax(Boolean.TRUE.equals(m.getIsTemperatureSensitive()) ? new BigDecimal("8.00") : new BigDecimal("25.00"))
+                        .storageTempMin(minTemp)
+                        .storageTempMax(maxTemp)
                         .shelfLifeDays(730)
                         .intensity(intensity)
                         .securityLevel(sec)
                         .deliveryActions(actions)
-                        .status("APPROVED")
-                        .reviewedBy("Dr. John Pharmacist")
-                        .reviewedAt(LocalDateTime.now())
+                        .status(status)
+                        .reviewedBy(status.equals("APPROVED") ? "Dr. John Pharmacist" : null)
+                        .reviewedAt(status.equals("APPROVED") ? LocalDateTime.now() : null)
                         .build();
 
                 coldChainTagRepository.save(tag);
             }
         }
-        log.info("Initialized cold chain tags for all catalog medicines.");
+        log.info("Initialized rich cold chain tags for all catalog medicines across all 5 sections.");
     }
 }

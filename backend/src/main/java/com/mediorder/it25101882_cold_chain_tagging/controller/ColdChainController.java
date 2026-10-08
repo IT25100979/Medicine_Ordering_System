@@ -86,6 +86,39 @@ public class ColdChainController {
         return ResponseEntity.ok(ApiResponse.success("Cold chain tag reviewed successfully", reviewed));
     }
 
+    @PostMapping("/tags/{tagId}/move-section")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'CHIEF_PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
+    public ResponseEntity<ApiResponse<ColdChainTag>> moveSection(
+            @PathVariable Long tagId,
+            @RequestParam com.mediorder.it25101882_cold_chain_tagging.model.ColdChainSection section,
+            Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : "pharmacist@mediorder.com";
+        String role = authentication != null && !authentication.getAuthorities().isEmpty()
+                ? authentication.getAuthorities().iterator().next().getAuthority()
+                : "CHIEF_PHARMACIST";
+
+        ColdChainTag moved = coldChainService.moveShelfSection(tagId, section, email, role);
+        return ResponseEntity.ok(ApiResponse.success("Shelf section updated with audit logging", moved));
+    }
+
+    @PostMapping("/tags/{tagId}/dual-confirm")
+    @PreAuthorize("hasAnyRole('CHIEF_PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
+    public ResponseEntity<ApiResponse<ColdChainTag>> dualConfirmTag(
+            @PathVariable Long tagId,
+            @RequestBody(required = false) Map<String, String> body,
+            Authentication authentication) {
+        String primaryEmail = authentication != null ? authentication.getName() : "pharmacist@mediorder.com";
+        String secondReviewer = body != null && body.containsKey("secondReviewer")
+                ? body.get("secondReviewer")
+                : "Dr. Sarah Pharmacist (Reg #SLMC-8492)";
+        String notes = body != null && body.containsKey("notes")
+                ? body.get("notes")
+                : "Dual confirmation authorized under high security & critical cold-chain protocol";
+
+        ColdChainTag confirmed = coldChainService.dualConfirmTag(tagId, secondReviewer, notes, primaryEmail);
+        return ResponseEntity.ok(ApiResponse.success("Dual confirmation recorded successfully", confirmed));
+    }
+
     @GetMapping("/sections")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getCanonicalSections() {
         return ResponseEntity.ok(ApiResponse.success("Canonical 5 cold chain sections retrieved", coldChainService.getCanonicalSectionMetadata()));

@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "inventory_batches", indexes = {
     @Index(name = "idx_batch_medicine", columnList = "medicine_id"),
-    @Index(name = "idx_batch_number", columnList = "batch_number", unique = true),
+    @Index(name = "idx_batch_number", columnList = "batch_number"),
     @Index(name = "idx_batch_expiry", columnList = "expiry_date"),
     @Index(name = "idx_batch_status", columnList = "status")
 })
@@ -27,7 +27,7 @@ public class InventoryBatch {
     @JoinColumn(name = "shipment_id")
     private SupplierShipment supplierShipment;
 
-    @Column(name = "batch_number", nullable = false, unique = true, length = 100)
+    @Column(name = "batch_number", nullable = false, length = 100)
     private String batchNumber;
 
     @Column(name = "qty_received")
