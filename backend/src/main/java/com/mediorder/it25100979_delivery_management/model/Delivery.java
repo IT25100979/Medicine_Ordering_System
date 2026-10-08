@@ -58,16 +58,31 @@ public class Delivery {
     @JsonProperty("assignedCourier")
     private String assignedCourier;
 
-    @Column(name = "delivery_otp")
+    @Column(name = "order_id")
+    @JsonProperty("orderId")
+    private Long orderId;
+
+    @Column(name = "delivery_otp", length = 10)
     @JsonProperty("deliveryOtp")
     private String deliveryOtp;
 
-    @Column(name = "action_status")
-    @JsonProperty("actionStatus")
+    @Column(name = "otp_hash")
+    private String otpHash;
+
+    @Column(name = "otp_expires_at")
+    private LocalDateTime otpExpiresAt;
+
+    @Column(name = "otp_attempts")
+    private Integer otpAttempts = 0;
+
+    @Column(name = "handling_instructions_snapshot", columnDefinition = "TEXT")
+    @JsonProperty("handlingInstructionsSnapshot")
+    private String handlingInstructionsSnapshot;
+
+    @Column(name = "action_status", length = 50)
     private String actionStatus;
 
     @Column(name = "action_reason", columnDefinition = "TEXT")
-    @JsonProperty("actionReason")
     private String actionReason;
 
     // --- Compatibility fields with earlier versions & modules ---
@@ -148,8 +163,23 @@ public class Delivery {
     public String getAssignedCourier() { return assignedCourier; }
     public void setAssignedCourier(String assignedCourier) { this.assignedCourier = assignedCourier; }
 
+    public Long getOrderId() { return orderId; }
+    public void setOrderId(Long orderId) { this.orderId = orderId; }
+
     public String getDeliveryOtp() { return deliveryOtp; }
     public void setDeliveryOtp(String deliveryOtp) { this.deliveryOtp = deliveryOtp; }
+
+    public String getOtpHash() { return otpHash; }
+    public void setOtpHash(String otpHash) { this.otpHash = otpHash; }
+
+    public LocalDateTime getOtpExpiresAt() { return otpExpiresAt; }
+    public void setOtpExpiresAt(LocalDateTime otpExpiresAt) { this.otpExpiresAt = otpExpiresAt; }
+
+    public Integer getOtpAttempts() { return otpAttempts != null ? otpAttempts : 0; }
+    public void setOtpAttempts(Integer otpAttempts) { this.otpAttempts = otpAttempts; }
+
+    public String getHandlingInstructionsSnapshot() { return handlingInstructionsSnapshot; }
+    public void setHandlingInstructionsSnapshot(String handlingInstructionsSnapshot) { this.handlingInstructionsSnapshot = handlingInstructionsSnapshot; }
 
     public String getActionStatus() { return actionStatus; }
     public void setActionStatus(String actionStatus) { this.actionStatus = actionStatus; }
@@ -243,7 +273,12 @@ public class Delivery {
         private String status = DeliveryStatus.PENDING.name();
         private String assignedRoute;
         private String assignedCourier;
+        private Long orderId;
         private String deliveryOtp;
+        private String otpHash;
+        private LocalDateTime otpExpiresAt;
+        private Integer otpAttempts = 0;
+        private String handlingInstructionsSnapshot;
         private String actionStatus;
         private String actionReason;
         private Long userId;
@@ -258,6 +293,7 @@ public class Delivery {
         private LocalDateTime deliveredAt;
 
         public DeliveryBuilder id(Long id) { this.id = id; return this; }
+        public DeliveryBuilder orderId(Long orderId) { this.orderId = orderId; return this; }
         public DeliveryBuilder batchId(String batchId) { this.batchId = batchId; return this; }
         public DeliveryBuilder customerName(String customerName) { this.customerName = customerName; return this; }
         public DeliveryBuilder orderAddress(String orderAddress) { this.orderAddress = orderAddress; return this; }
@@ -270,6 +306,10 @@ public class Delivery {
         public DeliveryBuilder assignedRoute(String assignedRoute) { this.assignedRoute = assignedRoute; return this; }
         public DeliveryBuilder assignedCourier(String assignedCourier) { this.assignedCourier = assignedCourier; return this; }
         public DeliveryBuilder deliveryOtp(String deliveryOtp) { this.deliveryOtp = deliveryOtp; return this; }
+        public DeliveryBuilder otpHash(String otpHash) { this.otpHash = otpHash; return this; }
+        public DeliveryBuilder otpExpiresAt(LocalDateTime otpExpiresAt) { this.otpExpiresAt = otpExpiresAt; return this; }
+        public DeliveryBuilder otpAttempts(Integer otpAttempts) { this.otpAttempts = otpAttempts; return this; }
+        public DeliveryBuilder handlingInstructionsSnapshot(String handlingInstructionsSnapshot) { this.handlingInstructionsSnapshot = handlingInstructionsSnapshot; return this; }
         public DeliveryBuilder actionStatus(String actionStatus) { this.actionStatus = actionStatus; return this; }
         public DeliveryBuilder actionReason(String actionReason) { this.actionReason = actionReason; return this; }
         public DeliveryBuilder userId(Long userId) { this.userId = userId; return this; }
@@ -286,6 +326,7 @@ public class Delivery {
         public Delivery build() {
             Delivery d = new Delivery();
             d.id = this.id;
+            d.orderId = this.orderId;
             d.batchId = this.batchId;
             d.customerName = this.customerName;
             d.orderAddress = this.orderAddress;
@@ -298,6 +339,10 @@ public class Delivery {
             d.assignedRoute = this.assignedRoute;
             d.assignedCourier = this.assignedCourier;
             d.deliveryOtp = this.deliveryOtp;
+            d.otpHash = this.otpHash;
+            d.otpExpiresAt = this.otpExpiresAt;
+            d.otpAttempts = this.otpAttempts != null ? this.otpAttempts : 0;
+            d.handlingInstructionsSnapshot = this.handlingInstructionsSnapshot;
             d.actionStatus = this.actionStatus;
             d.actionReason = this.actionReason;
             d.userId = this.userId;

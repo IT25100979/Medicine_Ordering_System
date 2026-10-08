@@ -35,7 +35,11 @@ export const CartProvider = ({ children }) => {
       });
 
       if (res.data) {
-        const items = res.data.items || [];
+        const items = (res.data.items || []).map(item => ({
+          ...item,
+          price: Number(item.unitPrice ?? item.price ?? item.unit_price ?? 0),
+          unitPrice: Number(item.unitPrice ?? item.price ?? item.unit_price ?? 0),
+        }));
         setCartItems(items);
         setCartCount(res.data.count || 0);
         setSubtotal(Number(res.data.subtotal || 0));
@@ -50,9 +54,19 @@ export const CartProvider = ({ children }) => {
     }
   }, [sessionId, userId]);
 
+  // Merge guest session cart upon user login
   useEffect(() => {
-    fetchCart();
-  }, [fetchCart]);
+    if (userId && sessionId) {
+      client.post('/api/v1/cart/merge', { sessionId, userId })
+        .then(() => fetchCart())
+        .catch((err) => {
+          console.warn('Guest cart auto-merge notice:', err);
+          fetchCart();
+        });
+    } else {
+      fetchCart();
+    }
+  }, [userId, sessionId, fetchCart]);
 
   // Add Item to Cart in DB
   const addToCart = async (product, quantity = 1) => {

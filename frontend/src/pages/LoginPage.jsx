@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAdminDashboardRoute } from '../utils/roleRoutes';
+import DemoRoleGrid from '../components/DemoRoleGrid';
 
 const LoginPage = () => {
   const { login } = useAuth();
@@ -175,6 +176,11 @@ const LoginPage = () => {
                 )}
               </button>
             </form>
+
+            {/* Demo Quick Access */}
+            <div className="mt-6">
+              <DemoRoleGrid />
+            </div>
 
             <div className="mt-8 pt-6 border-t border-brand-border space-y-3 text-center">
               <p className="text-xs text-on-surface-variant">

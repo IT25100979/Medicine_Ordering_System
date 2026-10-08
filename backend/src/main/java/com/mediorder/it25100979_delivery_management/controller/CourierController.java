@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/courier")
+@RequestMapping({"/api/courier", "/api/v1/courier"})
 @CrossOrigin(origins = "*")
 public class CourierController {
 

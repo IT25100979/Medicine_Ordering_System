@@ -83,6 +83,29 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/merge")
+    public ResponseEntity<Map<String, Object>> mergeCart(@RequestBody Map<String, Object> body) {
+        String sessionId = (String) body.get("sessionId");
+        Long userId = null;
+        if (body.get("userId") != null) {
+            userId = Long.valueOf(body.get("userId").toString());
+        }
+
+        List<CartItem> mergedItems = cartService.mergeCart(sessionId, userId);
+        int totalCount = mergedItems.stream().mapToInt(CartItem::getQuantity).sum();
+        BigDecimal subtotal = mergedItems.stream()
+                .map(i -> (i.getUnitPrice() != null ? i.getUnitPrice() : BigDecimal.ZERO).multiply(BigDecimal.valueOf(i.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("items", mergedItems);
+        response.put("count", totalCount);
+        response.put("subtotal", subtotal);
+        response.put("message", "Guest cart successfully merged to authenticated user profile");
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/clear")
     public ResponseEntity<Map<String, Object>> clearCart(
             @RequestParam(value = "sessionId", required = false) String sessionId,
