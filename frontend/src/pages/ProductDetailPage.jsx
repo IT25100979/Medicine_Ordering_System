@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { CLINICAL_FALLBACK_IMAGES } from './CatalogPage';
 
 // Default gallery thumbnails ported from Stitch clinical assets
@@ -16,6 +17,7 @@ const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -148,11 +150,34 @@ const ProductDetailPage = () => {
     });
   };
 
-  const handleAddToCart = () => {
-    showToast(`Added ${quantity}x "${product.name}" to your cart!`);
+  const handleAddToCart = async () => {
+    try {
+      const fallbackImg = CLINICAL_FALLBACK_IMAGES[product.category] || CLINICAL_FALLBACK_IMAGES['General'] || '';
+      await addToCart({
+        id: product.id,
+        name: product.name,
+        genericName: product.genericName || product.subtitle || '',
+        category: product.category || 'General',
+        price: unitPrice,
+        unitPrice: unitPrice,
+        imageUrl: activeImage || product.imageUrl || fallbackImg,
+        requiresPrescription: Boolean(product.requiresPrescription),
+      }, quantity);
+      showToast(`Added ${quantity}x "${product.name}" to your cart!`);
+    } catch (err) {
+      console.error('Failed to add product to cart:', err);
+      showToast('Could not add item to cart', 'error');
+    }
   };
 
   const handleOpenCheckout = () => {
+    if (!user) {
+      showToast('Please sign in or create an account to proceed to checkout.', 'error');
+      setTimeout(() => {
+        navigate(`/login?redirect=/product/${id}`);
+      }, 800);
+      return;
+    }
     setCheckoutStep('form');
     setShowCheckoutModal(true);
   };

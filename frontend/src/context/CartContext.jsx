@@ -4,179 +4,316 @@ import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
-const getOrCreateSessionId = () => {
-  let sess = localStorage.getItem('pharma_cart_session');
-  if (!sess) {
-    sess = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    localStorage.setItem('pharma_cart_session', sess);
+const GUEST_CART_KEY = 'pharma_guest_cart_items';
+const CART_COUNT_KEY = 'pharma_cart_count';
+
+const getGuestCartFromStorage = () => {
+  try {
+    const raw = sessionStorage.getItem(GUEST_CART_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.warn('Failed to parse guest cart from sessionStorage:', e);
+    return [];
   }
-  return sess;
+};
+
+const saveGuestCartToStorage = (items) => {
+  try {
+    sessionStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+    const totalCount = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    sessionStorage.setItem(CART_COUNT_KEY, String(totalCount));
+    localStorage.setItem(CART_COUNT_KEY, String(totalCount));
+    return totalCount;
+  } catch (e) {
+    console.warn('Failed to save guest cart to sessionStorage:', e);
+    return 0;
+  }
 };
 
 export const CartProvider = ({ children }) => {
-  const { user } = useAuth();
-  const [sessionId] = useState(getOrCreateSessionId);
+  const { user, isAuthenticated } = useAuth();
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const userId = user?.id || user?.userId || null;
+  const userId = (isAuthenticated && user?.id) ? user.id : (user?.userId || null);
 
-  // Fetch cart from backend DB
+  // Recalculate derived count and subtotal
+  const updateDerivedTotals = useCallback((items) => {
+    const count = items.reduce((acc, i) => acc + (Number(i.quantity) || 0), 0);
+    const sub = items.reduce((acc, i) => {
+      const price = Number(i.unitPrice ?? i.price ?? 0);
+      const qty = Number(i.quantity) || 0;
+      return acc + (price * qty);
+    }, 0);
+    setCartCount(count);
+    setSubtotal(sub);
+    sessionStorage.setItem(CART_COUNT_KEY, String(count));
+    localStorage.setItem(CART_COUNT_KEY, String(count));
+  }, []);
+
+  // Fetch cart (DB if customer, Session if guest)
   const fetchCart = useCallback(async () => {
+    if (!userId) {
+      // Guest: Load strictly from sessionStorage
+      const items = getGuestCartFromStorage();
+      setCartItems(items);
+      updateDerivedTotals(items);
+      return;
+    }
+
+    // Customer: Load from Database
     try {
       setLoading(true);
       const res = await client.get('/api/v1/cart', {
-        params: {
-          sessionId,
-          userId: userId || undefined,
-        },
+        params: { userId },
       });
 
       if (res.data) {
         const items = (res.data.items || []).map(item => ({
           ...item,
-          price: Number(item.unitPrice ?? item.price ?? item.unit_price ?? 0),
-          unitPrice: Number(item.unitPrice ?? item.price ?? item.unit_price ?? 0),
+          price: Number(item.unitPrice ?? item.price ?? 0),
+          unitPrice: Number(item.unitPrice ?? item.price ?? 0),
+          quantity: Number(item.quantity) || 1,
         }));
         setCartItems(items);
-        setCartCount(res.data.count || 0);
-        setSubtotal(Number(res.data.subtotal || 0));
-        localStorage.setItem('pharma_cart_count', String(res.data.count || 0));
+        const count = res.data.count !== undefined ? Number(res.data.count) : items.reduce((a, b) => a + b.quantity, 0);
+        const sub = res.data.subtotal !== undefined ? Number(res.data.subtotal) : items.reduce((a, b) => a + (b.unitPrice * b.quantity), 0);
+        setCartCount(count);
+        setSubtotal(sub);
+        sessionStorage.setItem(CART_COUNT_KEY, String(count));
+        localStorage.setItem(CART_COUNT_KEY, String(count));
       }
     } catch (err) {
       console.warn('Failed to load cart from DB, using local state:', err);
-      const localCount = parseInt(localStorage.getItem('pharma_cart_count') || '0', 10);
-      setCartCount(localCount);
     } finally {
       setLoading(false);
     }
-  }, [sessionId, userId]);
+  }, [userId, updateDerivedTotals]);
 
-  // Merge guest session cart upon user login
+  // Handle guest cart merge upon login
   useEffect(() => {
-    if (userId && sessionId) {
-      client.post('/api/v1/cart/merge', { sessionId, userId })
-        .then(() => fetchCart())
-        .catch((err) => {
-          console.warn('Guest cart auto-merge notice:', err);
-          fetchCart();
-        });
-    } else {
-      fetchCart();
-    }
-  }, [userId, sessionId, fetchCart]);
-
-  // Add Item to Cart in DB
-  const addToCart = async (product, quantity = 1) => {
-    try {
-      const payload = {
-        sessionId,
-        userId: userId || undefined,
-        medicineId: product.id || null,
-        name: product.name || 'Pharmaceutical Item',
-        genericName: product.genericName || product.brandName || '',
-        category: product.category || 'General',
-        unitPrice: Number(product.unitPrice || product.price || 0),
-        quantity: Number(quantity) || 1,
-        imageUrl: product.imageUrl || '',
-        requiresPrescription: Boolean(product.requiresPrescription || product.requiresRx),
-      };
-
-      const res = await client.post('/api/v1/cart/add', payload);
-      if (res.data) {
-        await fetchCart();
-        return res.data;
-      }
-    } catch (err) {
-      console.error('Error adding item to cart:', err);
-      // Fallback local update
-      setCartItems((prev) => {
-        const existingIdx = prev.findIndex((i) => (product.id ? i.medicineId === product.id : i.name === product.name));
-        let updated;
-        if (existingIdx >= 0) {
-          updated = [...prev];
-          updated[existingIdx] = {
-            ...updated[existingIdx],
-            quantity: updated[existingIdx].quantity + quantity,
-          };
-        } else {
-          updated = [
-            ...prev,
-            {
-              id: Date.now(),
-              name: product.name,
-              genericName: product.genericName || '',
-              category: product.category || 'General',
-              unitPrice: Number(product.unitPrice || product.price || 0),
-              quantity,
-              imageUrl: product.imageUrl || '',
-            },
-          ];
+    const syncOnAuthChange = async () => {
+      if (userId) {
+        const guestItems = getGuestCartFromStorage();
+        if (guestItems.length > 0) {
+          try {
+            // Push guest items to backend database for the logged in user
+            for (const item of guestItems) {
+              await client.post('/api/v1/cart/add', {
+                userId,
+                medicineId: item.medicineId || item.id || null,
+                name: item.name || 'Pharmaceutical Item',
+                genericName: item.genericName || '',
+                category: item.category || 'General',
+                unitPrice: Number(item.unitPrice || item.price || 0),
+                quantity: Number(item.quantity) || 1,
+                imageUrl: item.imageUrl || '',
+                requiresPrescription: Boolean(item.requiresPrescription),
+              });
+            }
+          } catch (mergeErr) {
+            console.warn('Error merging guest cart to DB:', mergeErr);
+          } finally {
+            sessionStorage.removeItem(GUEST_CART_KEY);
+          }
         }
-        const newCount = updated.reduce((acc, item) => acc + item.quantity, 0);
-        setCartCount(newCount);
-        localStorage.setItem('pharma_cart_count', String(newCount));
-        return updated;
-      });
+        fetchCart();
+      } else {
+        // Guest mode
+        fetchCart();
+      }
+    };
+
+    syncOnAuthChange();
+  }, [userId, fetchCart]);
+
+  // Add Item to Cart (Real-Time for Guest & Customer)
+  const addToCart = async (product, quantity = 1) => {
+    const qty = Math.max(1, Number(quantity) || 1);
+    const unitPrice = Number(product.price ?? product.unitPrice ?? 0);
+    const prodId = product.id ?? product.medicineId;
+
+    if (!userId) {
+      // -------------------------------------------------------------
+      // GUEST: Save in sessionStorage ONLY (No DB query)
+      // Real-time reactive update
+      // -------------------------------------------------------------
+      const currentItems = getGuestCartFromStorage();
+      const existingIndex = currentItems.findIndex(
+        i => (prodId && (i.id === prodId || i.medicineId === prodId)) || (i.name === (product.name || product.title))
+      );
+
+      let updated;
+      if (existingIndex >= 0) {
+        updated = [...currentItems];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + qty,
+          unitPrice: unitPrice > 0 ? unitPrice : updated[existingIndex].unitPrice,
+          price: unitPrice > 0 ? unitPrice : updated[existingIndex].price,
+        };
+      } else {
+        const newItem = {
+          id: prodId || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          medicineId: prodId || null,
+          name: product.name || product.title || 'Pharmaceutical Item',
+          genericName: product.genericName || product.subtitle || '',
+          category: product.category || 'General',
+          price: unitPrice,
+          unitPrice: unitPrice,
+          quantity: qty,
+          imageUrl: product.imageUrl || '',
+          requiresPrescription: Boolean(product.requiresPrescription || product.requiresRx),
+        };
+        updated = [...currentItems, newItem];
+      }
+
+      saveGuestCartToStorage(updated);
+      setCartItems(updated);
+      updateDerivedTotals(updated);
+      return { success: true, items: updated };
+    }
+
+    // -------------------------------------------------------------
+    // CUSTOMER: Save in Database via Backend API
+    // Real-time reactive optimistic update + backend persistence
+    // -------------------------------------------------------------
+    const payload = {
+      userId,
+      medicineId: prodId || null,
+      name: product.name || product.title || 'Pharmaceutical Item',
+      genericName: product.genericName || product.subtitle || '',
+      category: product.category || 'General',
+      unitPrice: unitPrice,
+      quantity: qty,
+      imageUrl: product.imageUrl || '',
+      requiresPrescription: Boolean(product.requiresPrescription || product.requiresRx),
+    };
+
+    // Optimistic state update for instant zero-lag feedback
+    setCartItems(prev => {
+      const idx = prev.findIndex(i => (prodId && (i.id === prodId || i.medicineId === prodId)) || i.name === payload.name);
+      let next;
+      if (idx >= 0) {
+        next = [...prev];
+        next[idx] = { ...next[idx], quantity: next[idx].quantity + qty };
+      } else {
+        next = [...prev, { ...payload, id: prodId || Date.now(), price: unitPrice }];
+      }
+      updateDerivedTotals(next);
+      return next;
+    });
+
+    try {
+      const res = await client.post('/api/v1/cart/add', payload);
+      await fetchCart();
+      return res.data;
+    } catch (err) {
+      console.error('Error saving item to DB cart:', err);
+      await fetchCart();
+      throw err;
     }
   };
 
-  // Update item quantity in DB
-  const updateQuantity = async (itemId, qty) => {
+  // Update item quantity (Real-Time for Guest & Customer)
+  const updateQuantity = async (itemId, newQty) => {
+    const targetQty = Number(newQty);
+
+    if (!userId) {
+      // GUEST
+      const currentItems = getGuestCartFromStorage();
+      let updated;
+      if (targetQty <= 0) {
+        updated = currentItems.filter(i => i.id !== itemId && i.medicineId !== itemId);
+      } else {
+        updated = currentItems.map(i =>
+          (i.id === itemId || i.medicineId === itemId) ? { ...i, quantity: targetQty } : i
+        );
+      }
+      saveGuestCartToStorage(updated);
+      setCartItems(updated);
+      updateDerivedTotals(updated);
+      return;
+    }
+
+    // CUSTOMER: Database
+    // Optimistic update
+    setCartItems(prev => {
+      let next;
+      if (targetQty <= 0) {
+        next = prev.filter(i => i.id !== itemId);
+      } else {
+        next = prev.map(i => (i.id === itemId ? { ...i, quantity: targetQty } : i));
+      }
+      updateDerivedTotals(next);
+      return next;
+    });
+
     try {
       await client.put(`/api/v1/cart/${itemId}`, null, {
         params: {
-          quantity: qty,
-          sessionId,
-          userId: userId || undefined,
+          quantity: targetQty,
+          userId,
         },
       });
       await fetchCart();
     } catch (err) {
-      console.error('Error updating quantity:', err);
-      setCartItems((prev) =>
-        prev
-          .map((item) => (item.id === itemId ? (qty > 0 ? { ...item, quantity: qty } : null) : item))
-          .filter(Boolean)
-      );
-      setCartCount((prev) => Math.max(0, prev + (qty > 0 ? 1 : -1)));
+      console.error('Error updating item quantity in DB:', err);
+      await fetchCart();
     }
   };
 
-  // Remove item from DB
+  // Remove item from Cart
   const removeFromCart = async (itemId) => {
+    if (!userId) {
+      // GUEST
+      const currentItems = getGuestCartFromStorage();
+      const updated = currentItems.filter(i => i.id !== itemId && i.medicineId !== itemId);
+      saveGuestCartToStorage(updated);
+      setCartItems(updated);
+      updateDerivedTotals(updated);
+      return;
+    }
+
+    // CUSTOMER
+    setCartItems(prev => {
+      const next = prev.filter(i => i.id !== itemId);
+      updateDerivedTotals(next);
+      return next;
+    });
+
     try {
       await client.delete(`/api/v1/cart/${itemId}`, {
-        params: {
-          sessionId,
-          userId: userId || undefined,
-        },
+        params: { userId },
       });
       await fetchCart();
     } catch (err) {
-      console.error('Error removing item:', err);
-      setCartItems((prev) => prev.filter((item) => item.id !== itemId));
+      console.error('Error removing item from DB cart:', err);
+      await fetchCart();
     }
   };
 
-  // Clear entire cart from DB and reset count to 0
+  // Clear entire cart
   const clearCart = async () => {
-    try {
-      await client.delete('/api/v1/cart/clear', {
-        params: {
-          sessionId,
-          userId: userId || undefined,
-        },
-      });
-    } catch (err) {
-      console.warn('Error clearing cart on server:', err);
-    } finally {
-      setCartItems([]);
-      setCartCount(0);
-      setSubtotal(0);
-      localStorage.setItem('pharma_cart_count', '0');
+    setCartItems([]);
+    setCartCount(0);
+    setSubtotal(0);
+    sessionStorage.removeItem(GUEST_CART_KEY);
+    sessionStorage.setItem(CART_COUNT_KEY, '0');
+    localStorage.setItem(CART_COUNT_KEY, '0');
+
+    if (userId) {
+      try {
+        await client.delete('/api/v1/cart/clear', {
+          params: { userId },
+        });
+      } catch (err) {
+        console.warn('Error clearing cart in DB:', err);
+      }
     }
   };
 
@@ -190,8 +327,10 @@ export const CartProvider = ({ children }) => {
         addToCart,
         updateQuantity,
         removeFromCart,
+        removeItem: removeFromCart, // alias for consistency
         clearCart,
         fetchCart,
+        isGuest: !userId,
       }}
     >
       {children}

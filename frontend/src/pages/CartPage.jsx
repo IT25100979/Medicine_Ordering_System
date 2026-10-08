@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { CLINICAL_FALLBACK_IMAGES } from './CatalogPage';
 
 const CartPage = () => {
-  const { cartItems, updateQuantity, removeItem, clearCart, loading } = useCart();
+  const { cartItems, updateQuantity, removeItem, removeFromCart, clearCart, loading, isGuest } = useCart();
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
   const [deliveryLocation, setDeliveryLocation] = useState(() => {
     return localStorage.getItem('pharma_plus_location') || 'Colombo 01 (0100)';
   });
@@ -19,13 +24,30 @@ const CartPage = () => {
   const [checkoutStep, setCheckoutStep] = useState('review'); // 'review' | 'confirmed'
   const [orderRef, setOrderRef] = useState('');
 
-  const subtotal = cartItems.reduce((acc, item) => acc + (Number(item.price) || 0) * item.quantity, 0);
+  const actualIsGuest = isGuest || !isAuthenticated || !user;
+
+  const subtotal = cartItems.reduce((acc, item) => acc + (Number(item.price || item.unitPrice) || 0) * item.quantity, 0);
   const deliveryFee = deliveryZone?.delivery_fee !== undefined
     ? Number(deliveryZone.delivery_fee)
     : (deliveryZone?.deliveryFee !== undefined ? Number(deliveryZone.deliveryFee) : 5.00);
   const total = subtotal > 0 ? subtotal + deliveryFee : 0;
 
+  const handleDeleteItem = (itemId) => {
+    if (removeItem) {
+      removeItem(itemId);
+    } else if (removeFromCart) {
+      removeFromCart(itemId);
+    } else {
+      updateQuantity(itemId, 0);
+    }
+  };
+
   const handleCheckout = async () => {
+    if (actualIsGuest) {
+      navigate('/login?redirect=/cart');
+      return;
+    }
+
     const ref = `ORD-${Math.floor(100000 + Math.random() * 900000)}-LK`;
     setOrderRef(ref);
     setCheckoutStep('confirmed');
@@ -43,7 +65,7 @@ const CartPage = () => {
         <span className="text-black">Inside Cart</span>
       </div>
 
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-neutral-200">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-neutral-200">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-neutral-900 flex items-center gap-3">
             <i className="fa-solid fa-cart-shopping text-emerald-700" />
@@ -53,13 +75,13 @@ const CartPage = () => {
             Verified licensed pharmacy fulfillment with cold-chain monitoring.
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
           {cartItems.length > 0 && (
             <button
               type="button"
               onClick={clearCart}
               className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-wider bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-full border border-red-200 transition-colors shadow-xs"
-              title="Clear all items from database cart"
+              title="Clear all items from cart"
             >
               <i className="fa-solid fa-trash-can text-xs" />
               <span>Clear Cart</span>
@@ -67,13 +89,49 @@ const CartPage = () => {
           )}
           <Link
             to="/catalog"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 uppercase tracking-wider bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-full border border-emerald-200 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 uppercase tracking-wider bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-full border border-emerald-200 transition-colors"
           >
             <i className="fa-solid fa-arrow-left text-xs" />
             <span>Continue Shopping</span>
           </Link>
         </div>
       </div>
+
+      {/* Guest Warning Banner if Not Logged In */}
+      {actualIsGuest && cartItems.length > 0 && checkoutStep !== 'confirmed' && (
+        <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <i className="fa-solid fa-user-clock text-lg" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-2">
+                <span>Guest Session Cart Active</span>
+                <span className="text-[10px] font-bold bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full">
+                  Saved in Session
+                </span>
+              </h3>
+              <p className="text-xs text-amber-800/90 mt-0.5 max-w-xl">
+                Your items are stored in this browser session. To complete prescription verification and purchase, please sign in or register your account.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+            <Link
+              to="/login?redirect=/cart"
+              className="flex-1 sm:flex-none text-center px-4 py-2 bg-neutral-900 hover:bg-black text-white text-xs font-extrabold uppercase tracking-wider rounded-full transition shadow-xs"
+            >
+              Sign In
+            </Link>
+            <Link
+              to="/register?redirect=/cart"
+              className="flex-1 sm:flex-none text-center px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-800 border border-neutral-300 text-xs font-bold uppercase tracking-wider rounded-full transition"
+            >
+              Register
+            </Link>
+          </div>
+        </div>
+      )}
 
       {checkoutStep === 'confirmed' ? (
         <div className="bg-white rounded-3xl p-8 sm:p-12 text-center max-w-xl mx-auto shadow-xl border border-neutral-200 space-y-5 animate-scaleUp">
@@ -112,64 +170,85 @@ const CartPage = () => {
           {/* Left 2 Cols: Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {cartItems.length > 0 ? (
-              cartItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white rounded-2xl p-4 sm:p-5 border border-neutral-200 shadow-sm flex flex-col sm:flex-row items-center gap-4 transition-all hover:shadow-md"
-                >
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border border-neutral-100 shrink-0"
-                  />
-                  <div className="flex-1 min-w-0 text-center sm:text-left">
-                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 tracking-wider">
-                      {item.category}
-                    </span>
-                    <h3 className="text-sm sm:text-base font-bold text-neutral-900 mt-1 truncate">
-                      {item.name}
-                    </h3>
-                    <p className="text-xs text-neutral-500 font-medium truncate mt-0.5">
-                      {item.genericName}
-                    </p>
-                    <div className="text-sm font-extrabold text-neutral-900 mt-2">
-                      LKR {item.price.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
+              cartItems.map((item) => {
+                const itemImg = item.imageUrl || CLINICAL_FALLBACK_IMAGES[item.category] || CLINICAL_FALLBACK_IMAGES['General'] || '';
+                const itemUnitPrice = Number(item.unitPrice ?? item.price ?? 0);
+                const itemTotal = itemUnitPrice * item.quantity;
 
-                  {/* Quantity Adjuster */}
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="flex items-center border border-neutral-300 rounded-full overflow-hidden bg-neutral-50">
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, -1)}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-neutral-200 text-neutral-700 font-bold transition-colors"
-                      >
-                        -
-                      </button>
-                      <span className="w-8 text-center text-xs font-black text-neutral-900">
-                        {item.quantity}
+                return (
+                  <div
+                    key={item.id || item.medicineId}
+                    className="bg-white rounded-2xl p-4 sm:p-5 border border-neutral-200 shadow-sm flex flex-col sm:flex-row items-center gap-4 transition-all hover:shadow-md"
+                  >
+                    {itemImg ? (
+                      <img
+                        src={itemImg}
+                        alt={item.name}
+                        className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border border-neutral-100 shrink-0 bg-neutral-50"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border border-neutral-100 bg-neutral-100 flex items-center justify-center text-neutral-400 shrink-0">
+                        <i className="fa-solid fa-pills text-xl" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 text-center sm:text-left">
+                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 tracking-wider">
+                        {item.category || 'General'}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, 1)}
-                        className="w-8 h-8 flex items-center justify-center hover:bg-neutral-200 text-neutral-700 font-bold transition-colors"
-                      >
-                        +
-                      </button>
+                      <h3 className="text-sm sm:text-base font-bold text-neutral-900 mt-1 truncate">
+                        {item.name}
+                      </h3>
+                      <p className="text-xs text-neutral-500 font-medium truncate mt-0.5">
+                        {item.genericName || ''}
+                      </p>
+                      <div className="text-sm font-extrabold text-neutral-900 mt-2 flex items-center gap-2 justify-center sm:justify-start">
+                        <span>
+                          LKR {itemUnitPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        {item.quantity > 1 && (
+                          <span className="text-xs text-neutral-400 font-normal">
+                            (Total: LKR {itemTotal.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.id)}
-                      className="w-8 h-8 rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-600 flex items-center justify-center transition-colors"
-                      title="Remove item"
-                    >
-                      <i className="fa-solid fa-trash text-xs" />
-                    </button>
+                    {/* Quantity Adjuster */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center border border-neutral-300 rounded-full overflow-hidden bg-neutral-50">
+                        <button
+                          type="button"
+                          aria-label="Decrease quantity"
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          className="w-8 h-8 flex items-center justify-center hover:bg-neutral-200 text-neutral-700 font-bold transition-colors active:scale-95"
+                        >
+                          -
+                        </button>
+                        <span className="w-8 text-center text-xs font-black text-neutral-900">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="Increase quantity"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="w-8 h-8 flex items-center justify-center hover:bg-neutral-200 text-neutral-700 font-bold transition-colors active:scale-95"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="w-8 h-8 rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-600 flex items-center justify-center transition-colors active:scale-95"
+                        title="Remove item"
+                      >
+                        <i className="fa-solid fa-trash text-xs" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="bg-white rounded-3xl p-12 text-center border border-neutral-200 shadow-sm space-y-4">
                 <div className="w-14 h-14 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto text-xl">
@@ -201,7 +280,7 @@ const CartPage = () => {
                   Delivery Destination
                 </span>
                 <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                  VERIFIED DB ZONE
+                  {actualIsGuest ? 'SESSION DESTINATION' : 'VERIFIED DB ZONE'}
                 </span>
               </div>
               <div className="flex items-start gap-2.5">
@@ -249,14 +328,30 @@ const CartPage = () => {
                 </span>
               </div>
 
-              <button
-                type="button"
-                disabled={cartItems.length === 0}
-                onClick={handleCheckout}
-                className="w-full py-3.5 bg-neutral-900 hover:bg-black disabled:bg-neutral-300 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95"
-              >
-                Proceed to Checkout
-              </button>
+              {actualIsGuest ? (
+                <div className="space-y-2">
+                  <Link
+                    to="/login?redirect=/cart"
+                    className="w-full py-3.5 bg-neutral-900 hover:bg-black text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-lock text-amber-400 text-xs" />
+                    <span>Sign In to Complete Purchase</span>
+                  </Link>
+                  <p className="text-[10px] text-center text-neutral-500 font-medium">
+                    Guests must log in to verify prescription items and finalize delivery.
+                  </p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={cartItems.length === 0}
+                  onClick={handleCheckout}
+                  className="w-full py-3.5 bg-neutral-900 hover:bg-black disabled:bg-neutral-300 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-shield-halved text-emerald-400 text-xs" />
+                  <span>Confirm &amp; Place Order</span>
+                </button>
+              )}
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-neutral-400 font-medium pt-1">
                 <i className="fa-solid fa-shield-halved text-emerald-600 text-xs" />
