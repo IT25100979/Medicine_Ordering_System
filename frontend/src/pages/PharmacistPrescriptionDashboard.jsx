@@ -11,6 +11,7 @@ const REJECTION_TAGS = [
   'Medical Institute / Medical Personal Information is not true',
 ];
 
+// 4 Canonical Pharmacy Shelf Storage Sections
 const CANONICAL_SECTIONS = [
   {
     key: 'AMBIENT',
@@ -28,7 +29,7 @@ const CANONICAL_SECTIONS = [
   },
   {
     key: 'COOL_ROOM',
-    displayName: 'Cool Room Storage',
+    displayName: 'Cold storage',
     tempRange: '8°C to 15°C',
     minTemp: 8.0,
     maxTemp: 15.0,
@@ -42,7 +43,7 @@ const CANONICAL_SECTIONS = [
   },
   {
     key: 'REFRIGERATED',
-    displayName: 'Refrigerated Cold Chain',
+    displayName: 'Refrigerated',
     tempRange: '2°C to 8°C',
     minTemp: 2.0,
     maxTemp: 8.0,
@@ -56,7 +57,7 @@ const CANONICAL_SECTIONS = [
   },
   {
     key: 'FROZEN',
-    displayName: 'Deep Frozen Storage',
+    displayName: 'Frozen storage',
     tempRange: '-25°C to -10°C',
     minTemp: -25.0,
     maxTemp: -10.0,
@@ -68,20 +69,6 @@ const CANONICAL_SECTIONS = [
     description: 'Ultra-low sub-zero freezer for cryo-preservatives, specialized mRNA biologics, and lab reagents.',
     packaging: 'Vacuum-insulated panel (VIP) shipper with dry ice / phase-change material. Dual sign-off required.',
   },
-  {
-    key: 'CONTROLLED_VAULT',
-    displayName: 'Controlled / Secured Vault',
-    tempRange: '15°C to 25°C (Locked)',
-    minTemp: 15.0,
-    maxTemp: 25.0,
-    defaultShelfDays: 730,
-    defaultIntensity: 'CRITICAL',
-    defaultSecurity: 'CONTROLLED_SUBSTANCE',
-    color: 'purple',
-    icon: 'lock',
-    description: 'High-security double-locked biometric vault for Schedule II-V controlled narcotics and high-potency opioids.',
-    packaging: 'Tamper-evident serial-numbered security bag, dual pharmacist verification seal, chain-of-custody tracking.',
-  },
 ];
 
 const PharmacistPrescriptionDashboard = () => {
@@ -89,9 +76,6 @@ const PharmacistPrescriptionDashboard = () => {
 
   // Navigation: 'prescriptions' (Rx Verification Queue) | 'condition_tagging' (Cold Chain & Shelf Tagging)
   const [activeNavTab, setActiveNavTab] = useState('prescriptions');
-
-  // Single Moving Side Panel Drawer State
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Toast Notification
   const [toast, setToast] = useState(null);
@@ -227,14 +211,29 @@ const PharmacistPrescriptionDashboard = () => {
   const [batches, setBatches] = useState([]);
   const [loadingTagging, setLoadingTagging] = useState(false);
 
-  // Tagging Sub-Views: 'queue' (Item & Batch Tagging Console) | 'shelves' (5-Section Shelf Arrangement View)
+  // Tagging Sub-Views: 'queue' (Batch & Item Tagging Queue) | 'shelves' (Shelf Arrangement)
   const [taggingSubView, setTaggingSubView] = useState('queue');
 
   // Tagging Filters
   const [tagStatusFilter, setTagStatusFilter] = useState('ALL'); // ALL, AWAITING_REVIEW, PENDING_DUAL_REVIEW, APPROVED, REJECTED
-  const [tagSectionFilter, setTagSectionFilter] = useState('ALL'); // ALL, AMBIENT, COOL_ROOM, REFRIGERATED, FROZEN, CONTROLLED_VAULT
+  const [tagSectionFilter, setTagSectionFilter] = useState('ALL'); // ALL, AMBIENT, COOL_ROOM, REFRIGERATED, FROZEN
   const [tagProductSearch, setTagProductSearch] = useState('');
   const [tagExpiryFilter, setTagExpiryFilter] = useState('ALL'); // ALL, GOOD, NEAR_EXPIRY, EXPIRED
+
+  // Batch Expand/Collapse Tracking
+  const [expandedBatches, setExpandedBatches] = useState({});
+  const [approvingBatch, setApprovingBatch] = useState(null);
+
+  const toggleBatchExpand = (batchNumber) => {
+    setExpandedBatches((prev) => ({
+      ...prev,
+      [batchNumber]: prev[batchNumber] === undefined ? false : !prev[batchNumber],
+    }));
+  };
+
+  const isBatchExpanded = (batchNumber) => {
+    return expandedBatches[batchNumber] !== false; // default expanded
+  };
 
   // Tag Editor Modal State
   const [showTagModal, setShowTagModal] = useState(false);
@@ -268,7 +267,7 @@ const PharmacistPrescriptionDashboard = () => {
   const [dualTargetTag, setDualTargetTag] = useState(null);
   const [dualTargetMedicine, setDualTargetMedicine] = useState(null);
   const [dualSecondReviewer, setDualSecondReviewer] = useState('Dr. Sarah Pharmacist (Reg #SLMC-8492)');
-  const [dualNotes, setDualNotes] = useState('Validated cold chain integrity & biometric security protocols.');
+  const [dualNotes, setDualNotes] = useState('Validated cold chain integrity & clinical stability protocols.');
   const [submittingDual, setSubmittingDual] = useState(false);
 
   // Fetch all Tagging and Catalog Data
@@ -306,13 +305,13 @@ const PharmacistPrescriptionDashboard = () => {
     let pendingDualCount = 0;
     let approvedCount = 0;
     let coldChainCount = 0;
-    let vaultCount = 0;
+    let highRiskCount = 0;
 
     medicines.forEach((m) => {
       const tag = tags.find((t) => t.medicine?.id === m.id || t.medicineId === m.id);
-      const isReview = tag ? (tag.status === 'PENDING_REVIEW' || tag.status === 'DRAFT') : Boolean(m.isTemperatureSensitive);
+      const isReview = tag ? (tag.status === 'PENDING_REVIEW' || tag.status === 'DRAFT' || tag.status === 'COLD_CHAIN_REVIEW') : Boolean(m.isTemperatureSensitive);
       const isDual = tag ? tag.status === 'PENDING_DUAL_REVIEW' : false;
-      const isAppr = tag ? tag.status === 'APPROVED' : true;
+      const isAppr = tag ? (tag.status === 'APPROVED' || tag.status === 'LIVE') : !m.isTemperatureSensitive;
 
       if (isDual) pendingDualCount++;
       else if (isReview) awaitingReviewCount++;
@@ -320,7 +319,7 @@ const PharmacistPrescriptionDashboard = () => {
 
       if (tag) {
         if (tag.section === 'REFRIGERATED' || tag.section === 'COOL_ROOM' || tag.section === 'FROZEN') coldChainCount++;
-        if (tag.section === 'CONTROLLED_VAULT' || tag.securityLevel === 'CONTROLLED_SUBSTANCE') vaultCount++;
+        if (tag.intensity === 'CRITICAL' || tag.securityLevel === 'CONTROLLED_SUBSTANCE' || tag.securityLevel === 'LOCKED') highRiskCount++;
       } else if (m.isTemperatureSensitive) {
         coldChainCount++;
       }
@@ -332,7 +331,7 @@ const PharmacistPrescriptionDashboard = () => {
       pendingDualCount,
       approvedCount,
       coldChainCount,
-      vaultCount,
+      highRiskCount,
     };
   }, [medicines, tags]);
 
@@ -354,6 +353,7 @@ const PharmacistPrescriptionDashboard = () => {
 
       return {
         medicine: m,
+        rawMedicine: m,
         tag: tag || null,
         tagId: tag?.id || null,
         medicineId: m.id,
@@ -361,7 +361,7 @@ const PharmacistPrescriptionDashboard = () => {
         genericName: m.genericName,
         sku: m.sku,
         barcode: m.barcode,
-        batchNumber: m.batchNumber || 'LOT-UNASSIGNED',
+        batchNumber: m.batchNumber || 'BAT-2026-001',
         stockQuantity: m.stockQuantity || 0,
         unitPrice: m.unitPrice,
         cogs: m.cogs,
@@ -380,6 +380,7 @@ const PharmacistPrescriptionDashboard = () => {
         reviewedBy: tag?.reviewedBy,
         reviewedAt: tag?.reviewedAt,
         dualConfirmedBy: tag?.dualConfirmedBy,
+        imageUrl: m.imageUrl,
         actionsObj: {
           insulatedBox: hasInsulated,
           icePack: hasIcePack,
@@ -393,63 +394,192 @@ const PharmacistPrescriptionDashboard = () => {
     });
   }, [medicines, tags]);
 
-  // Filtered Tagged Items for Queue View
-  const filteredTaggedItems = useMemo(() => {
-    let list = [...combinedTaggedItems];
+  // Grouped Batches for Pharmacist Condition Tagging Queue
+  // Pharmacist only sees batch number, date batch came, status, and medicine count (NO financial or total inventory stock counts)
+  const groupedBatchesForTagging = useMemo(() => {
+    if (batches && batches.length > 0) {
+      return batches.map((b) => {
+        const enrichedMedicines = (b.medicines || []).map((bm) => {
+          const fullMed = medicines.find((m) => m.id === bm.medicineId) || bm;
+          const tag = tags.find((t) => t.medicine?.id === bm.medicineId || t.medicineId === bm.medicineId);
+          const shelfLife = getShelfLifeStatus(bm.expiryDate || fullMed.expiryDate);
 
-    // Status Filter
-    if (tagStatusFilter !== 'ALL') {
-      if (tagStatusFilter === 'AWAITING_REVIEW') {
-        list = list.filter((item) => item.status === 'PENDING_REVIEW' || item.status === 'COLD_CHAIN_REVIEW' || item.status === 'DRAFT');
-      } else if (tagStatusFilter === 'PENDING_DUAL_REVIEW') {
-        list = list.filter((item) => item.status === 'PENDING_DUAL_REVIEW');
-      } else if (tagStatusFilter === 'APPROVED') {
-        list = list.filter((item) => item.status === 'APPROVED' || item.status === 'LIVE');
-      } else if (tagStatusFilter === 'REJECTED') {
-        list = list.filter((item) => item.status === 'REJECTED');
+          const actionsStr = tag?.deliveryActions || '';
+          const hasInsulated = actionsStr.toLowerCase().includes('insulated');
+          const hasIcePack = actionsStr.toLowerCase().includes('ice pack') || actionsStr.toLowerCase().includes('gel pad');
+          const hasUpright = actionsStr.toLowerCase().includes('upright');
+          const hasSunlight = actionsStr.toLowerCase().includes('sunlight');
+          const hasSignature = actionsStr.toLowerCase().includes('signature');
+          const hasIdCheck = actionsStr.toLowerCase().includes('id') || actionsStr.toLowerCase().includes('age');
+          const hasNoLeave = actionsStr.toLowerCase().includes('no leave');
+
+          return {
+            medicine: fullMed,
+            rawMedicine: fullMed,
+            tag: tag || null,
+            tagId: tag?.id || null,
+            batchItemId: bm.batchItemId || bm.id,
+            medicineId: bm.medicineId || fullMed.id,
+            name: bm.medicineName || fullMed.name || 'Pharmaceutical Item',
+            genericName: bm.genericName || fullMed.genericName,
+            sku: bm.sku || fullMed.sku,
+            barcode: bm.barcode || fullMed.barcode,
+            batchNumber: b.batchNumber,
+            shelfLocation: bm.shelfLocation || fullMed.shelfLocation || 'Shelf A-01',
+            storageRequirement: bm.storageRequirement || fullMed.storageRequirement,
+            expiryDate: bm.expiryDate || fullMed.expiryDate,
+            shelfLifeStatus: shelfLife,
+            section: tag?.section || bm.section || (fullMed.isTemperatureSensitive ? 'REFRIGERATED' : 'AMBIENT'),
+            storageTempMin: tag?.storageTempMin !== undefined ? tag.storageTempMin : (fullMed.isTemperatureSensitive ? 2.0 : 15.0),
+            storageTempMax: tag?.storageTempMax !== undefined ? tag.storageTempMax : (fullMed.isTemperatureSensitive ? 8.0 : 25.0),
+            shelfLifeDays: tag?.shelfLifeDays || 730,
+            intensity: tag?.intensity || (fullMed.requiresPrescription ? 'HIGH' : 'LOW'),
+            securityLevel: tag?.securityLevel || 'STANDARD',
+            deliveryActions: actionsStr,
+            status: tag?.status || bm.status || (fullMed.isTemperatureSensitive ? 'PENDING_REVIEW' : 'APPROVED'),
+            imageUrl: bm.imageUrl || fullMed.imageUrl,
+            actionsObj: {
+              insulatedBox: hasInsulated,
+              icePack: hasIcePack,
+              keepUpright: hasUpright,
+              avoidSunlight: hasSunlight,
+              signatureRequired: hasSignature,
+              idAgeCheck: hasIdCheck,
+              noLeaveAtDoor: hasNoLeave,
+            },
+          };
+        });
+
+        // Filter medicines in this batch according to active filters
+        const filteredMeds = enrichedMedicines.filter((item) => {
+          // Status Filter
+          if (tagStatusFilter !== 'ALL') {
+            if (tagStatusFilter === 'AWAITING_REVIEW') {
+              if (item.status !== 'PENDING_REVIEW' && item.status !== 'COLD_CHAIN_REVIEW' && item.status !== 'DRAFT') return false;
+            } else if (tagStatusFilter === 'PENDING_DUAL_REVIEW') {
+              if (item.status !== 'PENDING_DUAL_REVIEW') return false;
+            } else if (tagStatusFilter === 'APPROVED') {
+              if (item.status !== 'APPROVED' && item.status !== 'LIVE') return false;
+            } else if (tagStatusFilter === 'REJECTED') {
+              if (item.status !== 'REJECTED') return false;
+            }
+          }
+
+          // Section Filter
+          if (tagSectionFilter !== 'ALL') {
+            if (item.section !== tagSectionFilter) return false;
+          }
+
+          // Product Search Filter
+          if (tagProductSearch.trim()) {
+            const q = tagProductSearch.toLowerCase().trim();
+            const matchName = (item.name || '').toLowerCase().includes(q);
+            const matchGen = (item.genericName || '').toLowerCase().includes(q);
+            const matchSku = (item.sku || '').toLowerCase().includes(q);
+            const matchBatch = (b.batchNumber || '').toLowerCase().includes(q);
+            const matchShelf = (item.shelfLocation || '').toLowerCase().includes(q);
+            if (!matchName && !matchGen && !matchSku && !matchBatch && !matchShelf) return false;
+          }
+
+          // Expiry Filter
+          if (tagExpiryFilter !== 'ALL') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (!item.expiryDate) return false;
+            const exp = new Date(item.expiryDate);
+            exp.setHours(0, 0, 0, 0);
+            const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            if (tagExpiryFilter === 'EXPIRED' && diffDays >= 0) return false;
+            if (tagExpiryFilter === 'NEAR_EXPIRY' && (diffDays < 0 || diffDays > 60)) return false;
+            if (tagExpiryFilter === 'GOOD' && diffDays <= 60) return false;
+          }
+
+          return true;
+        });
+
+        return {
+          ...b,
+          batchDisplayName: b.batchDisplayName || `Batch (${b.batchNumber})`,
+          arrivedDate: b.arrivedDate || b.manufacturingDate || new Date().toISOString().split('T')[0],
+          medicines: filteredMeds,
+          totalMedsInBatch: enrichedMedicines.length,
+        };
+      }).filter((b) => b.medicines.length > 0 || (tagProductSearch.trim() && (b.batchNumber || '').toLowerCase().includes(tagProductSearch.toLowerCase().trim())));
+    }
+
+    // Fallback: Group combinedTaggedItems by batchNumber
+    const map = new Map();
+    combinedTaggedItems.forEach((item, idx) => {
+      const bNum = item.batchNumber && item.batchNumber !== 'LOT-UNASSIGNED'
+        ? item.batchNumber
+        : `Batch ${(idx % 4) + 1} (BAT-2026-00${(idx % 4) + 1})`;
+
+      if (!map.has(bNum)) {
+        map.set(bNum, {
+          id: idx + 1,
+          batchNumber: bNum,
+          batchDisplayName: bNum.startsWith('Batch ') ? bNum : `Batch (${bNum})`,
+          status: item.status === 'APPROVED' || item.status === 'LIVE' ? 'LIVE' : 'COLD_CHAIN_REVIEW',
+          arrivedDate: item.medicine?.manufacturingDate || new Date().toISOString().split('T')[0],
+          medicines: [],
+          totalMedsInBatch: 0,
+        });
       }
-    }
+      map.get(bNum).medicines.push(item);
+    });
 
-    // Section Filter
-    if (tagSectionFilter !== 'ALL') {
-      list = list.filter((item) => item.section === tagSectionFilter);
-    }
-
-    // Product Search Filter
-    if (tagProductSearch.trim()) {
-      const q = tagProductSearch.toLowerCase().trim();
-      list = list.filter((item) => {
-        const matchName = (item.name || '').toLowerCase().includes(q);
-        const matchGen = (item.genericName || '').toLowerCase().includes(q);
-        const matchSku = (item.sku || '').toLowerCase().includes(q);
-        const matchBatch = (item.batchNumber || '').toLowerCase().includes(q);
-        const matchShelf = (item.shelfLocation || '').toLowerCase().includes(q);
-        return matchName || matchGen || matchSku || matchBatch || matchShelf;
-      });
-    }
-
-    // Expiry Filter
-    if (tagExpiryFilter !== 'ALL') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      list = list.filter((item) => {
-        if (!item.expiryDate) return false;
-        const exp = new Date(item.expiryDate);
-        exp.setHours(0, 0, 0, 0);
-        const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        if (tagExpiryFilter === 'EXPIRED') return diffDays < 0;
-        if (tagExpiryFilter === 'NEAR_EXPIRY') return diffDays >= 0 && diffDays <= 60;
-        if (tagExpiryFilter === 'GOOD') return diffDays > 60;
+    const fallbackList = Array.from(map.values()).map((b) => {
+      const filteredMeds = b.medicines.filter((item) => {
+        if (tagStatusFilter !== 'ALL') {
+          if (tagStatusFilter === 'AWAITING_REVIEW') {
+            if (item.status !== 'PENDING_REVIEW' && item.status !== 'COLD_CHAIN_REVIEW' && item.status !== 'DRAFT') return false;
+          } else if (tagStatusFilter === 'PENDING_DUAL_REVIEW') {
+            if (item.status !== 'PENDING_DUAL_REVIEW') return false;
+          } else if (tagStatusFilter === 'APPROVED') {
+            if (item.status !== 'APPROVED' && item.status !== 'LIVE') return false;
+          } else if (tagStatusFilter === 'REJECTED') {
+            if (item.status !== 'REJECTED') return false;
+          }
+        }
+        if (tagSectionFilter !== 'ALL') {
+          if (item.section !== tagSectionFilter) return false;
+        }
+        if (tagProductSearch.trim()) {
+          const q = tagProductSearch.toLowerCase().trim();
+          const matchName = (item.name || '').toLowerCase().includes(q);
+          const matchGen = (item.genericName || '').toLowerCase().includes(q);
+          const matchSku = (item.sku || '').toLowerCase().includes(q);
+          const matchBatch = (b.batchNumber || '').toLowerCase().includes(q);
+          const matchShelf = (item.shelfLocation || '').toLowerCase().includes(q);
+          if (!matchName && !matchGen && !matchSku && !matchBatch && !matchShelf) return false;
+        }
+        if (tagExpiryFilter !== 'ALL') {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (!item.expiryDate) return false;
+          const exp = new Date(item.expiryDate);
+          exp.setHours(0, 0, 0, 0);
+          const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          if (tagExpiryFilter === 'EXPIRED' && diffDays >= 0) return false;
+          if (tagExpiryFilter === 'NEAR_EXPIRY' && (diffDays < 0 || diffDays > 60)) return false;
+          if (tagExpiryFilter === 'GOOD' && diffDays <= 60) return false;
+        }
         return true;
       });
-    }
 
-    return list;
-  }, [combinedTaggedItems, tagStatusFilter, tagSectionFilter, tagProductSearch, tagExpiryFilter]);
+      return {
+        ...b,
+        totalMedsInBatch: b.medicines.length,
+        medicines: filteredMeds,
+      };
+    });
+
+    return fallbackList.filter((b) => b.medicines.length > 0 || (tagProductSearch.trim() && (b.batchNumber || '').toLowerCase().includes(tagProductSearch.toLowerCase().trim())));
+  }, [batches, medicines, tags, combinedTaggedItems, tagStatusFilter, tagSectionFilter, tagProductSearch, tagExpiryFilter]);
 
   // Open Tag Editor Modal
   const handleOpenTagEditor = (item) => {
-    setEditingMedicine(item.medicine || item);
+    setEditingMedicine(item.medicine || item.rawMedicine || item);
     setEditingTag(item.tag || null);
 
     const sectionMeta = CANONICAL_SECTIONS.find((s) => s.key === item.section) || CANONICAL_SECTIONS[0];
@@ -493,8 +623,7 @@ const PharmacistPrescriptionDashboard = () => {
         ...prev.deliveryActions,
         insulatedBox: (newSecKey === 'REFRIGERATED' || newSecKey === 'FROZEN'),
         icePack: (newSecKey === 'REFRIGERATED' || newSecKey === 'COOL_ROOM'),
-        signatureRequired: (newSecKey === 'CONTROLLED_VAULT' || newSecKey === 'FROZEN'),
-        idAgeCheck: (newSecKey === 'CONTROLLED_VAULT'),
+        signatureRequired: (newSecKey === 'FROZEN'),
       },
     }));
   };
@@ -506,7 +635,7 @@ const PharmacistPrescriptionDashboard = () => {
 
     // Check if dual confirmation is required
     const isCritical = tagForm.intensity === 'CRITICAL';
-    const isControlled = tagForm.securityLevel === 'CONTROLLED_SUBSTANCE' || tagForm.section === 'CONTROLLED_VAULT';
+    const isControlled = tagForm.securityLevel === 'CONTROLLED_SUBSTANCE';
     const isFrozen = tagForm.section === 'FROZEN';
 
     if ((isCritical || isControlled || isFrozen) && forceApprove) {
@@ -561,7 +690,7 @@ const PharmacistPrescriptionDashboard = () => {
     setSubmittingDual(true);
     try {
       const tagId = dualTargetTag?.id || (tags.find(t => t.medicine?.id === dualTargetMedicine?.id)?.id);
-      
+
       if (tagId) {
         await client.post(`/api/v1/cold-chain/tags/${tagId}/dual-confirm`, {
           secondReviewer: dualSecondReviewer.trim(),
@@ -587,7 +716,7 @@ const PharmacistPrescriptionDashboard = () => {
         }
       }
 
-      showToast(`Dual-confirmation signed by ${dualSecondReviewer}! Item & batch marked LIVE.`);
+      showToast(`Dual-confirmation signed by ${dualSecondReviewer}! Item marked LIVE.`);
       setShowDualModal(false);
       await fetchTaggingData();
     } catch (err) {
@@ -624,13 +753,13 @@ const PharmacistPrescriptionDashboard = () => {
     }
   };
 
-  // Direct Approve Tag
+  // Direct Approve Tag for single item
   const handleDirectApprove = async (item) => {
     const isCritical = item.intensity === 'CRITICAL';
-    const isControlled = item.securityLevel === 'CONTROLLED_SUBSTANCE' || item.section === 'CONTROLLED_VAULT' || item.section === 'FROZEN';
+    const isControlled = item.securityLevel === 'CONTROLLED_SUBSTANCE' || item.section === 'FROZEN';
 
     if (isCritical || isControlled) {
-      setDualTargetMedicine(item.medicine || item);
+      setDualTargetMedicine(item.medicine || item.rawMedicine || item);
       setDualTargetTag(item.tag || { id: item.tagId });
       setShowDualModal(true);
       return;
@@ -655,6 +784,38 @@ const PharmacistPrescriptionDashboard = () => {
     } catch (err) {
       console.error('Approve tag error:', err);
       showToast(err.response?.data?.message || 'Failed to approve item', 'error');
+    }
+  };
+
+  // Approve Entire Batch LIVE
+  const handleApproveBatchLive = async (batchNumber, batchMedicines = []) => {
+    try {
+      setApprovingBatch(batchNumber);
+      await client.post(`/api/v1/batches/by-number/${encodeURIComponent(batchNumber)}/approve-live`);
+
+      // Also approve all individual tags for medicines in this batch
+      for (const m of batchMedicines) {
+        if (m.tagId) {
+          await client.post(`/api/v1/cold-chain/tags/${m.tagId}/review?action=APPROVE`).catch(() => {});
+        } else if (m.medicineId) {
+          await client.post(`/api/v1/cold-chain/tags/medicine/${m.medicineId}`, {
+            section: m.section || 'AMBIENT',
+            storageTempMin: m.storageTempMin || 15.0,
+            storageTempMax: m.storageTempMax || 25.0,
+            shelfLifeDays: m.shelfLifeDays || 730,
+            intensity: m.intensity || 'LOW',
+            securityLevel: m.securityLevel || 'STANDARD',
+            deliveryActions: m.deliveryActions || 'Standard Packaging',
+          }).catch(() => {});
+        }
+      }
+      showToast(`Batch "${batchNumber}" & all medicines approved LIVE! Synced to Catalog & Delivery.`);
+      await fetchTaggingData();
+    } catch (err) {
+      console.error('Approve batch error:', err);
+      showToast(err.response?.data?.message || 'Failed to approve batch LIVE', 'error');
+    } finally {
+      setApprovingBatch(null);
     }
   };
 
@@ -688,155 +849,13 @@ const PharmacistPrescriptionDashboard = () => {
       )}
 
       {/* ========================================================= */}
-      {/* SINGLE MOVING SIDE PANEL DRAWER                           */}
-      {/* ========================================================= */}
-      {/* Floating Modern Pill Button (Fixed on Top-Left) */}
-      <div className="fixed top-4 left-4 z-40">
-        <button
-          type="button"
-          onClick={() => setIsDrawerOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 text-white text-xs font-bold uppercase tracking-wider shadow-lg hover:bg-black hover:scale-105 active:scale-95 transition-all cursor-pointer border border-zinc-700"
-          title="Open Clinical Navigation Drawer"
-        >
-          <span className="material-symbols-outlined text-[18px]">menu_open</span>
-          <span className="hidden sm:inline">Pharma Console</span>
-        </button>
-      </div>
-
-      {/* Backdrop */}
-      {isDrawerOpen && (
-        <div
-          onClick={() => setIsDrawerOpen(false)}
-          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 transition-opacity"
-        />
-      )}
-
-      {/* Drawer Panel */}
-      <div
-        className={`fixed top-0 left-0 bottom-0 w-80 sm:w-96 bg-white z-50 shadow-2xl border-r border-neutral-200 flex flex-col transform transition-transform duration-300 ease-in-out ${
-          isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        {/* Drawer Header */}
-        <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
-          <div className="flex items-center gap-1 font-black text-xl tracking-tight uppercase text-black">
-            <span>PHARMA</span>
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-xs font-black shadow-sm">
-              +
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsDrawerOpen(false)}
-            className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 transition-colors cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-          </button>
-        </div>
-
-        {/* Drawer Content / Nav Tabs */}
-        <div className="flex-1 p-6 space-y-3 overflow-y-auto">
-          <div className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 mb-2">
-            Clinical Workspaces
-          </div>
-
-          {/* Nav Item 1: Rx Verification Queue */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveNavTab('prescriptions');
-              setIsDrawerOpen(false);
-            }}
-            className={`w-full flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeNavTab === 'prescriptions'
-                ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
-                : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border-neutral-200'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-[20px]">prescriptions</span>
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider">Rx Verification Queue</div>
-                <div className={`text-[10px] ${activeNavTab === 'prescriptions' ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                  Review patient uploaded prescriptions
-                </div>
-              </div>
-            </div>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-              activeNavTab === 'prescriptions' ? 'bg-white/20 text-white' : 'bg-neutral-200 text-neutral-700'
-            }`}>
-              {statusCounts.PENDING}
-            </span>
-          </button>
-
-          {/* Nav Item 2: Condition & Cold-Chain Tagging */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveNavTab('condition_tagging');
-              setIsDrawerOpen(false);
-            }}
-            className={`w-full flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeNavTab === 'condition_tagging'
-                ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
-                : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border-neutral-200'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-[20px]">ac_unit</span>
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider">Condition Tagging</div>
-                <div className={`text-[10px] ${activeNavTab === 'condition_tagging' ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                  5-Section Cold Chain &amp; Shelf Life
-                </div>
-              </div>
-            </div>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-              activeNavTab === 'condition_tagging' ? 'bg-cyan-500 text-white' : 'bg-cyan-100 text-cyan-900'
-            }`}>
-              {tagMetrics.awaitingReviewCount + tagMetrics.pendingDualCount}
-            </span>
-          </button>
-
-          {/* Switch to Operations Link */}
-          <div className="pt-6 border-t border-neutral-100">
-            <Link
-              to="/admin/stocks"
-              className="w-full flex items-center justify-between p-3 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">inventory_2</span>
-                <span>Operations Stocks Console</span>
-              </div>
-              <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Drawer Footer */}
-        <div className="p-6 border-t border-neutral-100 flex items-center justify-between">
-          <div className="text-xs text-neutral-500">
-            Logged in as <strong className="text-neutral-800">{user?.fullName || 'Chief Pharmacist'}</strong>
-          </div>
-          <button
-            type="button"
-            onClick={logout}
-            className="text-xs font-bold text-red-600 hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[14px]">logout</span>
-            <span>Logout</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ========================================================= */}
-      {/* TOP HEADER: Pharma + Logo (left) & Logout Button (right)  */}
+      {/* TOP HEADER: Pharma + Logo (left) & 2 Nav Tabs + Logout (right) */}
       {/* ========================================================= */}
       <header className="w-full bg-white border-b border-neutral-200/80 px-4 sm:px-6 lg:px-12 py-3.5 mb-6 shadow-xs">
         <div className="max-w-[1536px] mx-auto flex items-center justify-between">
           
           {/* Top Left: Pharma + Logo and Active Status Queue Badge below it */}
-          <div className="pl-12 sm:pl-0">
+          <div>
             <Link
               to="/pharmacist_dashboard"
               className="flex items-center gap-1 font-sans font-black text-xl sm:text-2xl tracking-tight uppercase text-black hover:opacity-90 transition-opacity"
@@ -854,11 +873,11 @@ const PharmacistPrescriptionDashboard = () => {
             </div>
           </div>
 
-          {/* Top Right: Header Workspace Switcher Pills & Logout Button */}
+          {/* Top Right: Header Workspace Switcher Pills (Rx Verification & Condition Tagging) & Logout Button */}
           <div className="flex items-center gap-3">
             
-            {/* Direct Switcher Pills */}
-            <div className="hidden md:flex items-center gap-1.5 bg-neutral-100 p-1 rounded-full border border-neutral-200">
+            {/* 2 Switcher Buttons */}
+            <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-full border border-neutral-200">
               <button
                 type="button"
                 onClick={() => setActiveNavTab('prescriptions')}
@@ -906,7 +925,7 @@ const PharmacistPrescriptionDashboard = () => {
       <div className="max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-12">
         
         {/* ======================================================= */}
-        {/* TAB 1: RX VERIFICATION QUEUE                           */}
+        {/* TAB 1: RX VERIFICATION QUEUE                            */}
         {/* ======================================================= */}
         {activeNavTab === 'prescriptions' && (
           <div>
@@ -1181,7 +1200,7 @@ const PharmacistPrescriptionDashboard = () => {
                   Condition &amp; Cold-Chain Tagging
                 </h1>
                 <p className="text-xs text-neutral-500 mt-1">
-                  Assign shelf sections, temperature envelopes, expiry days, risk intensity, security vaults &amp; delivery handling actions.
+                  Assign 4-section storage envelopes, temperature ranges, expiry validation, potency intensity &amp; delivery handling actions.
                 </p>
               </div>
 
@@ -1197,7 +1216,7 @@ const PharmacistPrescriptionDashboard = () => {
             </div>
 
             {/* Metrics Dashboard Banner */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
               <div className="bg-white rounded-2xl p-4 border border-neutral-200 shadow-xs">
                 <div className="text-[10px] font-extrabold uppercase text-neutral-400">Total Items</div>
                 <div className="text-xl font-black text-neutral-900 mt-0.5">{tagMetrics.totalItems}</div>
@@ -1214,7 +1233,7 @@ const PharmacistPrescriptionDashboard = () => {
               <div className="bg-purple-50/80 rounded-2xl p-4 border border-purple-200 shadow-xs">
                 <div className="text-[10px] font-extrabold uppercase text-purple-800 flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">lock</span>
-                  <span>Dual Review</span>
+                  <span>Dual Review Req</span>
                 </div>
                 <div className="text-xl font-black text-purple-950 mt-0.5">{tagMetrics.pendingDualCount}</div>
               </div>
@@ -1227,14 +1246,6 @@ const PharmacistPrescriptionDashboard = () => {
                 <div className="text-xl font-black text-cyan-950 mt-0.5">{tagMetrics.coldChainCount}</div>
               </div>
 
-              <div className="bg-blue-50/80 rounded-2xl p-4 border border-blue-200 shadow-xs">
-                <div className="text-[10px] font-extrabold uppercase text-blue-800 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">security</span>
-                  <span>Vault / Narc</span>
-                </div>
-                <div className="text-xl font-black text-blue-950 mt-0.5">{tagMetrics.vaultCount}</div>
-              </div>
-
               <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 shadow-xs">
                 <div className="text-[10px] font-extrabold uppercase text-emerald-800 flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">verified</span>
@@ -1244,7 +1255,7 @@ const PharmacistPrescriptionDashboard = () => {
               </div>
             </div>
 
-            {/* Sub-View Switcher: Tagging Queue Console vs 5-Section Shelf Arrangement View */}
+            {/* Sub-View Switcher: Batch & Item Tagging Queue vs Shelf Arrangement */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
               <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
                 <button
@@ -1270,16 +1281,16 @@ const PharmacistPrescriptionDashboard = () => {
                   }`}
                 >
                   <span className="material-symbols-outlined text-[16px]">shelves</span>
-                  <span>5-Section Shelf Arrangement</span>
+                  <span>Shelf Arrangement</span>
                 </button>
               </div>
 
               <div className="text-xs text-neutral-500">
-                Showing <strong className="text-black font-bold">{filteredTaggedItems.length}</strong> catalog items
+                Active Batches in Queue: <strong className="text-black font-bold">{groupedBatchesForTagging.length}</strong>
               </div>
             </div>
 
-            {/* SUB-VIEW 1: BATCH & ITEM TAGGING QUEUE */}
+            {/* SUB-VIEW 1: BATCH & ITEM TAGGING QUEUE (Stocks Style with Pharmacist Focus) */}
             {taggingSubView === 'queue' && (
               <div className="space-y-6 mb-8">
                 
@@ -1321,23 +1332,22 @@ const PharmacistPrescriptionDashboard = () => {
                       >
                         <option value="ALL">All Review Statuses</option>
                         <option value="AWAITING_REVIEW">Awaiting Tagging / Review</option>
-                        <option value="PENDING_DUAL_REVIEW">Dual Review Required (Critical/Vault)</option>
+                        <option value="PENDING_DUAL_REVIEW">Dual Review Required (Critical/Frozen)</option>
                         <option value="APPROVED">Approved &amp; Live</option>
                         <option value="REJECTED">Rejected</option>
                       </select>
 
-                      {/* Shelf Section Filter (5 Canonical Sections) */}
+                      {/* Shelf Section Filter (4 Canonical Sections) */}
                       <select
                         value={tagSectionFilter}
                         onChange={(e) => setTagSectionFilter(e.target.value)}
                         className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
                       >
-                        <option value="ALL">All 5 Shelf Sections</option>
-                        <option value="AMBIENT">Ambient Storage (15-25°C)</option>
-                        <option value="COOL_ROOM">Cool Room (8-15°C)</option>
-                        <option value="REFRIGERATED">Refrigerated Cold Chain (2-8°C)</option>
-                        <option value="FROZEN">Deep Frozen (-25°C to -10°C)</option>
-                        <option value="CONTROLLED_VAULT">Controlled / Secured Vault</option>
+                        <option value="ALL">All 4 Shelf Sections</option>
+                        <option value="AMBIENT">Ambient Storage (15–25°C)</option>
+                        <option value="COOL_ROOM">Cold storage (8–15°C)</option>
+                        <option value="REFRIGERATED">Refrigerated (2–8°C)</option>
+                        <option value="FROZEN">Frozen storage (-25°C to -10°C)</option>
                       </select>
 
                       {/* Expiry Filter */}
@@ -1357,254 +1367,347 @@ const PharmacistPrescriptionDashboard = () => {
                   </div>
                 </div>
 
-                {/* Tagging Items Table */}
-                <div className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden">
-                  {loadingTagging ? (
-                    <div className="p-16 text-center text-xs font-semibold text-neutral-500">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-3"></div>
-                      Loading condition tagging queue...
-                    </div>
-                  ) : filteredTaggedItems.length === 0 ? (
-                    <div className="p-16 text-center space-y-3">
-                      <span className="material-symbols-outlined text-[42px] text-neutral-300">ac_unit</span>
-                      <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                        No medicines match the selected condition tagging filters.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-neutral-100/80 text-neutral-700 font-extrabold uppercase tracking-wider border-b border-neutral-200">
-                          <tr>
-                            <th className="py-3 px-4">Medicine Item &amp; Batch</th>
-                            <th className="py-3 px-4">Shelf Section &amp; Envelope</th>
-                            <th className="py-3 px-4">Shelf-Life &amp; Expiry</th>
-                            <th className="py-3 px-4">Intensity &amp; Security</th>
-                            <th className="py-3 px-4">Delivery Handling Tags</th>
-                            <th className="py-3 px-4">Tagging Status</th>
-                            <th className="py-3 px-4 text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-100">
-                          {filteredTaggedItems.map((item) => {
-                            const isDual = item.status === 'PENDING_DUAL_REVIEW';
-                            const isApproved = item.status === 'APPROVED' || item.status === 'LIVE';
+                {/* Batch Cards Tagging Queue List */}
+                {loadingTagging ? (
+                  <div className="p-16 text-center text-xs font-semibold text-neutral-500 bg-white rounded-3xl border border-neutral-200 shadow-sm">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-3"></div>
+                    Loading batch and condition tagging queue...
+                  </div>
+                ) : groupedBatchesForTagging.length === 0 ? (
+                  <div className="p-16 text-center space-y-3 bg-white rounded-3xl border border-neutral-200 shadow-sm">
+                    <span className="material-symbols-outlined text-[42px] text-neutral-300">layers</span>
+                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                      No batches match the selected condition tagging filters.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {groupedBatchesForTagging.map((b) => {
+                      const isExpanded = isBatchExpanded(b.batchNumber);
+                      const isApproving = approvingBatch === b.batchNumber;
+                      const isBatchLive = b.status === 'LIVE';
+                      const hasPendingDual = b.medicines.some(m => m.status === 'PENDING_DUAL_REVIEW');
 
-                            return (
-                              <tr key={item.medicineId} className="hover:bg-neutral-50/80 transition-colors">
-                                
-                                {/* Item & Batch */}
-                                <td className="py-3.5 px-4 align-top">
-                                  <div className="flex items-start gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200 flex items-center justify-center mt-0.5">
-                                      {item.medicine?.imageUrl ? (
-                                        <img src={item.medicine.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                                      ) : (
-                                        <span className="material-symbols-outlined text-neutral-400 text-[18px]">medication</span>
-                                      )}
-                                    </div>
-                                    <div>
-                                      <div className="font-extrabold text-neutral-900 leading-tight">
-                                        {item.name}
-                                      </div>
-                                      <div className="text-[10px] text-neutral-500 truncate max-w-xs">
-                                        {item.genericName || 'Pharmaceutical compound'}
-                                      </div>
-                                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-700 border border-neutral-200">
-                                          {item.sku}
-                                        </span>
-                                        <span className="font-mono text-[10px] text-neutral-500">
-                                          Lot: <strong>{item.batchNumber}</strong>
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
+                      return (
+                        <div
+                          key={b.batchNumber}
+                          className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden transition-all"
+                        >
+                          {/* Batch Header Bar */}
+                          <div className="p-4 sm:p-5 bg-neutral-50/80 border-b border-neutral-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              {/* Expand / Collapse Button */}
+                              <button
+                                type="button"
+                                onClick={() => toggleBatchExpand(b.batchNumber)}
+                                className="w-8 h-8 rounded-full bg-white hover:bg-neutral-200 border border-neutral-300 flex items-center justify-center text-neutral-700 transition-colors cursor-pointer shrink-0"
+                                title={isExpanded ? 'Collapse Batch' : 'Expand Batch'}
+                              >
+                                <span className="material-symbols-outlined text-[20px]">
+                                  {isExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+                                </span>
+                              </button>
 
-                                {/* Shelf Section & Temp Envelope */}
-                                <td className="py-3.5 px-4 align-top">
-                                  <div className="space-y-1">
-                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                                      item.section === 'REFRIGERATED'
-                                        ? 'bg-cyan-100 text-cyan-900 border border-cyan-300'
-                                        : item.section === 'COOL_ROOM'
-                                        ? 'bg-teal-100 text-teal-900 border border-teal-300'
-                                        : item.section === 'FROZEN'
-                                        ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                                        : item.section === 'CONTROLLED_VAULT'
-                                        ? 'bg-purple-100 text-purple-900 border border-purple-300'
-                                        : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                                    }`}>
-                                      <span className="material-symbols-outlined text-[13px]">
-                                        {item.section === 'CONTROLLED_VAULT' ? 'lock' : item.section === 'AMBIENT' ? 'shelves' : 'ac_unit'}
-                                      </span>
-                                      <span>{item.section.replace('_', ' ')}</span>
-                                    </span>
+                              <div>
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                  <span className="font-mono text-sm font-black text-neutral-900">
+                                    {b.batchDisplayName || b.batchNumber}
+                                  </span>
 
-                                    <div className="text-[11px] font-mono text-neutral-700 font-bold">
-                                      {item.storageTempMin}°C to {item.storageTempMax}°C
-                                    </div>
-                                    <div className="text-[10px] text-neutral-400">
-                                      {item.shelfLocation}
-                                    </div>
-                                  </div>
-                                </td>
-
-                                {/* Shelf-Life & Expiry */}
-                                <td className="py-3.5 px-4 align-top">
-                                  <div className="space-y-1">
-                                    <div className="text-xs font-bold text-neutral-800">
-                                      {item.shelfLifeDays} days shelf-life
-                                    </div>
-                                    <div className="text-[11px] text-neutral-600">
-                                      Exp: <strong>{formatDateDDMMYYYY(item.expiryDate)}</strong>
-                                    </div>
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[9px] border ${item.shelfLifeStatus.badgeClass}`}>
-                                      <span className={`w-1 h-1 rounded-full ${item.shelfLifeStatus.dotClass}`}></span>
-                                      <span>{item.shelfLifeStatus.label}</span>
-                                    </span>
-                                  </div>
-                                </td>
-
-                                {/* Intensity & Security */}
-                                <td className="py-3.5 px-4 align-top">
-                                  <div className="space-y-1.5">
-                                    {/* Intensity */}
-                                    <div>
-                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                                        item.intensity === 'CRITICAL'
-                                          ? 'bg-rose-100 text-rose-900 border border-rose-300 animate-pulse'
-                                          : item.intensity === 'HIGH'
-                                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                                          : item.intensity === 'MEDIUM'
-                                          ? 'bg-blue-100 text-blue-900 border border-blue-200'
-                                          : 'bg-neutral-100 text-neutral-700'
-                                      }`}>
-                                        <span>Intensity: {item.intensity}</span>
-                                      </span>
-                                    </div>
-
-                                    {/* Security */}
-                                    <div className="text-[10px] font-mono font-semibold text-neutral-600">
-                                      Sec: <span className="text-black">{item.securityLevel.replace('_', ' ')}</span>
-                                    </div>
-                                  </div>
-                                </td>
-
-                                {/* Delivery Handling Tags */}
-                                <td className="py-3.5 px-4 align-top max-w-xs">
-                                  <div className="flex flex-wrap gap-1">
-                                    {item.actionsObj.insulatedBox && (
-                                      <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
-                                        Insulated Box
-                                      </span>
-                                    )}
-                                    {item.actionsObj.icePack && (
-                                      <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
-                                        Ice Pack
-                                      </span>
-                                    )}
-                                    {item.actionsObj.keepUpright && (
-                                      <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 text-[9px] font-bold">
-                                        Upright
-                                      </span>
-                                    )}
-                                    {item.actionsObj.signatureRequired && (
-                                      <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-bold">
-                                        Signature Req.
-                                      </span>
-                                    )}
-                                    {item.actionsObj.idAgeCheck && (
-                                      <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-[9px] font-bold">
-                                        ID Check
-                                      </span>
-                                    )}
-                                    {item.actionsObj.noLeaveAtDoor && (
-                                      <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-800 border border-red-200 text-[9px] font-bold">
-                                        Hand-to-Hand
-                                      </span>
-                                    )}
-                                    {!item.deliveryActions && (
-                                      <span className="text-[10px] text-neutral-400 italic">Standard ambient dispatch</span>
-                                    )}
-                                  </div>
-                                </td>
-
-                                {/* Tagging Status */}
-                                <td className="py-3.5 px-4 align-top whitespace-nowrap">
-                                  {isApproved ? (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                  {/* Batch Status Badge */}
+                                  {isBatchLive ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
                                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                                       <span>LIVE APPROVED</span>
                                     </span>
-                                  ) : isDual ? (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-100 text-purple-900 border border-purple-300 animate-pulse">
-                                      <span className="material-symbols-outlined text-[13px]">lock</span>
+                                  ) : hasPendingDual ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-900 border border-purple-300 animate-pulse">
+                                      <span className="material-symbols-outlined text-[12px]">lock</span>
                                       <span>DUAL REVIEW REQ</span>
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-300">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                                      <span>PENDING REVIEW</span>
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300">
+                                      <span className="material-symbols-outlined text-[12px] text-amber-700">ac_unit</span>
+                                      <span>IN COLD-CHAIN REVIEW</span>
                                     </span>
                                   )}
-                                </td>
+                                </div>
 
-                                {/* Actions */}
-                                <td className="py-3.5 px-4 align-top text-right whitespace-nowrap">
-                                  <div className="flex items-center justify-end gap-1.5">
-                                    
-                                    {/* Edit / Configure Tag */}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenTagEditor(item)}
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
-                                      title="Edit condition tags & parameters"
-                                    >
-                                      <span className="material-symbols-outlined text-[14px]">tune</span>
-                                      <span>Configure</span>
-                                    </button>
+                                {/* Pharmacist View: Only Batch number, date batch came, and medicine count */}
+                                <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500 flex-wrap">
+                                  <span>
+                                    Medicines in Batch: <strong className="text-black font-bold">{b.medicines?.length || 0}</strong>
+                                  </span>
+                                  <span>•</span>
+                                  <span>
+                                    Date Batch Came: <strong className="text-neutral-700 font-medium">{formatDateDDMMYYYY(b.arrivedDate)}</strong>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
 
-                                    {/* Approve / Dual Confirm Action */}
-                                    {isDual ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDirectApprove(item)}
-                                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-purple-700 hover:bg-purple-800 text-white text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
-                                        title="Sign second-pharmacist dual review"
-                                      >
-                                        <span className="material-symbols-outlined text-[14px]">lock_open</span>
-                                        <span>Dual Sign</span>
-                                      </button>
-                                    ) : !isApproved ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDirectApprove(item)}
-                                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
-                                        title="Approve condition tag and mark item LIVE"
-                                      >
-                                        <span className="material-symbols-outlined text-[14px]">check</span>
-                                        <span>Approve</span>
-                                      </button>
-                                    ) : null}
+                            {/* Batch Operational Action Buttons */}
+                            <div className="flex items-center gap-2.5 self-end lg:self-auto flex-wrap">
+                              {!isBatchLive && (
+                                <button
+                                  type="button"
+                                  disabled={isApproving}
+                                  onClick={() => handleApproveBatchLive(b.batchNumber, b.medicines)}
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs cursor-pointer"
+                                  title="Approve all condition tags in this batch and set batch LIVE"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">
+                                    {isApproving ? 'hourglass_top' : 'verified'}
+                                  </span>
+                                  <span>
+                                    {isApproving ? 'Approving Batch...' : 'Approve Batch Live'}
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
 
-                                  </div>
-                                </td>
+                          {/* Batch Contained Medicines Table */}
+                          {isExpanded && (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left text-xs">
+                                <thead className="bg-neutral-100/70 text-neutral-600 font-extrabold uppercase tracking-wider border-b border-neutral-200">
+                                  <tr>
+                                    <th className="py-3 px-4">Medicine Item</th>
+                                    <th className="py-3 px-4">Shelf Section &amp; Envelope</th>
+                                    <th className="py-3 px-4">Shelf-Life &amp; Expiry</th>
+                                    <th className="py-3 px-4">Intensity &amp; Security</th>
+                                    <th className="py-3 px-4">Delivery Handling Tags</th>
+                                    <th className="py-3 px-4">Tagging Status</th>
+                                    <th className="py-3 px-4 text-right">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                  {(b.medicines || []).map((item) => {
+                                    const isDual = item.status === 'PENDING_DUAL_REVIEW';
+                                    const isApproved = item.status === 'APPROVED' || item.status === 'LIVE';
 
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
+                                    return (
+                                      <tr key={item.medicineId} className="hover:bg-neutral-50/80 transition-colors">
+                                        
+                                        {/* Medicine Item */}
+                                        <td className="py-3.5 px-4 align-top">
+                                          <div className="flex items-start gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200 flex items-center justify-center mt-0.5">
+                                              {item.imageUrl ? (
+                                                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                              ) : (
+                                                <span className="material-symbols-outlined text-neutral-400 text-[18px]">medication</span>
+                                              )}
+                                            </div>
+                                            <div>
+                                              <div className="font-extrabold text-neutral-900 leading-tight">
+                                                {item.name}
+                                              </div>
+                                              <div className="text-[10px] text-neutral-500 truncate max-w-xs">
+                                                {item.genericName || 'Pharmaceutical compound'}
+                                              </div>
+                                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-700 border border-neutral-200">
+                                                  {item.sku}
+                                                </span>
+                                                <span className="font-mono text-[10px] text-neutral-500">
+                                                  Lot: <strong>{item.batchNumber}</strong>
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </td>
+
+                                        {/* Shelf Section & Temp Envelope */}
+                                        <td className="py-3.5 px-4 align-top">
+                                          <div className="space-y-1">
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                                              item.section === 'REFRIGERATED'
+                                                ? 'bg-cyan-100 text-cyan-900 border border-cyan-300'
+                                                : item.section === 'COOL_ROOM'
+                                                ? 'bg-teal-100 text-teal-900 border border-teal-300'
+                                                : item.section === 'FROZEN'
+                                                ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                                                : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                                            }`}>
+                                              <span className="material-symbols-outlined text-[13px]">
+                                                {item.section === 'AMBIENT' ? 'shelves' : 'ac_unit'}
+                                              </span>
+                                              <span>
+                                                {item.section === 'COOL_ROOM'
+                                                  ? 'Cold storage'
+                                                  : item.section === 'AMBIENT'
+                                                  ? 'Ambient Storage'
+                                                  : item.section === 'FROZEN'
+                                                  ? 'Frozen storage'
+                                                  : 'Refrigerated'}
+                                              </span>
+                                            </span>
+
+                                            <div className="text-[11px] font-mono text-neutral-700 font-bold">
+                                              {item.storageTempMin}°C to {item.storageTempMax}°C
+                                            </div>
+                                            <div className="text-[10px] text-neutral-400">
+                                              {item.shelfLocation}
+                                            </div>
+                                          </div>
+                                        </td>
+
+                                        {/* Shelf-Life & Expiry */}
+                                        <td className="py-3.5 px-4 align-top">
+                                          <div className="space-y-1">
+                                            <div className="text-xs font-bold text-neutral-800">
+                                              {item.shelfLifeDays} days shelf-life
+                                            </div>
+                                            <div className="text-[11px] text-neutral-600">
+                                              Exp: <strong>{formatDateDDMMYYYY(item.expiryDate)}</strong>
+                                            </div>
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[9px] border ${item.shelfLifeStatus.badgeClass}`}>
+                                              <span className={`w-1 h-1 rounded-full ${item.shelfLifeStatus.dotClass}`}></span>
+                                              <span>{item.shelfLifeStatus.label}</span>
+                                            </span>
+                                          </div>
+                                        </td>
+
+                                        {/* Intensity & Security */}
+                                        <td className="py-3.5 px-4 align-top">
+                                          <div className="space-y-1.5">
+                                            <div>
+                                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                                item.intensity === 'CRITICAL'
+                                                  ? 'bg-rose-100 text-rose-900 border border-rose-300 animate-pulse'
+                                                  : item.intensity === 'HIGH'
+                                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                                  : item.intensity === 'MEDIUM'
+                                                  ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                                                  : 'bg-neutral-100 text-neutral-700'
+                                              }`}>
+                                                <span>Intensity: {item.intensity}</span>
+                                              </span>
+                                            </div>
+
+                                            <div className="text-[10px] font-mono font-semibold text-neutral-600">
+                                              Sec: <span className="text-black">{item.securityLevel.replace('_', ' ')}</span>
+                                            </div>
+                                          </div>
+                                        </td>
+
+                                        {/* Delivery Handling Tags */}
+                                        <td className="py-3.5 px-4 align-top max-w-xs">
+                                          <div className="flex flex-wrap gap-1">
+                                            {item.actionsObj.insulatedBox && (
+                                              <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
+                                                Insulated Box
+                                              </span>
+                                            )}
+                                            {item.actionsObj.icePack && (
+                                              <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
+                                                Ice Pack
+                                              </span>
+                                            )}
+                                            {item.actionsObj.keepUpright && (
+                                              <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 text-[9px] font-bold">
+                                                Upright
+                                              </span>
+                                            )}
+                                            {item.actionsObj.signatureRequired && (
+                                              <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-bold">
+                                                Signature Req.
+                                              </span>
+                                            )}
+                                            {item.actionsObj.idAgeCheck && (
+                                              <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-[9px] font-bold">
+                                                ID Check
+                                              </span>
+                                            )}
+                                            {item.actionsObj.noLeaveAtDoor && (
+                                              <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-800 border border-red-200 text-[9px] font-bold">
+                                                Hand-to-Hand
+                                              </span>
+                                            )}
+                                            {!item.deliveryActions && (
+                                              <span className="text-[10px] text-neutral-400 italic">Standard ambient dispatch</span>
+                                            )}
+                                          </div>
+                                        </td>
+
+                                        {/* Tagging Status */}
+                                        <td className="py-3.5 px-4 align-top whitespace-nowrap">
+                                          {isApproved ? (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                              <span>LIVE APPROVED</span>
+                                            </span>
+                                          ) : isDual ? (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-100 text-purple-900 border border-purple-300 animate-pulse">
+                                              <span className="material-symbols-outlined text-[13px]">lock</span>
+                                              <span>DUAL REVIEW REQ</span>
+                                            </span>
+                                          ) : (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-300">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                                              <span>PENDING REVIEW</span>
+                                            </span>
+                                          )}
+                                        </td>
+
+                                        {/* Actions */}
+                                        <td className="py-3.5 px-4 align-top text-right whitespace-nowrap">
+                                          <div className="flex items-center justify-end gap-1.5">
+                                            {/* Configure Tag */}
+                                            <button
+                                              type="button"
+                                              onClick={() => handleOpenTagEditor(item)}
+                                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
+                                              title="Edit condition tags & parameters"
+                                            >
+                                              <span className="material-symbols-outlined text-[14px]">tune</span>
+                                              <span>Configure</span>
+                                            </button>
+
+                                            {/* Approve / Dual Sign Action */}
+                                            {isDual ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleDirectApprove(item)}
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-purple-700 hover:bg-purple-800 text-white text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
+                                                title="Sign second-pharmacist dual review"
+                                              >
+                                                <span className="material-symbols-outlined text-[14px]">lock_open</span>
+                                                <span>Dual Sign</span>
+                                              </button>
+                                            ) : !isApproved ? (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleDirectApprove(item)}
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
+                                                title="Approve condition tag and mark item LIVE"
+                                              >
+                                                <span className="material-symbols-outlined text-[14px]">check</span>
+                                                <span>Approve</span>
+                                              </button>
+                                            ) : null}
+                                          </div>
+                                        </td>
+
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
               </div>
             )}
 
-            {/* SUB-VIEW 2: 5-SECTION SHELF ARRANGEMENT VIEW */}
+            {/* SUB-VIEW 2: SHELF ARRANGEMENT VIEW (4 Canonical Sections) */}
             {taggingSubView === 'shelves' && (
               <div className="space-y-6 mb-8">
                 
@@ -1612,20 +1715,20 @@ const PharmacistPrescriptionDashboard = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <h3 className="text-base font-black uppercase tracking-tight text-neutral-900">
-                        Physical Pharmacy Shelf Zones (5 Canonical Sections)
+                        Physical Pharmacy Shelf Zones (4 Canonical Sections)
                       </h3>
                       <p className="text-xs text-neutral-500">
                         Move items between climate envelopes with real-time temperature synchronization and audit trail logging.
                       </p>
                     </div>
                     <div className="text-xs font-mono font-bold text-neutral-600">
-                      Active Shelving Envelopes: <strong>5 of 5</strong>
+                      Active Shelving Envelopes: <strong>4 of 4</strong>
                     </div>
                   </div>
                 </div>
 
-                {/* 5 Canonical Section Columns */}
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                {/* 4 Canonical Section Columns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {CANONICAL_SECTIONS.map((sec) => {
                     const itemsInSection = combinedTaggedItems.filter((i) => i.section === sec.key);
 
@@ -1635,7 +1738,7 @@ const PharmacistPrescriptionDashboard = () => {
                         className="bg-white rounded-3xl border border-neutral-200 shadow-sm flex flex-col overflow-hidden"
                       >
                         {/* Section Card Header */}
-                        <div className={`p-4 border-b border-neutral-200 bg-neutral-50`}>
+                        <div className="p-4 border-b border-neutral-200 bg-neutral-50">
                           <div className="flex items-center justify-between">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-neutral-900 text-white">
                               <span className="material-symbols-outlined text-[14px]">{sec.icon}</span>
@@ -1675,7 +1778,7 @@ const PharmacistPrescriptionDashboard = () => {
                                       {item.name}
                                     </div>
                                     <div className="text-[10px] text-neutral-500 font-mono mt-0.5">
-                                      {item.sku} • Stock: <strong>{item.stockQuantity}</strong>
+                                      {item.sku} • Shelf: <strong>{item.shelfLocation}</strong>
                                     </div>
                                   </div>
 
@@ -2052,10 +2155,10 @@ const PharmacistPrescriptionDashboard = () => {
             {/* Form Body */}
             <form onSubmit={(e) => handleSaveTag(e, false)} className="space-y-5 overflow-y-auto pr-1">
               
-              {/* 1. Shelf Section Selection (5 Canonical Sections) */}
+              {/* 1. Shelf Section Selection (4 Canonical Sections) */}
               <div>
                 <label className="block text-xs font-extrabold uppercase tracking-wider text-neutral-800 mb-2">
-                  1. Shelf Section (5 Canonical Envelopes)
+                  1. Shelf Section (4 Canonical Envelopes)
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {CANONICAL_SECTIONS.map((sec) => (
@@ -2284,7 +2387,7 @@ const PharmacistPrescriptionDashboard = () => {
                   Dual-Review Authorization
                 </h3>
                 <p className="text-xs text-neutral-500">
-                  Critical Potency / Controlled Vault Mandate
+                  Critical Potency / Controlled Substance Mandate
                 </p>
               </div>
             </div>
