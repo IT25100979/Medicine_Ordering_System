@@ -478,7 +478,7 @@ const InventoryPage = () => {
     const days = batch.daysUntilExpiry;
     if (batch.status === 'EXPIRED' || days < 0) {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-red-500/10 text-red-500 border border-red-500/20">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
           <AlertOctagon className="w-3 h-3" />
           EXPIRED ({Math.abs(days)}d ago)
         </span>
@@ -486,7 +486,7 @@ const InventoryPage = () => {
     }
     if (batch.status === 'QUARANTINED') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-purple-500/10 text-purple-400 border border-purple-500/20">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
           <Lock className="w-3 h-3" />
           QUARANTINED
         </span>
@@ -494,59 +494,59 @@ const InventoryPage = () => {
     }
     if (days <= 30) {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-amber-500/15 text-amber-500 border border-amber-500/30 animate-pulse">
-          <AlertTriangle className="w-3 h-3" />
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 animate-pulse">
+          <AlertTriangle className="w-3 h-3 text-amber-600" />
           FEFO PRIORITY ({days}d left)
         </span>
       );
     }
     if (days <= 90) {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50/60 text-amber-700 border border-amber-200">
           <Clock className="w-3 h-3" />
           MODERATE ({days}d left)
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-        <CheckCircle2 className="w-3 h-3" />
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
         SAFE ({days}d left)
       </span>
     );
   };
 
   return (
-    <div className="min-h-screen bg-[#090a0f] text-zinc-100 pt-24 pb-16 px-4 sm:px-6 lg:px-8 font-sans selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 pt-24 pb-16 px-4 sm:px-6 lg:px-8 font-sans selection:bg-emerald-500 selection:text-white">
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl backdrop-blur-xl border transition-all animate-bounce ${
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl backdrop-blur-md border transition-all animate-bounce ${
             toast.type === 'error'
-              ? 'bg-red-950/90 border-red-500/40 text-red-200'
-              : 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200'
+              ? 'bg-rose-50 border-rose-200 text-rose-800'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-900'
           }`}
         >
-          {toast.type === 'error' ? <AlertTriangle className="w-5 h-5 text-red-400" /> : <Sparkles className="w-5 h-5 text-emerald-400" />}
+          {toast.type === 'error' ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <Sparkles className="w-5 h-5 text-emerald-600" />}
           <span className="text-sm font-semibold">{toast.message}</span>
         </div>
       )}
 
       <div className="max-w-[1536px] mx-auto space-y-8">
         {/* Top Control Bar & Breadcrumbs */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-zinc-800/80">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200/80">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-emerald-400 uppercase mb-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-emerald-700 uppercase mb-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
               <span>PHARMACEUTICAL SUPPLY CHAIN PROTOCOL</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 flex items-center gap-3">
               <span>Smart Inventory & FEFO Engine</span>
-              <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+              <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
                 First Expiring, First Out
               </span>
             </h1>
-            <p className="text-zinc-400 text-sm mt-1 max-w-2xl">
+            <p className="text-slate-500 text-sm mt-1 max-w-2xl">
               Automated earliest-expiry dispatch prioritization, cold-chain compliance, batch quarantine containment, and stock depletion intelligence.
             </p>
           </div>
@@ -554,15 +554,15 @@ const InventoryPage = () => {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setShowAddMedicineModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 hover:border-zinc-500 text-white font-bold text-xs uppercase tracking-wider transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-wider transition-all shadow-xs"
             >
-              <Plus className="w-4 h-4 text-emerald-400" />
+              <Plus className="w-4 h-4 text-emerald-600" />
               <span>Add Medicine</span>
             </button>
 
             <button
               onClick={() => setShowAddBatchModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20"
             >
               <Boxes className="w-4 h-4" />
               <span>Register Batch</span>
@@ -571,79 +571,79 @@ const InventoryPage = () => {
             <button
               onClick={fetchData}
               title="Refresh Data"
-              className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 transition-all"
+              className="p-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-all shadow-xs"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
             </button>
           </div>
         </div>
 
         {/* Real-time KPI Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 backdrop-blur-md relative overflow-hidden group hover:border-zinc-700 transition-all">
-            <div className="flex items-center justify-between text-zinc-400 text-xs font-bold uppercase tracking-wider">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs relative overflow-hidden group hover:border-slate-300 hover:shadow-md transition-all">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
               <span>Cataloged</span>
-              <Boxes className="w-4 h-4 text-zinc-500" />
+              <Boxes className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="text-3xl font-black text-white mt-2">{stats?.totalMedicines ?? 0}</div>
-            <div className="text-[11px] text-zinc-500 mt-1">Unique medicine SKUs</div>
+            <div className="text-3xl font-black text-slate-900 mt-2">{stats?.totalMedicines ?? 0}</div>
+            <div className="text-[11px] text-slate-500 mt-1">Unique medicine SKUs</div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 backdrop-blur-md relative overflow-hidden group hover:border-zinc-700 transition-all">
-            <div className="flex items-center justify-between text-zinc-400 text-xs font-bold uppercase tracking-wider">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs relative overflow-hidden group hover:border-slate-300 hover:shadow-md transition-all">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
               <span>Total Units</span>
-              <Layers className="w-4 h-4 text-cyan-400" />
+              <Layers className="w-4 h-4 text-teal-600" />
             </div>
-            <div className="text-3xl font-black text-cyan-400 mt-2">{stats?.totalUnitsInStock ?? 0}</div>
-            <div className="text-[11px] text-zinc-500 mt-1">Available in active storage</div>
+            <div className="text-3xl font-black text-teal-600 mt-2">{stats?.totalUnitsInStock ?? 0}</div>
+            <div className="text-[11px] text-slate-500 mt-1">Available in active storage</div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 backdrop-blur-md relative overflow-hidden group hover:border-zinc-700 transition-all">
-            <div className="flex items-center justify-between text-zinc-400 text-xs font-bold uppercase tracking-wider">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs relative overflow-hidden group hover:border-slate-300 hover:shadow-md transition-all">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-bold uppercase tracking-wider">
               <span>FEFO Queue</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="text-3xl font-black text-emerald-400 mt-2">{stats?.activeBatches ?? 0}</div>
-            <div className="text-[11px] text-zinc-500 mt-1">Active registered batches</div>
+            <div className="text-3xl font-black text-emerald-600 mt-2">{stats?.activeBatches ?? 0}</div>
+            <div className="text-[11px] text-slate-500 mt-1">Active registered batches</div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/40 transition-all">
-            <div className="flex items-center justify-between text-amber-400 text-xs font-bold uppercase tracking-wider">
+          <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 shadow-xs relative overflow-hidden group hover:border-amber-300 hover:shadow-md transition-all">
+            <div className="flex items-center justify-between text-amber-800 text-xs font-bold uppercase tracking-wider">
               <span>Critical FEFO</span>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
             </div>
-            <div className="text-3xl font-black text-amber-400 mt-2">{stats?.nearExpiryBatches ?? 0}</div>
-            <div className="text-[11px] text-amber-400/70 mt-1">Expiring within 30 days</div>
+            <div className="text-3xl font-black text-amber-700 mt-2">{stats?.nearExpiryBatches ?? 0}</div>
+            <div className="text-[11px] text-amber-800/80 mt-1 font-medium">Expiring within 30 days</div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-red-500/5 border border-red-500/20 backdrop-blur-md relative overflow-hidden group hover:border-red-500/40 transition-all">
-            <div className="flex items-center justify-between text-red-400 text-xs font-bold uppercase tracking-wider">
+          <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-200/80 shadow-xs relative overflow-hidden group hover:border-rose-300 hover:shadow-md transition-all">
+            <div className="flex items-center justify-between text-rose-800 text-xs font-bold uppercase tracking-wider">
               <span>Expired</span>
-              <AlertOctagon className="w-4 h-4 text-red-400" />
+              <AlertOctagon className="w-4 h-4 text-rose-600" />
             </div>
-            <div className="text-3xl font-black text-red-400 mt-2">{stats?.expiredBatches ?? 0}</div>
-            <div className="text-[11px] text-red-400/70 mt-1">Halted from dispatch</div>
+            <div className="text-3xl font-black text-rose-700 mt-2">{stats?.expiredBatches ?? 0}</div>
+            <div className="text-[11px] text-rose-800/80 mt-1 font-medium">Halted from dispatch</div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-purple-500/5 border border-purple-500/20 backdrop-blur-md relative overflow-hidden group hover:border-purple-500/40 transition-all">
-            <div className="flex items-center justify-between text-purple-400 text-xs font-bold uppercase tracking-wider">
+          <div className="p-5 rounded-2xl bg-purple-50/70 border border-purple-200/80 shadow-xs relative overflow-hidden group hover:border-purple-300 hover:shadow-md transition-all">
+            <div className="flex items-center justify-between text-purple-800 text-xs font-bold uppercase tracking-wider">
               <span>Quarantined</span>
-              <Lock className="w-4 h-4 text-purple-400" />
+              <Lock className="w-4 h-4 text-purple-600" />
             </div>
-            <div className="text-3xl font-black text-purple-400 mt-2">{stats?.quarantinedBatches ?? 0}</div>
-            <div className="text-[11px] text-purple-400/70 mt-1">Containment inspection</div>
+            <div className="text-3xl font-black text-purple-700 mt-2">{stats?.quarantinedBatches ?? 0}</div>
+            <div className="text-[11px] text-purple-800/80 mt-1 font-medium">Containment inspection</div>
           </div>
         </div>
 
         {/* Main View Mode Selector (Batches vs Medicines) */}
-        <div className="flex flex-wrap items-center justify-between gap-4 p-2 rounded-2xl bg-zinc-900/90 border border-zinc-800">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-2 rounded-2xl bg-white border border-slate-200 shadow-xs">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveMainView('batches')}
               className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${
                 activeMainView === 'batches'
-                  ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20 font-black'
-                  : 'bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 font-black'
+                  : 'bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
               }`}
             >
               <Zap className="w-4 h-4" />
@@ -654,8 +654,8 @@ const InventoryPage = () => {
               onClick={() => setActiveMainView('medicines')}
               className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${
                 activeMainView === 'medicines'
-                  ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20 font-black'
-                  : 'bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 font-black'
+                  : 'bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
               }`}
             >
               <Boxes className="w-4 h-4" />
@@ -667,7 +667,7 @@ const InventoryPage = () => {
             {activeMainView === 'medicines' ? (
               <button
                 onClick={() => setShowAddMedicineModal(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-500/20"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider transition-all shadow-sm"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Medicine</span>
@@ -675,7 +675,7 @@ const InventoryPage = () => {
             ) : (
               <button
                 onClick={() => setShowAddBatchModal(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-500/20"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider transition-all shadow-sm"
               >
                 <Plus className="w-4 h-4" />
                 <span>Register Batch</span>
@@ -687,7 +687,7 @@ const InventoryPage = () => {
         {activeMainView === 'medicines' ? (
           <div className="space-y-4">
             {/* Filter and Search Action Strip for Medicines */}
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 rounded-2xl bg-zinc-900/70 border border-zinc-800">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
               {/* Category Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
                 {[
@@ -708,8 +708,8 @@ const InventoryPage = () => {
                     onClick={() => setMedCategoryFilter(cat)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                       medCategoryFilter === cat
-                        ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20 font-black'
-                        : 'bg-zinc-800/60 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                        ? 'bg-emerald-600 text-white shadow-xs font-black'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
                     }`}
                   >
                     {cat}
@@ -719,29 +719,29 @@ const InventoryPage = () => {
 
               {/* Medicine Search Field */}
               <div className="relative min-w-[280px]">
-                <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Search by drug name, generic or SKU..."
                   value={medSearchQuery}
                   onChange={(e) => setMedSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-colors"
                 />
               </div>
             </div>
 
             {/* Medicines Master Table */}
-            <div className="rounded-3xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-xl overflow-hidden shadow-2xl">
-              <div className="p-5 border-b border-zinc-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-zinc-900/60">
+            <div className="rounded-3xl bg-white border border-slate-200 overflow-hidden shadow-sm">
+              <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/70">
                 <div className="flex items-center gap-3">
-                  <span className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
-                    <Boxes className="w-5 h-5 text-emerald-400" />
+                  <span className="text-base font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Boxes className="w-5 h-5 text-emerald-600" />
                     Master Pharmaceutical Products
                   </span>
-                  <span className="text-xs text-zinc-400">({filteredMedicines.length} registered drugs)</span>
+                  <span className="text-xs text-slate-500">({filteredMedicines.length} registered drugs)</span>
                 </div>
-                <div className="text-xs font-semibold text-zinc-400 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <div className="text-xs font-semibold text-slate-500 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   <span>Direct Edit &amp; Stock Management</span>
                 </div>
               </div>
@@ -749,7 +749,7 @@ const InventoryPage = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-zinc-950/80 text-[11px] font-black uppercase tracking-wider text-zinc-400 border-b border-zinc-800">
+                    <tr className="bg-slate-100/70 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
                       <th className="py-3.5 px-4">SKU / Code</th>
                       <th className="py-3.5 px-4">Medicine &amp; Clinical Profile</th>
                       <th className="py-3.5 px-4">Category</th>
@@ -759,19 +759,19 @@ const InventoryPage = () => {
                       <th className="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/60 text-xs">
+                  <tbody className="divide-y divide-slate-100 text-xs">
                     {loading ? (
                       <tr>
-                        <td colSpan="7" className="py-12 text-center text-zinc-500">
+                        <td colSpan="7" className="py-12 text-center text-slate-500">
                           <div className="inline-flex items-center gap-2">
-                            <RefreshCw className="w-5 h-5 animate-spin text-emerald-400" />
+                            <RefreshCw className="w-5 h-5 animate-spin text-emerald-600" />
                             <span>Loading pharmaceutical products...</span>
                           </div>
                         </td>
                       </tr>
                     ) : filteredMedicines.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="py-12 text-center text-zinc-500">
+                        <td colSpan="7" className="py-12 text-center text-slate-500">
                           No medicines found matching criteria.
                         </td>
                       </tr>
@@ -785,25 +785,27 @@ const InventoryPage = () => {
                         return (
                           <tr
                             key={med.id}
-                            className="hover:bg-zinc-800/30 transition-colors group"
+                            className="hover:bg-slate-50/80 transition-colors group"
                           >
                             {/* SKU */}
-                            <td className="py-4 px-4 font-mono text-zinc-300 font-bold text-xs">
-                              {med.sku || `MED-${med.id}`}
+                            <td className="py-4 px-4 font-mono text-slate-700 font-bold text-xs">
+                              <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                {med.sku || `MED-${med.id}`}
+                              </span>
                             </td>
 
                             {/* Medicine & Generic Name */}
                             <td className="py-4 px-4">
-                              <div className="font-bold text-white text-sm">{med.name}</div>
-                              <div className="text-zinc-400 text-[11px] flex items-center gap-2 mt-0.5">
+                              <div className="font-bold text-slate-900 text-sm">{med.name}</div>
+                              <div className="text-slate-500 text-[11px] flex items-center gap-2 mt-0.5">
                                 <span>{med.genericName || 'Standard Chemical Entity'}</span>
                                 {med.requiresPrescription && (
-                                  <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[10px] font-extrabold uppercase">
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase">
                                     Rx Required
                                   </span>
                                 )}
                                 {med.isTemperatureSensitive && (
-                                  <span className="inline-flex items-center gap-0.5 text-cyan-400 font-semibold text-[10px]">
+                                  <span className="inline-flex items-center gap-0.5 text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200 font-semibold text-[10px]">
                                     <Thermometer className="w-3 h-3" /> Cold Chain
                                   </span>
                                 )}
@@ -812,18 +814,18 @@ const InventoryPage = () => {
 
                             {/* Category */}
                             <td className="py-4 px-4">
-                              <span className="px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 font-medium">
+                              <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px] text-slate-700 font-medium">
                                 {med.category || 'General'}
                               </span>
                             </td>
 
                             {/* Price */}
                             <td className="py-4 px-4">
-                              <div className="font-mono font-bold text-white text-sm">
+                              <div className="font-mono font-bold text-slate-900 text-sm">
                                 ${Number(med.unitPrice || med.price || 0).toFixed(2)}
                               </div>
                               {med.msrp && (
-                                <div className="text-[10px] text-zinc-500 line-through">
+                                <div className="text-[10px] text-slate-400 line-through">
                                   ${Number(med.msrp).toFixed(2)}
                                 </div>
                               )}
@@ -832,18 +834,18 @@ const InventoryPage = () => {
                             {/* Available Stock */}
                             <td className="py-4 px-4 text-center">
                               {isOutOfStock ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-red-500/10 text-red-500 border border-red-500/20">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                                   <AlertOctagon className="w-3 h-3" />
                                   OUT OF STOCK
                                 </span>
                               ) : isLowStock ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                                   <AlertTriangle className="w-3 h-3" />
                                   {stock} units (LOW)
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                  <CheckCircle2 className="w-3 h-3" />
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                                   {stock} in stock
                                 </span>
                               )}
@@ -851,7 +853,7 @@ const InventoryPage = () => {
 
                             {/* Active Batches Count */}
                             <td className="py-4 px-4 text-center">
-                              <span className="px-2.5 py-1 rounded-full bg-zinc-950 border border-zinc-800 text-xs font-mono font-bold text-zinc-300">
+                              <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-700">
                                 {medBatches.length} {medBatches.length === 1 ? 'batch' : 'batches'}
                               </span>
                             </td>
@@ -862,7 +864,7 @@ const InventoryPage = () => {
                                 <button
                                   onClick={() => handleRegisterBatchForMedicine(med.id)}
                                   title="Add Batch for this Medicine"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500 hover:text-black text-emerald-400 font-bold text-[11px] transition-all border border-emerald-500/30"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-[11px] transition-all border border-emerald-200 shadow-xs"
                                 >
                                   <Plus className="w-3 h-3" />
                                   <span>+ Batch</span>
@@ -871,7 +873,7 @@ const InventoryPage = () => {
                                 <button
                                   onClick={() => handleOpenEditMedicine(med)}
                                   title="Edit Medicine Details"
-                                  className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors"
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 transition-colors"
                                 >
                                   <Edit className="w-3.5 h-3.5" />
                                 </button>
@@ -879,7 +881,7 @@ const InventoryPage = () => {
                                 <button
                                   onClick={() => handleDeleteMedicine(med.id, med.name)}
                                   title="Delete Medicine from Catalog"
-                                  className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors"
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 transition-colors"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -897,306 +899,306 @@ const InventoryPage = () => {
         ) : (
           <div className="space-y-4">
             {/* Filter and Search Action Strip */}
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 rounded-2xl bg-zinc-900/70 border border-zinc-800">
-          {/* Quick Tab Filters */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
-            {[
-              { id: 'ALL', label: 'All Batches', count: batches.length },
-              { id: 'ACTIVE', label: '⚡ FEFO Active', count: stats?.activeBatches },
-              { id: 'NEAR_EXPIRY', label: '⚠️ Near Expiry', count: stats?.nearExpiryBatches },
-              { id: 'EXPIRED', label: '🔴 Expired', count: stats?.expiredBatches },
-              { id: 'QUARANTINED', label: '🔒 Quarantined', count: stats?.quarantinedBatches },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setStatusFilter(tab.id);
-                  setUrgencyFilter('ALL');
-                }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                  statusFilter === tab.id
-                    ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20 font-black'
-                    : 'bg-zinc-800/60 text-zinc-400 hover:text-white hover:bg-zinc-800'
-                }`}
-              >
-                <span>{tab.label}</span>
-                {tab.count !== undefined && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                      statusFilter === tab.id ? 'bg-black/20 text-black' : 'bg-zinc-700 text-zinc-300'
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              {/* Quick Tab Filters */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
+                {[
+                  { id: 'ALL', label: 'All Batches', count: batches.length },
+                  { id: 'ACTIVE', label: '⚡ FEFO Active', count: stats?.activeBatches },
+                  { id: 'NEAR_EXPIRY', label: '⚠️ Near Expiry', count: stats?.nearExpiryBatches },
+                  { id: 'EXPIRED', label: '🔴 Expired', count: stats?.expiredBatches },
+                  { id: 'QUARANTINED', label: '🔒 Quarantined', count: stats?.quarantinedBatches },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setStatusFilter(tab.id);
+                      setUrgencyFilter('ALL');
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                      statusFilter === tab.id
+                        ? 'bg-emerald-600 text-white shadow-xs font-black'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
                     }`}
                   >
-                    {tab.count}
+                    <span>{tab.label}</span>
+                    {tab.count !== undefined && (
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                          statusFilter === tab.id ? 'bg-white/20 text-white font-bold' : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Field */}
+              <div className="relative min-w-[280px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search batch #, medicine, or shelf..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-colors"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs font-semibold"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* FEFO Master Batch Table */}
+            <div className="rounded-3xl bg-white border border-slate-200 overflow-hidden shadow-sm">
+              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-sm text-slate-900 tracking-wide uppercase">
+                    FEFO Prioritized Batch Registry
                   </span>
-                )}
-              </button>
-            ))}
-          </div>
+                  <span className="text-xs text-slate-500">({filteredBatches.length} records matching criteria)</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-500 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>Sorted: Earliest Expiry First (Strict FEFO)</span>
+                </div>
+              </div>
 
-          {/* Search Field */}
-          <div className="relative min-w-[280px]">
-            <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search batch #, medicine, or shelf..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* FEFO Master Batch Table */}
-        <div className="rounded-3xl bg-zinc-900/50 border border-zinc-800 overflow-hidden shadow-2xl backdrop-blur-xl">
-          <div className="px-6 py-4 border-b border-zinc-800/80 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm text-white tracking-wide uppercase">
-                FEFO Prioritized Batch Registry
-              </span>
-              <span className="text-xs text-zinc-400">({filteredBatches.length} records matching criteria)</span>
-            </div>
-            <div className="text-xs font-semibold text-zinc-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>Sorted: Earliest Expiry First (Strict FEFO)</span>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-zinc-950/80 text-[11px] font-black uppercase tracking-wider text-zinc-400 border-b border-zinc-800">
-                  <th className="py-3.5 px-4 text-center">FEFO Priority</th>
-                  <th className="py-3.5 px-4">Batch Details</th>
-                  <th className="py-3.5 px-4">Medicine & SKU</th>
-                  <th className="py-3.5 px-4">Shelf Location</th>
-                  <th className="py-3.5 px-4">Manufacturing Date</th>
-                  <th className="py-3.5 px-4">Expiry Date & Status</th>
-                  <th className="py-3.5 px-4 text-center">Available Stock</th>
-                  <th className="py-3.5 px-4 text-right">Batch Action & Status Controls</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/60 text-xs">
-                {loading ? (
-                  <tr>
-                    <td colSpan="8" className="py-12 text-center text-zinc-500">
-                      <div className="inline-flex items-center gap-2">
-                        <RefreshCw className="w-5 h-5 animate-spin text-emerald-400" />
-                        <span>Synchronizing Smart Inventory & FEFO tables...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredBatches.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="py-12 text-center text-zinc-500">
-                      No batches found matching current filters.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredBatches.map((batch) => (
-                    <tr
-                      key={batch.id}
-                      className="hover:bg-zinc-800/30 transition-colors group"
-                    >
-                      {/* FEFO Priority Rank */}
-                      <td className="py-4 px-4 text-center">
-                        {batch.status === 'EXPIRED' ? (
-                          <span className="inline-block px-2 py-0.5 rounded-md bg-red-500/10 text-red-500 font-extrabold text-[10px]">
-                            HALTED
-                          </span>
-                        ) : batch.status === 'QUARANTINED' ? (
-                          <span className="inline-block px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 font-extrabold text-[10px]">
-                            LOCKED
-                          </span>
-                        ) : batch.fefoRank ? (
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-black text-xs ${
-                              batch.fefoRank === 1
-                                ? 'bg-amber-400 text-black shadow-md shadow-amber-400/20'
-                                : batch.fefoRank === 2
-                                ? 'bg-zinc-300 text-black font-extrabold'
-                                : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
-                            }`}
-                          >
-                            <span>#{batch.fefoRank}</span>
-                            {batch.fefoRank === 1 && <Zap className="w-3 h-3 fill-black text-black" />}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-600 font-bold">-</span>
-                        )}
-                      </td>
-
-                      {/* Batch Number */}
-                      <td className="py-4 px-4">
-                        <div className="font-mono font-bold text-white text-sm tracking-wide">
-                          {batch.batchNumber}
-                        </div>
-                        {batch.quarantineReason && (
-                          <div className="text-[11px] text-purple-400 flex items-center gap-1 mt-0.5">
-                            <Lock className="w-3 h-3" />
-                            <span>{batch.quarantineReason}</span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Medicine Info */}
-                      <td className="py-4 px-4">
-                        <div className="font-bold text-white text-sm">{batch.medicineName}</div>
-                        <div className="text-zinc-400 text-[11px] flex items-center gap-2 mt-0.5">
-                          <span>{batch.genericName || 'Standard Formulation'}</span>
-                          <span className="text-zinc-600">•</span>
-                          <span className="font-mono text-zinc-500">{batch.sku}</span>
-                          {batch.isTemperatureSensitive && (
-                            <span className="inline-flex items-center gap-0.5 text-cyan-400 font-semibold">
-                              <Thermometer className="w-3 h-3" /> Cold Chain
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Shelf Location */}
-                      <td className="py-4 px-4 text-zinc-300 font-medium">
-                        <span className="px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px]">
-                          {batch.shelfLocation || 'Main Bay'}
-                        </span>
-                      </td>
-
-                      {/* Manufacturing Date */}
-                      <td className="py-4 px-4 text-zinc-400 font-mono">
-                        {batch.manufacturingDate || 'N/A'}
-                      </td>
-
-                      {/* Expiry Date & Urgency Indicator */}
-                      <td className="py-4 px-4">
-                        <div className="font-mono font-bold text-white">{batch.expiryDate}</div>
-                        <div className="mt-1">{getUrgencyBadge(batch)}</div>
-                      </td>
-
-                      {/* Quantity */}
-                      <td className="py-4 px-4 text-center">
-                        <div className="font-extrabold text-white text-sm">
-                          {batch.quantityAvailable}{' '}
-                          <span className="text-zinc-500 text-xs font-normal">/ {batch.initialQuantity}</span>
-                        </div>
-                        <div className="w-20 mx-auto bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              batch.quantityAvailable === 0
-                                ? 'bg-zinc-600'
-                                : batch.status === 'EXPIRED'
-                                ? 'bg-red-500'
-                                : batch.status === 'QUARANTINED'
-                                ? 'bg-purple-500'
-                                : 'bg-emerald-400'
-                            }`}
-                            style={{
-                              width: `${Math.min(
-                                100,
-                                Math.round(((batch.quantityAvailable || 0) / (batch.initialQuantity || 1)) * 100)
-                              )}%`,
-                            }}
-                          ></div>
-                        </div>
-                      </td>
-
-                      {/* Status Management Actions */}
-                      <td className="py-4 px-4 text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          {batch.status !== 'ACTIVE' && (
-                            <button
-                              onClick={() => handleUpdateStatus(batch.id, 'ACTIVE')}
-                              title="Mark as Active FEFO"
-                              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-black font-bold text-[11px] transition-all"
-                            >
-                              Activate
-                            </button>
-                          )}
-
-                          {batch.status !== 'QUARANTINED' && (
-                            <button
-                              onClick={() => {
-                                setSelectedBatchForQuarantine(batch);
-                                setQuarantineReasonInput('Visual seal check failed / storage review');
-                                setShowQuarantineModal(true);
-                              }}
-                              title="Quarantine this batch"
-                              className="px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500 hover:text-white font-bold text-[11px] transition-all"
-                            >
-                              Quarantine
-                            </button>
-                          )}
-
-                          {batch.status !== 'EXPIRED' && (
-                            <button
-                              onClick={() => handleUpdateStatus(batch.id, 'EXPIRED')}
-                              title="Mark Expired"
-                              className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white font-bold text-[11px] transition-all"
-                            >
-                              Expire
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handleOpenEditBatch(batch)}
-                            title="Edit Batch Details (Dates, Qty, Shelf)"
-                            className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors ml-1"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            onClick={() => handleDeleteBatch(batch.id, batch.batchNumber)}
-                            title="Delete Batch"
-                            className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100/70 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
+                      <th className="py-3.5 px-4 text-center">FEFO Priority</th>
+                      <th className="py-3.5 px-4">Batch Details</th>
+                      <th className="py-3.5 px-4">Medicine &amp; SKU</th>
+                      <th className="py-3.5 px-4">Shelf Location</th>
+                      <th className="py-3.5 px-4">Manufacturing Date</th>
+                      <th className="py-3.5 px-4">Expiry Date &amp; Status</th>
+                      <th className="py-3.5 px-4 text-center">Available Stock</th>
+                      <th className="py-3.5 px-4 text-right">Batch Action &amp; Status Controls</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs">
+                    {loading ? (
+                      <tr>
+                        <td colSpan="8" className="py-12 text-center text-slate-500">
+                          <div className="inline-flex items-center gap-2">
+                            <RefreshCw className="w-5 h-5 animate-spin text-emerald-600" />
+                            <span>Synchronizing Smart Inventory &amp; FEFO tables...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredBatches.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className="py-12 text-center text-slate-500">
+                          No batches found matching current filters.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredBatches.map((batch) => (
+                        <tr
+                          key={batch.id}
+                          className="hover:bg-slate-50/80 transition-colors group"
+                        >
+                          {/* FEFO Priority Rank */}
+                          <td className="py-4 px-4 text-center">
+                            {batch.status === 'EXPIRED' ? (
+                              <span className="inline-block px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 font-bold text-[10px]">
+                                HALTED
+                              </span>
+                            ) : batch.status === 'QUARANTINED' ? (
+                              <span className="inline-block px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">
+                                LOCKED
+                              </span>
+                            ) : batch.fefoRank ? (
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-black text-xs ${
+                                  batch.fefoRank === 1
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-xs'
+                                    : batch.fefoRank === 2
+                                    ? 'bg-slate-200 text-slate-800 font-extrabold border border-slate-300'
+                                    : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                }`}
+                              >
+                                <span>#{batch.fefoRank}</span>
+                                {batch.fefoRank === 1 && <Zap className="w-3 h-3 fill-amber-500 text-amber-600" />}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-bold">-</span>
+                            )}
+                          </td>
+
+                          {/* Batch Number */}
+                          <td className="py-4 px-4">
+                            <div className="font-mono font-bold text-slate-900 text-sm tracking-wide">
+                              {batch.batchNumber}
+                            </div>
+                            {batch.quarantineReason && (
+                              <div className="text-[11px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 inline-flex items-center gap-1 mt-1">
+                                <Lock className="w-3 h-3" />
+                                <span>{batch.quarantineReason}</span>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Medicine Info */}
+                          <td className="py-4 px-4">
+                            <div className="font-bold text-slate-900 text-sm">{batch.medicineName}</div>
+                            <div className="text-slate-500 text-[11px] flex items-center gap-2 mt-0.5">
+                              <span>{batch.genericName || 'Standard Formulation'}</span>
+                              <span className="text-slate-400">•</span>
+                              <span className="font-mono text-slate-600">{batch.sku}</span>
+                              {batch.isTemperatureSensitive && (
+                                <span className="inline-flex items-center gap-0.5 text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200 font-semibold">
+                                  <Thermometer className="w-3 h-3" /> Cold Chain
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Shelf Location */}
+                          <td className="py-4 px-4 text-slate-700 font-medium">
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px]">
+                              {batch.shelfLocation || 'Main Bay'}
+                            </span>
+                          </td>
+
+                          {/* Manufacturing Date */}
+                          <td className="py-4 px-4 text-slate-600 font-mono">
+                            {batch.manufacturingDate || 'N/A'}
+                          </td>
+
+                          {/* Expiry Date & Urgency Indicator */}
+                          <td className="py-4 px-4">
+                            <div className="font-mono font-bold text-slate-900">{batch.expiryDate}</div>
+                            <div className="mt-1">{getUrgencyBadge(batch)}</div>
+                          </td>
+
+                          {/* Quantity */}
+                          <td className="py-4 px-4 text-center">
+                            <div className="font-extrabold text-slate-900 text-sm">
+                              {batch.quantityAvailable}{' '}
+                              <span className="text-slate-400 text-xs font-normal">/ {batch.initialQuantity}</span>
+                            </div>
+                            <div className="w-20 mx-auto bg-slate-100 border border-slate-200 h-2 rounded-full overflow-hidden mt-1.5">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  batch.quantityAvailable === 0
+                                    ? 'bg-slate-300'
+                                    : batch.status === 'EXPIRED'
+                                    ? 'bg-rose-500'
+                                    : batch.status === 'QUARANTINED'
+                                    ? 'bg-purple-500'
+                                    : 'bg-emerald-500'
+                                }`}
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    Math.round(((batch.quantityAvailable || 0) / (batch.initialQuantity || 1)) * 100)
+                                  )}%`,
+                                }}
+                              ></div>
+                            </div>
+                          </td>
+
+                          {/* Status Management Actions */}
+                          <td className="py-4 px-4 text-right">
+                            <div className="inline-flex items-center gap-1.5">
+                              {batch.status !== 'ACTIVE' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(batch.id, 'ACTIVE')}
+                                  title="Mark as Active FEFO"
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-700 hover:bg-emerald-600 hover:text-white font-bold text-[11px] transition-all shadow-xs"
+                                >
+                                  Activate
+                                </button>
+                              )}
+
+                              {batch.status !== 'QUARANTINED' && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedBatchForQuarantine(batch);
+                                    setQuarantineReasonInput('Visual seal check failed / storage review');
+                                    setShowQuarantineModal(true);
+                                  }}
+                                  title="Quarantine this batch"
+                                  className="px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-300 text-purple-700 hover:bg-purple-600 hover:text-white font-bold text-[11px] transition-all shadow-xs"
+                                >
+                                  Quarantine
+                                </button>
+                              )}
+
+                              {batch.status !== 'EXPIRED' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(batch.id, 'EXPIRED')}
+                                  title="Mark Expired"
+                                  className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-300 text-rose-700 hover:bg-rose-600 hover:text-white font-bold text-[11px] transition-all shadow-xs"
+                                >
+                                  Expire
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => handleOpenEditBatch(batch)}
+                                title="Edit Batch Details (Dates, Qty, Shelf)"
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200 transition-colors ml-1"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteBatch(batch.id, batch.batchNumber)}
+                                title="Delete Batch"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors ml-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
-    )}
-  </div>
 
       {/* ============================================================== */}
       {/* MODAL 1: ADD NEW MEDICINE PRODUCT                              */}
       {/* ============================================================== */}
       {showAddMedicineModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowAddMedicineModal(false)}
-              className="absolute top-6 right-6 text-zinc-400 hover:text-white p-1"
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full p-1.5 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <Plus className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-2">
+              <Plus className="w-4 h-4 text-emerald-600" />
               <span>Pharmaceutical Catalog</span>
             </div>
-            <h2 className="text-2xl font-black text-white">Add New Medicine Product</h2>
-            <p className="text-zinc-400 text-xs mt-1">
+            <h2 className="text-2xl font-black text-slate-900">Add New Medicine Product</h2>
+            <p className="text-slate-500 text-xs mt-1">
               Register a new pharmaceutical line into the master database before allocating batches.
             </p>
 
             <form onSubmit={handleCreateMedicine} className="space-y-4 mt-6">
               <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                  Medicine Name <span className="text-emerald-400">*</span>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Medicine Name <span className="text-emerald-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -1204,40 +1206,40 @@ const InventoryPage = () => {
                   placeholder="e.g. Paracetamol 500mg, Omeprazole 20mg"
                   value={newMedicine.name}
                   onChange={(e) => setNewMedicine({ ...newMedicine, name: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Generic Name</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Generic Name</label>
                   <input
                     type="text"
                     placeholder="e.g. Acetaminophen"
                     value={newMedicine.genericName}
                     onChange={(e) => setNewMedicine({ ...newMedicine, genericName: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">SKU / Code</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">SKU / Code</label>
                   <input
                     type="text"
                     placeholder="Auto-generated if empty"
                     value={newMedicine.sku}
                     onChange={(e) => setNewMedicine({ ...newMedicine, sku: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none font-mono"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Category</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Category</label>
                   <select
                     value={newMedicine.category}
                     onChange={(e) => setNewMedicine({ ...newMedicine, category: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   >
                     <option value="Analgesics">Analgesics</option>
                     <option value="Antibiotics">Antibiotics</option>
@@ -1249,8 +1251,8 @@ const InventoryPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Unit Price ($/LKR) <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Unit Price ($/LKR) <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="number"
@@ -1259,63 +1261,63 @@ const InventoryPage = () => {
                     placeholder="12.50"
                     value={newMedicine.unitPrice}
                     onChange={(e) => setNewMedicine({ ...newMedicine, unitPrice: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
               </div>
 
               {/* Toggles */}
               <div className="grid grid-cols-2 gap-4 pt-2">
-                <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer hover:border-zinc-700">
+                <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-colors">
                   <input
                     type="checkbox"
                     checked={newMedicine.requiresPrescription}
                     onChange={(e) =>
                       setNewMedicine({ ...newMedicine, requiresPrescription: e.target.checked })
                     }
-                    className="w-4 h-4 text-emerald-500 rounded bg-zinc-900 border-zinc-700 focus:ring-0"
+                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
                   />
-                  <span className="text-xs font-bold text-zinc-200">Requires Prescription</span>
+                  <span className="text-xs font-bold text-slate-800">Requires Prescription</span>
                 </label>
 
-                <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer hover:border-zinc-700">
+                <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-colors">
                   <input
                     type="checkbox"
                     checked={newMedicine.isTemperatureSensitive}
                     onChange={(e) =>
                       setNewMedicine({ ...newMedicine, isTemperatureSensitive: e.target.checked })
                     }
-                    className="w-4 h-4 text-cyan-400 rounded bg-zinc-900 border-zinc-700 focus:ring-0"
+                    className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                   />
-                  <span className="text-xs font-bold text-zinc-200">Cold Chain Sensitive</span>
+                  <span className="text-xs font-bold text-slate-800">Cold Chain Sensitive</span>
                 </label>
               </div>
 
               {/* Optional Initial Batch Registration */}
-              <div className="pt-3 border-t border-zinc-800">
-                <label className="flex items-start gap-3 p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 cursor-pointer hover:border-emerald-500/50">
+              <div className="pt-3 border-t border-slate-200">
+                <label className="flex items-start gap-3 p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition-colors">
                   <input
                     type="checkbox"
                     checked={createInitialBatch}
                     onChange={(e) => setCreateInitialBatch(e.target.checked)}
-                    className="w-4 h-4 mt-0.5 text-emerald-500 rounded bg-zinc-900 border-zinc-700 focus:ring-0"
+                    className="w-4 h-4 mt-0.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
                   />
                   <div className="flex-1">
-                    <span className="text-xs font-black text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
-                      <Boxes className="w-3.5 h-3.5" />
+                    <span className="text-xs font-black text-emerald-800 uppercase tracking-wide flex items-center gap-1.5">
+                      <Boxes className="w-3.5 h-3.5 text-emerald-600" />
                       Register Initial Stock Batch
                     </span>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                    <p className="text-[11px] text-slate-600 mt-0.5">
                       Creates the first warehouse batch immediately so it appears in the FEFO Batch Registry with real available stock.
                     </p>
                   </div>
                 </label>
 
                 {createInitialBatch && (
-                  <div className="mt-3 p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-3">
+                  <div className="mt-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[11px] font-bold text-zinc-400 uppercase mb-1">
+                        <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
                           Batch Number
                         </label>
                         <input
@@ -1325,12 +1327,12 @@ const InventoryPage = () => {
                           onChange={(e) =>
                             setInitialBatchData({ ...initialBatchData, batchNumber: e.target.value })
                           }
-                          className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-xs focus:border-emerald-500 focus:outline-none"
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs font-mono focus:border-emerald-500 focus:outline-none uppercase"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-bold text-zinc-400 uppercase mb-1">
-                          Initial Stock Quantity <span className="text-emerald-400">*</span>
+                        <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                          Initial Stock Quantity <span className="text-emerald-600">*</span>
                         </label>
                         <input
                           type="number"
@@ -1343,15 +1345,15 @@ const InventoryPage = () => {
                               initialQuantity: parseInt(e.target.value) || 0,
                             })
                           }
-                          className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-xs focus:border-emerald-500 focus:outline-none"
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs focus:border-emerald-500 focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[11px] font-bold text-zinc-400 uppercase mb-1">
-                          Expiry Date (FEFO) <span className="text-emerald-400">*</span>
+                        <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                          Expiry Date (FEFO) <span className="text-emerald-600">*</span>
                         </label>
                         <input
                           type="date"
@@ -1360,11 +1362,11 @@ const InventoryPage = () => {
                           onChange={(e) =>
                             setInitialBatchData({ ...initialBatchData, expiryDate: e.target.value })
                           }
-                          className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-xs focus:border-emerald-500 focus:outline-none"
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs focus:border-emerald-500 focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-bold text-zinc-400 uppercase mb-1">
+                        <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
                           Shelf Location
                         </label>
                         <input
@@ -1373,7 +1375,7 @@ const InventoryPage = () => {
                           onChange={(e) =>
                             setInitialBatchData({ ...initialBatchData, shelfLocation: e.target.value })
                           }
-                          className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-xs focus:border-emerald-500 focus:outline-none"
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs focus:border-emerald-500 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1381,17 +1383,17 @@ const InventoryPage = () => {
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowAddMedicineModal(false)}
-                  className="px-5 py-2.5 rounded-xl text-zinc-400 hover:text-white font-bold text-xs uppercase"
+                  className="px-5 py-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs uppercase transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 transition-all"
                 >
                   Save Medicine
                 </button>
@@ -1405,66 +1407,66 @@ const InventoryPage = () => {
       {/* MODAL 1B: EDIT MEDICINE PRODUCT                                */}
       {/* ============================================================== */}
       {showEditMedicineModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowEditMedicineModal(false)}
-              className="absolute top-6 right-6 text-zinc-400 hover:text-white p-1"
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full p-1.5 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <Edit className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-2">
+              <Edit className="w-4 h-4 text-emerald-600" />
               <span>Update Medication</span>
             </div>
-            <h2 className="text-2xl font-black text-white">Edit Medicine Profile</h2>
-            <p className="text-zinc-400 text-xs mt-1">
+            <h2 className="text-2xl font-black text-slate-900">Edit Medicine Profile</h2>
+            <p className="text-slate-500 text-xs mt-1">
               Modify clinical specifications, pricing, and master catalog settings.
             </p>
 
             <form onSubmit={handleUpdateMedicine} className="space-y-4 mt-6">
               <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                  Medicine Name <span className="text-emerald-400">*</span>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Medicine Name <span className="text-emerald-600">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={editingMedicine.name}
                   onChange={(e) => setEditingMedicine({ ...editingMedicine, name: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Generic Name</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Generic Name</label>
                   <input
                     type="text"
                     value={editingMedicine.genericName}
                     onChange={(e) => setEditingMedicine({ ...editingMedicine, genericName: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">SKU / Code</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">SKU / Code</label>
                   <input
                     type="text"
                     value={editingMedicine.sku}
                     onChange={(e) => setEditingMedicine({ ...editingMedicine, sku: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm font-mono focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Category</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Category</label>
                   <select
                     value={editingMedicine.category}
                     onChange={(e) => setEditingMedicine({ ...editingMedicine, category: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   >
                     <option value="Analgesics">Analgesics</option>
                     <option value="Antibiotics">Antibiotics</option>
@@ -1479,8 +1481,8 @@ const InventoryPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Unit Price ($/LKR) <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Unit Price ($/LKR) <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="number"
@@ -1488,60 +1490,60 @@ const InventoryPage = () => {
                     required
                     value={editingMedicine.unitPrice}
                     onChange={(e) => setEditingMedicine({ ...editingMedicine, unitPrice: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Description</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
                 <textarea
                   rows="2"
                   value={editingMedicine.description}
                   onChange={(e) => setEditingMedicine({ ...editingMedicine, description: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none resize-none"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none resize-none"
                   placeholder="Clinical indications and dosage instructions..."
                 ></textarea>
               </div>
 
               {/* Toggles */}
               <div className="grid grid-cols-2 gap-4 pt-1">
-                <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer hover:border-zinc-700">
+                <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-colors">
                   <input
                     type="checkbox"
                     checked={editingMedicine.requiresPrescription}
                     onChange={(e) =>
                       setEditingMedicine({ ...editingMedicine, requiresPrescription: e.target.checked })
                     }
-                    className="w-4 h-4 text-emerald-500 rounded bg-zinc-900 border-zinc-700 focus:ring-0"
+                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
                   />
-                  <span className="text-xs font-bold text-zinc-200">Requires Prescription</span>
+                  <span className="text-xs font-bold text-slate-800">Requires Prescription</span>
                 </label>
 
-                <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer hover:border-zinc-700">
+                <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-colors">
                   <input
                     type="checkbox"
                     checked={editingMedicine.isTemperatureSensitive}
                     onChange={(e) =>
                       setEditingMedicine({ ...editingMedicine, isTemperatureSensitive: e.target.checked })
                     }
-                    className="w-4 h-4 text-cyan-400 rounded bg-zinc-900 border-zinc-700 focus:ring-0"
+                    className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                   />
-                  <span className="text-xs font-bold text-zinc-200">Cold Chain Sensitive</span>
+                  <span className="text-xs font-bold text-slate-800">Cold Chain Sensitive</span>
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowEditMedicineModal(false)}
-                  className="px-5 py-2.5 rounded-xl text-zinc-400 hover:text-white font-bold text-xs uppercase"
+                  className="px-5 py-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs uppercase transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 transition-all"
                 >
                   Save Changes
                 </button>
@@ -1555,34 +1557,34 @@ const InventoryPage = () => {
       {/* MODAL 2: REGISTER NEW BATCH                                    */}
       {/* ============================================================== */}
       {showAddBatchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
             <button
               onClick={() => setShowAddBatchModal(false)}
-              className="absolute top-6 right-6 text-zinc-400 hover:text-white p-1"
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full p-1.5 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <Boxes className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-2">
+              <Boxes className="w-4 h-4 text-emerald-600" />
               <span>FEFO Lot Registration</span>
             </div>
-            <h2 className="text-2xl font-black text-white">Register Inventory Batch</h2>
-            <p className="text-zinc-400 text-xs mt-1">
+            <h2 className="text-2xl font-black text-slate-900">Register Inventory Batch</h2>
+            <p className="text-slate-500 text-xs mt-1">
               Add a physical manufacturing lot. The FEFO engine will automatically calculate its dispatch priority rank.
             </p>
 
             <form onSubmit={handleCreateBatch} className="space-y-4 mt-6">
               <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                  Select Medicine <span className="text-emerald-400">*</span>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Select Medicine <span className="text-emerald-600">*</span>
                 </label>
                 <select
                   required
                   value={newBatch.medicineId}
                   onChange={(e) => setNewBatch({ ...newBatch, medicineId: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                 >
                   {medicines.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -1594,8 +1596,8 @@ const InventoryPage = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Batch Number <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Batch Number <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="text"
@@ -1603,12 +1605,12 @@ const InventoryPage = () => {
                     placeholder="BATCH-2026-PARA-05"
                     value={newBatch.batchNumber}
                     onChange={(e) => setNewBatch({ ...newBatch, batchNumber: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm font-mono focus:border-emerald-500 focus:outline-none uppercase"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm font-mono focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none uppercase"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Stock Quantity (Units) <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Stock Quantity (Units) <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="number"
@@ -1616,15 +1618,15 @@ const InventoryPage = () => {
                     required
                     value={newBatch.initialQuantity}
                     onChange={(e) => setNewBatch({ ...newBatch, initialQuantity: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Manufacturing Date <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Manufacturing Date <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="date"
@@ -1632,40 +1634,40 @@ const InventoryPage = () => {
                     max={new Date().toISOString().split('T')[0]}
                     value={newBatch.manufacturingDate}
                     onChange={(e) => setNewBatch({ ...newBatch, manufacturingDate: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Expiry Date <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Expiry Date <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={newBatch.expiryDate}
                     onChange={(e) => setNewBatch({ ...newBatch, expiryDate: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Shelf Location</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Shelf Location</label>
                   <input
                     type="text"
                     placeholder="Aisle 1 - Shelf B2"
                     value={newBatch.shelfLocation}
                     onChange={(e) => setNewBatch({ ...newBatch, shelfLocation: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Initial Status</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Initial Status</label>
                   <select
                     value={newBatch.status}
                     onChange={(e) => setNewBatch({ ...newBatch, status: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   >
                     <option value="ACTIVE">ACTIVE (Ready for FEFO)</option>
                     <option value="QUARANTINED">QUARANTINED (Hold for inspection)</option>
@@ -1673,17 +1675,17 @@ const InventoryPage = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowAddBatchModal(false)}
-                  className="px-5 py-2.5 rounded-xl text-zinc-400 hover:text-white font-bold text-xs uppercase"
+                  className="px-5 py-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs uppercase transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 transition-all"
                 >
                   Commit Batch to FEFO
                 </button>
@@ -1693,33 +1695,31 @@ const InventoryPage = () => {
         </div>
       )}
 
-
-
       {/* ============================================================== */}
       {/* MODAL 4: QUARANTINE REASON PROMPT                              */}
       {/* ============================================================== */}
       {showQuarantineModal && selectedBatchForQuarantine && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="bg-zinc-900 border border-purple-500/30 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white border border-purple-200 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
             <button
               onClick={() => setShowQuarantineModal(false)}
-              className="absolute top-6 right-6 text-zinc-400 hover:text-white p-1"
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full p-1.5 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <Lock className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-purple-700 text-xs font-bold uppercase tracking-wider mb-2">
+              <Lock className="w-4 h-4 text-purple-600" />
               <span>Safety Protocol</span>
             </div>
-            <h2 className="text-xl font-black text-white">Quarantine Batch</h2>
-            <p className="text-zinc-400 text-xs mt-1">
-              Quarantining batch <span className="font-mono text-white font-bold">{selectedBatchForQuarantine.batchNumber}</span> immediately prevents it from being allocated to any customer order.
+            <h2 className="text-xl font-black text-slate-900">Quarantine Batch</h2>
+            <p className="text-slate-500 text-xs mt-1">
+              Quarantining batch <span className="font-mono text-slate-900 font-bold">{selectedBatchForQuarantine.batchNumber}</span> immediately prevents it from being allocated to any customer order.
             </p>
 
             <div className="space-y-4 mt-5">
               <div>
-                <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                   Reason for Quarantine
                 </label>
                 <textarea
@@ -1727,15 +1727,15 @@ const InventoryPage = () => {
                   value={quarantineReasonInput}
                   onChange={(e) => setQuarantineReasonInput(e.target.value)}
                   placeholder="e.g. Broken foil packaging, suspected temperature spike, lab testing required..."
-                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-purple-500 focus:outline-none"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10 focus:outline-none"
                 ></textarea>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowQuarantineModal(false)}
-                  className="px-4 py-2 rounded-xl text-zinc-400 hover:text-white font-bold text-xs uppercase"
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs uppercase transition-colors"
                 >
                   Cancel
                 </button>
@@ -1747,7 +1747,7 @@ const InventoryPage = () => {
                       quarantineReasonInput
                     )
                   }
-                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-purple-600/20"
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs uppercase tracking-wider shadow-md shadow-purple-600/20 transition-all"
                 >
                   Confirm Quarantine
                 </button>
@@ -1761,31 +1761,31 @@ const InventoryPage = () => {
       {/* MODAL 2B: EDIT INVENTORY BATCH                                 */}
       {/* ============================================================== */}
       {showEditBatchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowEditBatchModal(false)}
-              className="absolute top-6 right-6 text-zinc-400 hover:text-white p-1"
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full p-1.5 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <Boxes className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-2">
+              <Boxes className="w-4 h-4 text-emerald-600" />
               <span>Batch Calibration</span>
             </div>
-            <h2 className="text-2xl font-black text-white">Edit Inventory Batch</h2>
-            <p className="text-zinc-400 text-xs mt-1">
+            <h2 className="text-2xl font-black text-slate-900">Edit Inventory Batch</h2>
+            <p className="text-slate-500 text-xs mt-1">
               Modify manufacturing date, expiry date, inventory quantity, or warehouse location.
             </p>
 
             {/* Medicine Profile Pill */}
-            <div className="mt-4 p-3 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-between">
+            <div className="mt-4 p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Target Medicine</span>
-                <div className="text-sm font-black text-white">{editingBatch.medicineName || 'Pharmaceutical Product'}</div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target Medicine</span>
+                <div className="text-sm font-black text-slate-900">{editingBatch.medicineName || 'Pharmaceutical Product'}</div>
               </div>
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono font-bold">
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-mono font-bold">
                 Batch ID #{editingBatch.id}
               </span>
             </div>
@@ -1793,20 +1793,20 @@ const InventoryPage = () => {
             <form onSubmit={handleUpdateBatch} className="space-y-4 mt-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Batch Number <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Batch Number <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={editingBatch.batchNumber}
                     onChange={(e) => setEditingBatch({ ...editingBatch, batchNumber: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none uppercase"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 font-mono text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none uppercase"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Stock Quantity <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Stock Quantity <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="number"
@@ -1816,15 +1816,15 @@ const InventoryPage = () => {
                     onChange={(e) =>
                       setEditingBatch({ ...editingBatch, initialQuantity: parseInt(e.target.value, 10) || 0 })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Manufacturing Date <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Manufacturing Date <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="date"
@@ -1832,40 +1832,40 @@ const InventoryPage = () => {
                     max={new Date().toISOString().split('T')[0]}
                     value={editingBatch.manufacturingDate}
                     onChange={(e) => setEditingBatch({ ...editingBatch, manufacturingDate: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">
-                    Expiry Date (FEFO) <span className="text-emerald-400">*</span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Expiry Date (FEFO) <span className="text-emerald-600">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={editingBatch.expiryDate}
                     onChange={(e) => setEditingBatch({ ...editingBatch, expiryDate: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Shelf Location</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Shelf Location</label>
                   <input
                     type="text"
                     placeholder="e.g. Aisle 2 - Shelf B1"
                     value={editingBatch.shelfLocation}
                     onChange={(e) => setEditingBatch({ ...editingBatch, shelfLocation: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Batch Status</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Batch Status</label>
                   <select
                     value={editingBatch.status}
                     onChange={(e) => setEditingBatch({ ...editingBatch, status: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none"
                   >
                     <option value="ACTIVE">ACTIVE (FEFO Eligible)</option>
                     <option value="QUARANTINED">QUARANTINED (Containment)</option>
@@ -1877,7 +1877,7 @@ const InventoryPage = () => {
 
               {editingBatch.status === 'QUARANTINED' && (
                 <div>
-                  <label className="block text-xs font-bold text-purple-400 uppercase mb-1">
+                  <label className="block text-xs font-bold text-purple-700 uppercase mb-1">
                     Quarantine Containment Reason
                   </label>
                   <input
@@ -1887,22 +1887,22 @@ const InventoryPage = () => {
                       setEditingBatch({ ...editingBatch, quarantineReason: e.target.value })
                     }
                     placeholder="e.g. Visual inspection required, temperature breach"
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-purple-500/40 text-white text-sm focus:border-purple-500 focus:outline-none"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-purple-300 text-slate-900 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10 focus:outline-none"
                   />
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowEditBatchModal(false)}
-                  className="px-5 py-2.5 rounded-xl text-zinc-400 hover:text-white font-bold text-xs uppercase"
+                  className="px-5 py-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs uppercase transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 transition-all"
                 >
                   Save Batch Changes
                 </button>

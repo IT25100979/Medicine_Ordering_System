@@ -17,7 +17,7 @@ const Navbar = () => {
   const roleLabel = ADMIN_ROLE_LABELS[user?.role] || user?.role || 'Staff';
   const workspaceTitle = ADMIN_WORKSPACE_NAMES[user?.role] || 'Management Console';
 
-  // Only show the dark Admin Topbar when actively viewing Admin Workspace / Inventory pages
+  // Only show the light Admin Topbar when actively viewing Admin Workspace / Inventory pages
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/modules/inventory';
 
   // -------------------------------------------------------------
@@ -25,7 +25,7 @@ const Navbar = () => {
   // -------------------------------------------------------------
   if (isAdmin && isAdminRoute) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 text-white">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 text-slate-800 shadow-xs">
         <div className="h-16 max-w-[1536px] mx-auto px-4 md:px-8 flex items-center justify-between">
           
           {/* Left: Brand & Admin Console Identifier */}
@@ -33,13 +33,13 @@ const Navbar = () => {
             <Link
               to="/"
               title="Visit Storefront / Home"
-              className="font-sans text-xl font-black tracking-tight uppercase flex items-center gap-1.5 text-white group"
+              className="font-sans text-xl font-black tracking-tight uppercase flex items-center gap-1.5 text-slate-900 group"
             >
               <span>PILLS</span>
-              <span className="w-2 h-2 rounded-full bg-amber-400 group-hover:scale-125 transition-transform"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform"></span>
             </Link>
 
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-extrabold uppercase tracking-widest">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-extrabold uppercase tracking-widest">
               <span className="material-symbols-outlined text-[12px]">security</span>
               <span>ADMIN CONSOLE</span>
             </span>
@@ -47,8 +47,8 @@ const Navbar = () => {
 
           {/* Center: Current Workspace Context Indicator */}
           <div className="hidden md:flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
               {workspaceTitle}
             </span>
           </div>
@@ -60,8 +60,8 @@ const Navbar = () => {
               id="admin-smart-inventory-btn"
               className={`inline-flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase px-3 py-1.5 rounded-full transition-all border ${
                 isActive('/modules/inventory') || isActive('/admin/smart-inventory')
-                  ? 'bg-emerald-400 text-black border-emerald-400 shadow-sm font-black'
-                  : 'bg-zinc-900 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20 hover:border-emerald-400'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm font-black'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
               }`}
             >
               <span className="material-symbols-outlined text-[15px]">inventory_2</span>
@@ -76,18 +76,18 @@ const Navbar = () => {
               to={dashboardRoute}
               className={`inline-flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full transition-all border ${
                 isActive(dashboardRoute)
-                  ? 'bg-amber-400 text-black border-amber-400 shadow-sm font-black'
-                  : 'bg-zinc-900 text-zinc-200 border-zinc-700 hover:bg-zinc-800'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm font-black'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
             >
               <span className="material-symbols-outlined text-[15px]">space_dashboard</span>
               <span className="hidden sm:inline">My Dashboard</span>
             </Link>
 
-            <div className="flex items-center gap-2 pl-2 border-l border-zinc-800">
-              <div className="inline-flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-xs font-semibold text-zinc-200">
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <div className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-xs font-semibold text-slate-700">
                 <span className="max-w-[120px] truncate">{user?.fullName || 'Admin'}</span>
-                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-amber-400 text-black font-extrabold">
+                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold">
                   {roleLabel}
                 </span>
               </div>
@@ -95,7 +95,7 @@ const Navbar = () => {
               <button
                 onClick={logout}
                 title="Log Out of Admin Console"
-                className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-red-500/20 hover:text-red-400 text-zinc-400 flex items-center justify-center transition-colors border border-zinc-800"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 flex items-center justify-center transition-colors border border-slate-200"
               >
                 <span className="material-symbols-outlined text-[16px]">logout</span>
               </button>
