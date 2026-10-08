@@ -456,11 +456,11 @@ const CatalogPage = () => {
   const urlSearch = searchParams.get('search') || '';
   const urlCategory = searchParams.get('category') || '';
 
-  // Interactive Filter States
+  // Interactive Filter States (Empty by default: all products visible)
   const [priceMax, setPriceMax] = useState(1500);
-  const [selectedGenders, setSelectedGenders] = useState(['Male']);
-  const [selectedBrands, setSelectedBrands] = useState(['PHARMA + Lab Clinical']);
-  const [selectedForms, setSelectedForms] = useState(['Capsule & Softgel']);
+  const [selectedGenders, setSelectedGenders] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedForms, setSelectedForms] = useState([]);
   const [selectedGoals, setSelectedGoals] = useState([]);
   const [sortBy, setSortBy] = useState('Recommended');
   const [currentPage, setCurrentPage] = useState(1);
@@ -601,17 +601,20 @@ const CatalogPage = () => {
     return filteredProducts.slice(start, start + itemsPerPage);
   }, [filteredProducts, currentPage]);
 
-  // Handle Add to Cart with DB Cart integration
+  // Handle Add to Cart (Real-Time for Guest & Customer)
   const handleAddToCart = async (item) => {
     try {
+      const fallbackImg = CLINICAL_FALLBACK_IMAGES[item.category] || CLINICAL_FALLBACK_IMAGES['General'] || '';
       await addToCart({
         id: item.id,
         name: item.title,
-        price: item.price,
-        category: item.category,
-        imageUrl: '',
-        quantity: 1,
-      });
+        genericName: item.subtitle || item.description || '',
+        price: Number(item.price),
+        unitPrice: Number(item.price),
+        category: item.category || 'General',
+        imageUrl: item.imageUrl || fallbackImg,
+        requiresPrescription: Boolean(item.requiresPrescription),
+      }, 1);
       setAddedIds((prev) => ({ ...prev, [item.id]: true }));
       setTimeout(() => {
         setAddedIds((prev) => ({ ...prev, [item.id]: false }));
