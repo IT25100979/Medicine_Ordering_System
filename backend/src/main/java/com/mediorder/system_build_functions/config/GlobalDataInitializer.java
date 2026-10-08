@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -39,6 +40,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
     private final MedicineRepository medicineRepository;
     private final InventoryBatchRepository inventoryBatchRepository;
     private final ColdChainTagRepository coldChainTagRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public GlobalDataInitializer(
             UserRepository userRepository,
@@ -48,7 +50,8 @@ public class GlobalDataInitializer implements CommandLineRunner {
             SupplierShipmentRepository supplierShipmentRepository,
             MedicineRepository medicineRepository,
             InventoryBatchRepository inventoryBatchRepository,
-            ColdChainTagRepository coldChainTagRepository) {
+            ColdChainTagRepository coldChainTagRepository,
+            JdbcTemplate jdbcTemplate) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.featureFlagRepository = featureFlagRepository;
@@ -57,15 +60,29 @@ public class GlobalDataInitializer implements CommandLineRunner {
         this.medicineRepository = medicineRepository;
         this.inventoryBatchRepository = inventoryBatchRepository;
         this.coldChainTagRepository = coldChainTagRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public void run(String... args) {
         log.info("Initializing global system data, demo users, suppliers, and feature flags...");
+        autoMigrateUserSchema();
         seedDemoUsers();
         seedFeatureFlags();
         seedSuppliers();
         seedColdChainTags();
+    }
+
+    private void autoMigrateUserSchema() {
+        if (jdbcTemplate != null) {
+            try {
+                jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) NOT NULL");
+                jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN status VARCHAR(50) NOT NULL");
+                log.info("Successfully ensured users table schema has VARCHAR(50) role and status columns.");
+            } catch (Exception ex) {
+                log.info("User schema auto-migration check completed: {}", ex.getMessage());
+            }
+        }
     }
 
     private void seedDemoUsers() {

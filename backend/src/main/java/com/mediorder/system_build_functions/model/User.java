@@ -26,7 +26,7 @@ public class User {
     private String fullName;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "role", nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
     @Builder.Default
     private Role role = Role.CUSTOMER;
 
@@ -34,7 +34,7 @@ public class User {
     private String phoneNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
     @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 
