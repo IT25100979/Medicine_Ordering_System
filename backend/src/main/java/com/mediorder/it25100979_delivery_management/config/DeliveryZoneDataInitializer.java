@@ -22,17 +22,20 @@ public class DeliveryZoneDataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        seedDeliveryZone(1L, "Colombo 01", "0100", 1, 5.0, 30, LocalDate.of(2026, 9, 18));
-        seedDeliveryZone(2L, "Colombo 14", "1400", 1, 5.0, 30, LocalDate.of(2026, 9, 18));
-        seedDeliveryZone(3L, "Colombo 09", "0900", 0, 15.0, 120, LocalDate.of(2026, 9, 18));
-        seedDeliveryZone(4L, "Colombo 03", "0300", 1, 5.0, 35, LocalDate.of(2026, 9, 18));
-        seedDeliveryZone(5L, "Colombo 07", "0700", 1, 6.0, 25, LocalDate.of(2026, 9, 18));
-        seedDeliveryZone(6L, "New York", "10001", 1, 8.0, 45, LocalDate.of(2026, 9, 18));
-        seedDeliveryZone(7L, "Los Angeles", "90001", 1, 9.0, 50, LocalDate.of(2026, 9, 18));
-        logger.info("Delivery zones data seeded successfully with requested records.");
+        try {
+            // Remove all existing delivery zones as per specification
+            jdbcTemplate.update("DELETE FROM delivery_zones");
+
+            // Seed the exact route data required:
+            // City: Colombo 1 - 5 | Postal Code: 0100 - 0500 | Status: Active | Delivery Fee: 500 Rs | Estimated Time: 1 hour (60 mins)
+            seedDeliveryRoute(1L, "Colombo 1 - 5", "0100 - 0500", 1, 500.0, 60, LocalDate.now());
+            logger.info("Delivery routes seeded successfully with Colombo 1 - 5 exact geofence data.");
+        } catch (Exception e) {
+            logger.warn("Could not re-initialize delivery routes data: {}", e.getMessage());
+        }
     }
 
-    private void seedDeliveryZone(Long id, String city, String postalCode, Integer isActive, Double deliveryFee, Integer estTime, LocalDate createdAt) {
+    private void seedDeliveryRoute(Long id, String city, String postalCode, Integer isActive, Double deliveryFee, Integer estTime, LocalDate createdAt) {
         String sql = "INSERT INTO delivery_zones (id, city, postal_code, is_active, delivery_fee, estimated_delivery_time, esitmated_delivery_time, created_at) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
                      "ON DUPLICATE KEY UPDATE city = VALUES(city), postal_code = VALUES(postal_code), is_active = VALUES(is_active), " +
@@ -41,4 +44,3 @@ public class DeliveryZoneDataInitializer implements CommandLineRunner {
         jdbcTemplate.update(sql, id, city, postalCode, isActive, deliveryFee, estTime, estTime, Date.valueOf(createdAt));
     }
 }
-

@@ -67,6 +67,8 @@ public class SecurityConfig {
                                 "/api/v1/health",
                                 "/api/auth/**",
                                 "/api/v1/auth/**",
+                                "/api/realtime/**",
+                                "/api/v1/realtime/**",
                                 "/api/delivery-zones",
                                 "/api/delivery-zones/**",
                                 "/api/v1/delivery-zones",
@@ -79,34 +81,54 @@ public class SecurityConfig {
                                 "/api/v1/prescriptions/files/**",
                                 "/error"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/medicines",
+                                "/api/medicines/**",
+                                "/api/v1/medicines",
+                                "/api/v1/medicines/**",
+                                "/api/reviews",
+                                "/api/reviews/**",
+                                "/api/v1/reviews",
+                                "/api/v1/reviews/**"
+                        ).permitAll()
                         .requestMatchers(
                                 "/api/medicines/stats",
                                 "/api/v1/medicines/stats"
-                        ).hasRole("OPERATIONS_MANAGER")
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/medicines",
-                                "/api/medicines/**",
-                                "/api/v1/medicines",
-                                "/api/v1/medicines/**"
-                        ).permitAll()
+                        ).hasAnyRole("OPERATIONS_MANAGER", "ADMIN", "SYSTEM_ADMIN")
                         .requestMatchers(
                                 "/api/medicines",
                                 "/api/medicines/**",
                                 "/api/v1/medicines",
                                 "/api/v1/medicines/**"
-                        ).hasRole("OPERATIONS_MANAGER")
+                        ).hasAnyRole("OPERATIONS_MANAGER", "ADMIN", "SYSTEM_ADMIN")
                         .requestMatchers(HttpMethod.GET,
                                 "/api/deliveries",
                                 "/api/deliveries/**",
                                 "/api/v1/deliveries",
-                                "/api/v1/deliveries/**"
+                                "/api/v1/deliveries/**",
+                                "/api/courier",
+                                "/api/courier/**"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/courier",
+                                "/api/courier/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/deliveries",
                                 "/api/deliveries/**",
                                 "/api/v1/deliveries",
                                 "/api/v1/deliveries/**"
-                        ).hasAnyRole("DELIVERY_COORDINATOR", "ADMIN", "CHIEF_PHARMACIST", "OPERATIONS_MANAGER", "FINANCE_MANAGER", "DELIVERY_RIDER", "COORDINATOR")
+                        ).hasAnyRole("DELIVERY_COORDINATOR", "ADMIN", "SYSTEM_ADMIN", "CHIEF_PHARMACIST", "OPERATIONS_MANAGER", "FINANCE_MANAGER", "DELIVERY_RIDER")
+                        .requestMatchers(
+                                "/api/audit-logs/**",
+                                "/api/v1/audit-logs/**",
+                                "/api/error-logs/**",
+                                "/api/v1/error-logs/**",
+                                "/api/feature-flags/**",
+                                "/api/v1/feature-flags/**",
+                                "/api/admin/system/**",
+                                "/api/v1/admin/system/**"
+                        ).hasAnyRole("ADMIN", "SYSTEM_ADMIN", "IT_MANAGER")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

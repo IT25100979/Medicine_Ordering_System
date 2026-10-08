@@ -5,8 +5,8 @@ import com.mediorder.system_build_functions.model.User;
 import com.mediorder.system_build_functions.config.JwtTokenProvider;
 import com.mediorder.system_build_functions.dto.AuthRequest;
 import com.mediorder.system_build_functions.dto.AuthResponse;
+import com.mediorder.system_build_functions.dto.DemoLoginRequest;
 import com.mediorder.system_build_functions.repository.UserRepository;
-import com.mediorder.system_build_functions.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -211,6 +211,43 @@ public class AuthServiceTest {
         assertTrue(ex.getMessage().contains("Administrator accounts must log in via the Admin Portal"));
         verify(tokenProvider, never()).generateToken(any());
     }
+
+    @Test
+    void testDemoLogin_ChiefPharmacist_ReturnsValidTokenAndRole() {
+        User pharmUser = User.builder()
+                .id(10L)
+                .email("pharmacist@mediorder.com")
+                .fullName("Dr. Silva")
+                .role(Role.CHIEF_PHARMACIST)
+                .isDemo(true)
+                .build();
+
+        when(userRepository.findByEmail("pharmacist@mediorder.com")).thenReturn(Optional.of(pharmUser));
+        when(tokenProvider.generateTokenFromUsername("pharmacist@mediorder.com")).thenReturn("mock-pharm-token");
+
+        AuthResponse response = authService.demoLogin(new DemoLoginRequest("CHIEF_PHARMACIST"));
+
+        assertNotNull(response);
+        assertEquals("mock-pharm-token", response.getToken());
+        assertEquals(Role.CHIEF_PHARMACIST, response.getUser().getRole());
+        assertTrue(response.getUser().getIsDemo());
+        verify(userRepository, times(1)).save(any(User.class));
+    }
+
+    @Test
+    void testDemoLogin_Customer_SeedsIfMissing() {
+        when(userRepository.findByEmail("customer@mediorder.com")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(i -> {
+            User u = i.getArgument(0);
+            u.setId(101L);
+            return u;
+        });
+        when(tokenProvider.generateTokenFromUsername("customer@mediorder.com")).thenReturn("mock-cust-token");
+
+        AuthResponse response = authService.demoLogin(new DemoLoginRequest("CUSTOMER"));
+
+        assertNotNull(response);
+        assertEquals("mock-cust-token", response.getToken());
+        assertEquals(Role.CUSTOMER, response.getUser().getRole());
+    }
 }
-
-

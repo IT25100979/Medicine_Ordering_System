@@ -89,6 +89,22 @@ public class CartServiceTest {
         cartService.clearCart("sess-123", 5L);
         verify(cartItemRepository, times(1)).clearCart("sess-123", 5L);
     }
+
+    @Test
+    void testMergeCart() {
+        CartItem sessionItem = new CartItem("sess-999", null, 1L, "Hyaluronic Acid", "Hyaluronate", "Skin Care", new BigDecimal("42.00"), 2, "img.jpg", false);
+        CartItem userItem = new CartItem(null, 5L, 1L, "Hyaluronic Acid", "Hyaluronate", "Skin Care", new BigDecimal("42.00"), 3, "img.jpg", false);
+
+        when(cartItemRepository.findBySessionId("sess-999")).thenReturn(List.of(sessionItem));
+        when(cartItemRepository.findByUserIdAndMedicineId(5L, 1L)).thenReturn(Optional.of(userItem));
+        when(cartItemRepository.findByUserId(5L)).thenReturn(List.of(userItem));
+
+        List<CartItem> merged = cartService.mergeCart("sess-999", 5L);
+        assertEquals(1, merged.size());
+        assertEquals(5, userItem.getQuantity()); // 3 + 2
+        verify(cartItemRepository, times(1)).delete(sessionItem);
+        verify(cartItemRepository, times(1)).save(userItem);
+    }
 }
 
 

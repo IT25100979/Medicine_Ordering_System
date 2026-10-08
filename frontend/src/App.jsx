@@ -23,6 +23,7 @@ import OrderProcessingPage from './pages/modules/OrderProcessingPage';
 import ColdChainPage from './pages/modules/ColdChainPage';
 import SubscriptionsPage from './pages/modules/SubscriptionsPage';
 import DeliveryPage from './pages/modules/DeliveryPage';
+import SystemAdminConsolePage from './pages/admin/SystemAdminConsolePage';
 
 const App = () => {
   return (
@@ -48,6 +49,22 @@ const App = () => {
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              } />
+              <Route path="/account" element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/admin/system" element={
+                <ProtectedRoute allowedRoles={['SYSTEM_ADMIN', 'ADMIN', 'IT_MANAGER', 'OPERATIONS_MANAGER']}>
+                  <SystemAdminConsolePage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/console" element={
+                <ProtectedRoute allowedRoles={['SYSTEM_ADMIN', 'ADMIN', 'IT_MANAGER', 'OPERATIONS_MANAGER']}>
+                  <SystemAdminConsolePage />
                 </ProtectedRoute>
               } />
 
@@ -78,6 +95,7 @@ const App = () => {
               {/* Module Routes */}
               <Route path="/prescription" element={<PrescriptionPage />} />
               <Route path="/modules/prescription" element={<PrescriptionPage />} />
+              <Route path="/modules/prescriptions" element={<PrescriptionPage />} />
               <Route path="/modules/inventory" element={<InventoryPage />} />
               <Route path="/modules/orders" element={<OrderProcessingPage />} />
               <Route path="/modules/cold-chain" element={<ColdChainPage />} />

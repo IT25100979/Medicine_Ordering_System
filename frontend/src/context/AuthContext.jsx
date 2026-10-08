@@ -4,7 +4,14 @@ import client from '../api/client';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    try {
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
@@ -17,6 +24,7 @@ export const AuthProvider = ({ children }) => {
           const response = await client.get('/api/v1/auth/me');
           if (response.data && response.data.data) {
             setUser(response.data.data);
+            localStorage.setItem('user', JSON.stringify(response.data.data));
             setToken(storedToken);
           } else {
             logout();
@@ -58,6 +66,19 @@ export const AuthProvider = ({ children }) => {
     throw new Error('Invalid admin login response');
   };
 
+  const demoLogin = async (role) => {
+    const response = await client.post('/api/v1/auth/demo', { role });
+    const authData = response.data.data;
+    if (authData && authData.token) {
+      localStorage.setItem('token', authData.token);
+      localStorage.setItem('user', JSON.stringify(authData.user));
+      setToken(authData.token);
+      setUser(authData.user);
+      return authData;
+    }
+    throw new Error('Invalid demo login response');
+  };
+
   const register = async (fullName, email, password, role = 'CUSTOMER', phoneNumber = '') => {
     const response = await client.post('/api/v1/auth/register', {
       fullName,
@@ -94,6 +115,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         adminLogin,
+        demoLogin,
         register,
         logout,
       }}

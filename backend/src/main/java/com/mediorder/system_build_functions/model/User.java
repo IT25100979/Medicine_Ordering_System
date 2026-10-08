@@ -33,6 +33,18 @@ public class User {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
+    @Column(name = "is_demo", nullable = false)
+    @Builder.Default
+    private Boolean isDemo = false;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -40,6 +52,12 @@ public class User {
     protected void onCreate() {
         if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
+        }
+        if (this.status == null) {
+            this.status = UserStatus.ACTIVE;
+        }
+        if (this.isDemo == null) {
+            this.isDemo = false;
         }
     }
 
@@ -58,6 +76,13 @@ public class User {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    public UserStatus getStatus() { return status; }
+    public void setStatus(UserStatus status) { this.status = status; }
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public Boolean getIsDemo() { return isDemo != null ? isDemo : false; }
+    public void setIsDemo(Boolean isDemo) { this.isDemo = isDemo; }
+
     public static UserBuilder builder() {
         return new UserBuilder();
     }
@@ -69,6 +94,9 @@ public class User {
         private String fullName;
         private Role role = Role.CUSTOMER;
         private String phoneNumber;
+        private UserStatus status = UserStatus.ACTIVE;
+        private String avatarUrl;
+        private Boolean isDemo = false;
         private LocalDateTime createdAt;
 
         public UserBuilder id(Long id) { this.id = id; return this; }
@@ -77,6 +105,9 @@ public class User {
         public UserBuilder fullName(String fullName) { this.fullName = fullName; return this; }
         public UserBuilder role(Role role) { this.role = role; return this; }
         public UserBuilder phoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; return this; }
+        public UserBuilder status(UserStatus status) { this.status = status; return this; }
+        public UserBuilder avatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; return this; }
+        public UserBuilder isDemo(Boolean isDemo) { this.isDemo = isDemo; return this; }
         public UserBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public User build() {
@@ -87,6 +118,9 @@ public class User {
             user.setFullName(this.fullName);
             user.setRole(this.role);
             user.setPhoneNumber(this.phoneNumber);
+            user.setStatus(this.status != null ? this.status : UserStatus.ACTIVE);
+            user.setAvatarUrl(this.avatarUrl);
+            user.setIsDemo(this.isDemo != null ? this.isDemo : false);
             user.setCreatedAt(this.createdAt);
             return user;
         }

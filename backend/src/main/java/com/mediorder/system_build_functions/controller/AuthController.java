@@ -1,10 +1,6 @@
 package com.mediorder.system_build_functions.controller;
 
-import com.mediorder.system_build_functions.dto.ApiResponse;
-import com.mediorder.system_build_functions.dto.AuthRequest;
-import com.mediorder.system_build_functions.dto.AuthResponse;
-import com.mediorder.system_build_functions.dto.RegisterRequest;
-import com.mediorder.system_build_functions.dto.UserResponse;
+import com.mediorder.system_build_functions.dto.*;
 import com.mediorder.system_build_functions.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -41,6 +37,15 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Admin login successful", response));
     }
 
+    @PostMapping("/demo")
+    public ResponseEntity<ApiResponse<AuthResponse>> demoLogin(@RequestBody(required = false) DemoLoginRequest request) {
+        if (request == null) {
+            request = new DemoLoginRequest("CUSTOMER");
+        }
+        AuthResponse response = authService.demoLogin(request);
+        return ResponseEntity.ok(ApiResponse.success("Demo login successful", response));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -51,5 +56,3 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Current user profile retrieved", response));
     }
 }
-
-
