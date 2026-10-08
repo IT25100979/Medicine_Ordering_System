@@ -83,6 +83,23 @@ public class GlobalDataInitializer implements CommandLineRunner {
             } catch (Exception ex) {
                 log.info("User schema auto-migration check completed: {}", ex.getMessage());
             }
+
+            try {
+                List<String> uniqueIndexes = jdbcTemplate.query(
+                        "SELECT DISTINCT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS " +
+                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory_batches' " +
+                        "AND COLUMN_NAME = 'batch_number' AND NON_UNIQUE = 0",
+                        (rs, rowNum) -> rs.getString("INDEX_NAME")
+                );
+                for (String idx : uniqueIndexes) {
+                    if (!"PRIMARY".equalsIgnoreCase(idx)) {
+                        jdbcTemplate.execute("ALTER TABLE inventory_batches DROP INDEX `" + idx + "`");
+                        log.info("Dropped legacy unique constraint {} from inventory_batches", idx);
+                    }
+                }
+            } catch (Exception ex) {
+                log.info("Index check on inventory_batches: {}", ex.getMessage());
+            }
         }
     }
 
