@@ -1,5 +1,6 @@
 package com.mediorder.it25103946_order_processing_and_workflow.model;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -14,48 +15,57 @@ public class CartItem {
     private Long id;
 
     @Column(name = "session_id", length = 100)
-    @JsonProperty("session_id")
+    @JsonProperty("sessionId")
+    @JsonAlias({"session_id", "sessionId"})
     private String sessionId;
 
     @Column(name = "user_id")
-    @JsonProperty("user_id")
+    @JsonProperty("userId")
+    @JsonAlias({"user_id", "userId"})
     private Long userId;
 
     @Column(name = "medicine_id")
-    @JsonProperty("medicine_id")
+    @JsonProperty("medicineId")
+    @JsonAlias({"medicine_id", "medicineId"})
     private Long medicineId;
 
     @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "generic_name")
-    @JsonProperty("generic_name")
+    @JsonProperty("genericName")
+    @JsonAlias({"generic_name", "genericName"})
     private String genericName;
 
     @Column(name = "category")
     private String category;
 
     @Column(name = "unit_price", precision = 10, scale = 2)
-    @JsonProperty("unit_price")
+    @JsonProperty("unitPrice")
+    @JsonAlias({"unit_price", "unitPrice", "price"})
     private BigDecimal unitPrice = BigDecimal.ZERO;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity = 1;
 
     @Column(name = "image_url", length = 500)
-    @JsonProperty("image_url")
+    @JsonProperty("imageUrl")
+    @JsonAlias({"image_url", "imageUrl"})
     private String imageUrl;
 
     @Column(name = "requires_prescription")
-    @JsonProperty("requires_prescription")
+    @JsonProperty("requiresPrescription")
+    @JsonAlias({"requires_prescription", "requiresPrescription"})
     private Boolean requiresPrescription = false;
 
     @Column(name = "created_at")
-    @JsonProperty("created_at")
+    @JsonProperty("createdAt")
+    @JsonAlias({"created_at", "createdAt"})
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "updated_at")
-    @JsonProperty("updated_at")
+    @JsonProperty("updatedAt")
+    @JsonAlias({"updated_at", "updatedAt"})
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     public CartItem() {

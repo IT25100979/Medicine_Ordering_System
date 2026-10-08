@@ -22,12 +22,17 @@ public class CartController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> getCart(
             @RequestParam(value = "sessionId", required = false) String sessionId,
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @RequestParam(value = "session_id", required = false) String sessionIdSnake,
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "user_id", required = false) Long userIdSnake) {
 
-        List<CartItem> items = cartService.getCart(sessionId, userId);
+        String effectiveSessionId = sessionId != null ? sessionId : sessionIdSnake;
+        Long effectiveUserId = userId != null ? userId : userIdSnake;
+
+        List<CartItem> items = cartService.getCart(effectiveSessionId, effectiveUserId);
         int totalCount = items.stream().mapToInt(CartItem::getQuantity).sum();
         BigDecimal subtotal = items.stream()
-                .map(i -> i.getUnitPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
+                .map(i -> (i.getUnitPrice() != null ? i.getUnitPrice() : BigDecimal.ZERO).multiply(BigDecimal.valueOf(i.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Map<String, Object> response = new HashMap<>();
@@ -55,10 +60,15 @@ public class CartController {
             @PathVariable Long id,
             @RequestParam("quantity") int quantity,
             @RequestParam(value = "sessionId", required = false) String sessionId,
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @RequestParam(value = "session_id", required = false) String sessionIdSnake,
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "user_id", required = false) Long userIdSnake) {
+
+        String effectiveSessionId = sessionId != null ? sessionId : sessionIdSnake;
+        Long effectiveUserId = userId != null ? userId : userIdSnake;
 
         CartItem updated = cartService.updateQuantity(id, quantity);
-        int totalCount = cartService.getCartCount(sessionId, userId);
+        int totalCount = cartService.getCartCount(effectiveSessionId, effectiveUserId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -71,10 +81,15 @@ public class CartController {
     public ResponseEntity<Map<String, Object>> removeItem(
             @PathVariable Long id,
             @RequestParam(value = "sessionId", required = false) String sessionId,
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @RequestParam(value = "session_id", required = false) String sessionIdSnake,
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "user_id", required = false) Long userIdSnake) {
+
+        String effectiveSessionId = sessionId != null ? sessionId : sessionIdSnake;
+        Long effectiveUserId = userId != null ? userId : userIdSnake;
 
         cartService.removeItem(id);
-        int totalCount = cartService.getCartCount(sessionId, userId);
+        int totalCount = cartService.getCartCount(effectiveSessionId, effectiveUserId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -85,10 +100,11 @@ public class CartController {
 
     @PostMapping("/merge")
     public ResponseEntity<Map<String, Object>> mergeCart(@RequestBody Map<String, Object> body) {
-        String sessionId = (String) body.get("sessionId");
+        String sessionId = (String) (body.get("sessionId") != null ? body.get("sessionId") : body.get("session_id"));
         Long userId = null;
-        if (body.get("userId") != null) {
-            userId = Long.valueOf(body.get("userId").toString());
+        Object rawUserId = body.get("userId") != null ? body.get("userId") : body.get("user_id");
+        if (rawUserId != null) {
+            userId = Long.valueOf(rawUserId.toString());
         }
 
         List<CartItem> mergedItems = cartService.mergeCart(sessionId, userId);
@@ -109,9 +125,14 @@ public class CartController {
     @DeleteMapping("/clear")
     public ResponseEntity<Map<String, Object>> clearCart(
             @RequestParam(value = "sessionId", required = false) String sessionId,
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @RequestParam(value = "session_id", required = false) String sessionIdSnake,
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "user_id", required = false) Long userIdSnake) {
 
-        cartService.clearCart(sessionId, userId);
+        String effectiveSessionId = sessionId != null ? sessionId : sessionIdSnake;
+        Long effectiveUserId = userId != null ? userId : userIdSnake;
+
+        cartService.clearCart(effectiveSessionId, effectiveUserId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

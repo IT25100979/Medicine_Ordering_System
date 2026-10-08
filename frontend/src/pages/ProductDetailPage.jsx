@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { CLINICAL_FALLBACK_IMAGES } from './CatalogPage';
+import { CLINICAL_FALLBACK_IMAGES, CATALOG_ITEMS } from './CatalogPage';
 
 // Default gallery thumbnails ported from Stitch clinical assets
 const DEFAULT_THUMBNAILS = {
@@ -67,38 +67,67 @@ const ProductDetailPage = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
+      const catalogMatch = Array.isArray(CATALOG_ITEMS)
+        ? CATALOG_ITEMS.find((c) => String(c.id) === String(id))
+        : null;
+
       try {
         const res = await client.get(`/api/v1/medicines/${id}`);
         if (res.data) {
           const m = res.data;
-          const cat = m.category || 'General';
+          const cat = m.category || catalogMatch?.category || 'General';
           const fallback = CLINICAL_FALLBACK_IMAGES[cat] || CLINICAL_FALLBACK_IMAGES['General'];
           const mainImg = m.imageUrl || fallback;
           setProduct({
             ...m,
-            price: Number(m.unitPrice) || Number(m.price) || 28.5,
-            msrp: m.msrp ? Number(m.msrp) : (Number(m.unitPrice) || 28.5) * 1.25,
+            price: Number(m.unitPrice) || Number(m.price) || catalogMatch?.price || 28.5,
+            msrp: m.msrp ? Number(m.msrp) : (Number(m.unitPrice) || catalogMatch?.price || 28.5) * 1.25,
             stockQuantity: m.stockQuantity != null ? m.stockQuantity : 45,
-            rating: m.rating ? Number(m.rating) : 4.8,
-            reviewsCount: m.reviewsCount || 142,
+            rating: m.rating ? Number(m.rating) : (catalogMatch?.rating || 4.8),
+            reviewsCount: m.reviewsCount || catalogMatch?.reviewsCount || 142,
             category: cat,
             imageUrl: mainImg,
           });
           setActiveImage(mainImg);
+          setLoading(false);
+          return;
         }
       } catch (err) {
-        console.warn('Failed to load specific medicine from backend, attempting fallback:', err);
-        // Fallback for ID if API endpoint errored
+        // Fallback to local catalog dataset if backend specific medicine ID not found
+      }
+
+      if (catalogMatch) {
+        const fallback = CLINICAL_FALLBACK_IMAGES[catalogMatch.category] || CLINICAL_FALLBACK_IMAGES['General'];
+        setProduct({
+          id: catalogMatch.id,
+          name: catalogMatch.title,
+          genericName: catalogMatch.description || catalogMatch.subtitle || '',
+          sku: `NDC 72910-00${catalogMatch.id}-12`,
+          price: catalogMatch.price,
+          msrp: catalogMatch.price * 1.25,
+          stockQuantity: 42,
+          category: catalogMatch.category,
+          rating: catalogMatch.rating || 4.9,
+          reviewsCount: catalogMatch.reviewsCount || 128,
+          imageUrl: fallback,
+          description: catalogMatch.description,
+          subtitle: catalogMatch.subtitle,
+          brand: catalogMatch.brand,
+          requiresPrescription: false,
+          isTemperatureSensitive: false,
+        });
+        setActiveImage(fallback);
+      } else {
         const fallback = CLINICAL_FALLBACK_IMAGES['Dietary & Vits'];
         setProduct({
-          id: id || 9,
+          id: id || 1,
           name: 'Vitamin C 1000mg Bioflavonoid Complex',
           genericName: 'Ascorbic Acid & Standardized Citrus Bioflavonoid Complex',
           sku: 'NDC 72910-401-12',
           price: 30.5,
           msrp: 36.0,
           stockQuantity: 18,
-          category: 'Dietary & Vits',
+          category: 'Vitamins & Nutritional Supplements',
           rating: 4.8,
           reviewsCount: 142,
           imageUrl: fallback,
@@ -108,9 +137,8 @@ const ProductDetailPage = () => {
           isTemperatureSensitive: false,
         });
         setActiveImage(fallback);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     };
 
     fetchProduct();
