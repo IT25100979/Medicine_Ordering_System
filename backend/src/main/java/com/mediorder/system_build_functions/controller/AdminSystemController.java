@@ -1,6 +1,8 @@
 package com.mediorder.system_build_functions.controller;
 
 import com.mediorder.system_build_functions.dto.ApiResponse;
+import com.mediorder.system_build_functions.dto.AuditLogCreateRequest;
+import com.mediorder.system_build_functions.dto.AuditLogUpdateRequest;
 import com.mediorder.system_build_functions.model.AuditLog;
 import com.mediorder.system_build_functions.model.ErrorLog;
 import com.mediorder.system_build_functions.model.FeatureFlag;
@@ -8,7 +10,9 @@ import com.mediorder.system_build_functions.service.AuditService;
 import com.mediorder.system_build_functions.service.ErrorLogService;
 import com.mediorder.system_build_functions.service.FeatureFlagService;
 import com.mediorder.system_build_functions.service.RealtimeService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -93,10 +97,45 @@ public class AdminSystemController {
 
     @GetMapping("/audit")
     public ResponseEntity<ApiResponse<Page<AuditLog>>> getAuditLogs(
+            @RequestParam(required = false) String department,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        Page<AuditLog> logs = auditService.getAuditLogs(page, size);
+        Page<AuditLog> logs = auditService.getAuditLogsByDepartment(department, page, size);
         return ResponseEntity.ok(ApiResponse.success("Audit logs retrieved", logs));
+    }
+
+    @PostMapping("/audit")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<AuditLog>> createDepartmentAuditLog(
+            @Valid @RequestBody AuditLogCreateRequest request,
+            Authentication authentication) {
+        String adminEmail = authentication != null ? authentication.getName() : "admin@mediorder.com";
+        String adminRole = authentication != null && !authentication.getAuthorities().isEmpty()
+                ? authentication.getAuthorities().iterator().next().getAuthority().replace("ROLE_", "")
+                : "SYSTEM_ADMIN";
+        AuditLog created = auditService.createDepartmentAudit(request, adminEmail, adminRole);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Department audit log created", created));
+    }
+
+    @PutMapping("/audit/{id}")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<AuditLog>> updateAuditLog(
+            @PathVariable Long id,
+            @RequestBody AuditLogUpdateRequest request,
+            Authentication authentication) {
+        String adminEmail = authentication != null ? authentication.getName() : "admin@mediorder.com";
+        AuditLog updated = auditService.updateAuditLog(id, request, adminEmail);
+        return ResponseEntity.ok(ApiResponse.success("Audit log updated successfully", updated));
+    }
+
+    @DeleteMapping("/audit/{id}")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteAuditLog(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String adminEmail = authentication != null ? authentication.getName() : "admin@mediorder.com";
+        auditService.deleteAuditLog(id, adminEmail);
+        return ResponseEntity.ok(ApiResponse.success("Audit log deleted successfully", null));
     }
 
     @GetMapping("/errors")

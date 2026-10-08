@@ -1,8 +1,6 @@
 package com.mediorder.system_build_functions.service;
 
-import com.mediorder.system_build_functions.dto.PasswordChangeRequest;
-import com.mediorder.system_build_functions.dto.ProfileUpdateRequest;
-import com.mediorder.system_build_functions.dto.UserResponse;
+import com.mediorder.system_build_functions.dto.*;
 import com.mediorder.system_build_functions.model.Role;
 import com.mediorder.system_build_functions.model.User;
 import com.mediorder.system_build_functions.model.UserStatus;
@@ -86,5 +84,38 @@ public class UserServiceTest {
 
         assertEquals("newHashedPass", sampleUser.getPasswordHash());
         verify(userRepository, times(1)).save(sampleUser);
+    }
+
+    @Test
+    void testCreateAdminUser() {
+        when(userRepository.existsByEmail("newadmin@mediorder.com")).thenReturn(false);
+        when(passwordEncoder.encode("InitialPass123!")).thenReturn("encodedPassword");
+        when(userRepository.save(any(User.class))).thenAnswer(i -> {
+            User u = i.getArgument(0);
+            u.setId(200L);
+            return u;
+        });
+
+        AdminUserCreateRequest req = new AdminUserCreateRequest(
+                "New Admin User", "newadmin@mediorder.com", "InitialPass123!",
+                Role.SYSTEM_ADMIN, UserStatus.ACTIVE, "0771122334", null
+        );
+
+        UserResponse res = userService.createUser(req, "superadmin@mediorder.com");
+
+        assertNotNull(res);
+        assertEquals("newadmin@mediorder.com", res.getEmail());
+        assertEquals(Role.SYSTEM_ADMIN, res.getRole());
+        verify(auditService, times(1)).logUserAction(eq("superadmin@mediorder.com"), eq("SYSTEM_ADMIN"), eq("CREATE_USER_PROFILE"), eq("User"), eq("200"), any());
+    }
+
+    @Test
+    void testDeleteUser() {
+        when(userRepository.findById(100L)).thenReturn(Optional.of(sampleUser));
+
+        userService.deleteUser(100L, "superadmin@mediorder.com");
+
+        verify(userRepository, times(1)).delete(sampleUser);
+        verify(auditService, times(1)).logUserAction(eq("superadmin@mediorder.com"), eq("SYSTEM_ADMIN"), eq("DELETE_USER_PROFILE"), eq("User"), eq("100"), any());
     }
 }

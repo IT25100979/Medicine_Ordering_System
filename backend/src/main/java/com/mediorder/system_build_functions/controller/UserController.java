@@ -1,11 +1,9 @@
 package com.mediorder.system_build_functions.controller;
 
-import com.mediorder.system_build_functions.dto.ApiResponse;
-import com.mediorder.system_build_functions.dto.PasswordChangeRequest;
-import com.mediorder.system_build_functions.dto.ProfileUpdateRequest;
-import com.mediorder.system_build_functions.dto.UserResponse;
+import com.mediorder.system_build_functions.dto.*;
 import com.mediorder.system_build_functions.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -61,6 +59,37 @@ public class UserController {
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
         List<UserResponse> list = userService.getAllUsers();
         return ResponseEntity.ok(ApiResponse.success("Users retrieved", list));
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(
+            @Valid @RequestBody AdminUserCreateRequest request,
+            Authentication authentication) {
+        String adminEmail = authentication != null ? authentication.getName() : "admin@mediorder.com";
+        UserResponse created = userService.createUser(request, adminEmail);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("User profile created successfully", created));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
+            @PathVariable Long id,
+            @RequestBody AdminUserUpdateRequest request,
+            Authentication authentication) {
+        String adminEmail = authentication != null ? authentication.getName() : "admin@mediorder.com";
+        UserResponse updated = userService.updateUser(id, request, adminEmail);
+        return ResponseEntity.ok(ApiResponse.success("User profile updated successfully", updated));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String adminEmail = authentication != null ? authentication.getName() : "admin@mediorder.com";
+        userService.deleteUser(id, adminEmail);
+        return ResponseEntity.ok(ApiResponse.success("User profile deleted successfully", null));
     }
 
     @PutMapping("/{id}/role")
