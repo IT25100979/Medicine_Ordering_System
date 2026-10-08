@@ -99,7 +99,13 @@ public class SecurityConfig {
                                 "/api/deliveries",
                                 "/api/deliveries/**",
                                 "/api/v1/deliveries",
-                                "/api/v1/deliveries/**"
+                                "/api/v1/deliveries/**",
+                                "/api/courier",
+                                "/api/courier/**"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/courier",
+                                "/api/courier/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/deliveries",

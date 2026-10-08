@@ -1,102 +1,96 @@
-# MediOrder Phase 1 Baseline Architecture & Implementation Specification
+# Prompt for Antigravity: Delivery Management Module Update
 
-This specification outlines the foundational setup, local authentication system, and frontend scaffolding for Phase 1 of the MediOrder platform.
+**Target Application:** Spring Boot Application
+**Target Package:** `it25100979_delivery_management`
+
+## Overview
+Please refactor and update the delivery management module under the `it25100979_delivery_management` package. You will need to remove the existing delivery management section entirely and replace it with a new flow handling customer deliveries, batching, courier assignment, and status tracking. 
+
+Please follow the detailed instructions below for Database Entities, REST API Endpoints, Business Logic, and UI Layout.
 
 ---
 
-## 1. Technical Prerequisites & Dependencies
+## 1. Code Cleanup
+- Locate the existing delivery management section under "all sections" and completely remove its associated frontend components, backend controllers, and obsolete services.
 
-Before generating application source code, configure the build tools and project metadata. 
--allow_access : to open vscode in the same project folder
--allow_access : to install all the dependencies needed for the vscode to run the spirngboot application + maven
--allow_access : to install all the libraries required for the project
+## 2. Database Entities & Seed Data
 
-### Backend: Maven Configuration (`backend/pom.xml`)
-Initialize a Spring Boot 4.x project using Java 26 with the following starter modules:
+### A. Delivery & Batch Entities
+Create or update entities to handle single and batched deliveries. 
+- **Fields required per Delivery:**
+  - `deliveryId` (Unique identifier)
+  - `batchId` (Nullable, connects multiple deliveries)
+  - `customerName` (Who orders)
+  - `orderAddress`
+  - `customerPhone`
+  - `customerEmail`
+  - `specialInstructions` (Includes cold chain requirements)
+  - `validatingPharmacist` (Name/ID of pharmacist who validated the prescription, if attached)
+  - `arrangingStaff` (Name/ID of the person who arranged the medications)
+  - `status` (Enum: `PENDING`, `DISPATCHED`, `IN_TRANSIT`, `DELIVERED`, `FAILED`)
 
-*   **`spring-boot-starter-web`**: Exposes RESTful endpoints and sets up embedded Tomcat.
-*   **`spring-boot-starter-data-jpa`**: Manages entity persistence, repositories, and Hibernate lifecycle.
-*   **`spring-boot-starter-security`**: Configures authorization filters and authentication pipelines.
-*   **`mysql-connector-j`**: Provides JDBC transport for MySQL 8+.
-*   **`jjwt-api` / `jjwt-impl` / `jjwt-jackson`**: Issues and verifies stateless JWT tokens.
-*   **`lombok`**: Removes boilerplate for POJOs, entities, and DTOs.
-*   **`spring-boot-starter-validation`**: Validates request payloads (e.g., email format, password constraints).
+### B. Delivery Routes (Geofenced Areas)
+- **Action:** Remove all existing delivery zones. 
+- **Seed/Add the following exact route data:**
+  - City: `Colombo 1 - 5`
+  - Postal Code: `0100 - 0500`
+  - Status: `Active`
+  - Delivery Fee: `500 Rs`
+  - Estimated Time: `1 hour`
 
-### Frontend: Vite & React Setup (`frontend/package.json`)
-Initialize the React SPA using the Vite build tool:
+### C. Delivery Couriers
+- **Action:** Create an Entity or Enum for Couriers with the following specific options:
+  - `DHL`
+  - `Koombiyo`
+  - `Lanka Delivery`
+  - `In Company Delivery`
 
-*   **`react-router-dom`**: Handles client-side navigation across views.
-*   **`axios`**: Centralized HTTP client configured with base URLs and interceptors.
-*   **`lucide-react`**: Provides interface icons for action buttons and status cards.
-*   **Tailwind CSS**: Utility-first styling for accessible, responsive views.
+---
 
-### Instructions to build the initial base of the springboot project
-* everywhere change mediorder --> online_pharmacy (including folder names, sub folder names)
-* install database using mySQL & JPA entities, use the database schema: medical_system_db
-* build for user: entity, repository, authService, AuthController, AuthContext; instructions: user attributes fullname, email, password, contact number, role (customer, admin), createdAt (account creation date), userID; email/userid should be the primary keys to identify each user(findByEmail|existsByEmail); security_config: use BcryptPasswordEncoder & configure security Filter chain.
-* Any user who goes to the local address will directed to the landing page, users must have sessions tokens it should be refreshed until the perticular user logs out. In the landing page users have option to login/register (if user is already logged in an accout symbol is shown in the top nav bar). 
-* Landing page should only have 6 button and a nav bar(navbar: must havev login|register --> if not logged in, account access symbo --> if already logged in), 4buttons (buttons with 6 different colours and with names of the core functions;{prescription test, inventory & expiry management, real time order processing, cold chain tagging & logistics security, automatic medicine refil & subscription management, Delivery management & notification engine})
-* set base url: http://localhost:8080/
+## 3. Backend Endpoints (REST API)
 
+### Delivery Management API
+- **POST `/api/deliveries`**: Endpoint to receive new deliveries from customers, show related entities, and persist them to the database.
+- **PUT `/api/deliveries/assign`**: Endpoint to select a single delivery or a batch of deliveries (by ID) and assign a `Delivery Route` and a `Delivery Courier`.
+- **PUT `/api/deliveries/{id}/action`**: Endpoint to perform specific actions on a delivery/batch. Supported actions:
+  - `TERMINATE`
+  - `HOLD` (Hold without sending to delivery)
+  - `POSTPONE`
 
-## 2. Directory Layout & Artifact Mapping
+### Courier API
+- **GET `/api/courier/deliveries`**: Endpoint tailored strictly for couriers. It must **only** return:
+  - `deliveryId` / `batchId`
+  - `customerName` (Recipient)
+  - `orderAddress`
+  - `customerPhone`
+- **PUT `/api/courier/deliveries/{id}/status`**: Endpoint for couriers to update the delivery status. 
+  - Allow direct updates to `IN_TRANSIT` and `FAILED`.
+  - For `DELIVERED`, strictly require a valid `OTP` in the request payload.
 
-This structure maintains separation of concerns across both frontend and backend modules, use the same structure to organize the files in the project folder, create all the folder required even source codes aren't build yet :
+---
 
-```text
-mediorder/
-├── backend/
-│   ├── pom.xml
-│   └── src/
-│       ├── main/
-│       │   ├── java/com/mediorder/
-│       │   │   ├── config/
-│       │   │   │   ├── SecurityConfig.java
-│       │   │   │   ├── CorsConfig.java
-│       │   │   │   └── JwtTokenProvider.java
-│       │   │   ├── controller/
-│       │   │   │   ├── AuthController.java
-│       │   │   │   └── HealthController.java
-│       │   │   ├── dto/
-│       │   │   │   ├── AuthRequest.java
-│       │   │   │   ├── AuthResponse.java
-│       │   │   │   └── UserResponse.java
-│       │   │   ├── model/
-│       │   │   │   ├── User.java
-│       │   │   │   └── Role.java
-│       │   │   ├── repository/
-│       │   │   │   └── UserRepository.java
-│       │   │   └── service/
-│       │   │       ├── AuthService.java
-│       │   │       └── CustomUserDetailsService.java
-│       │   └── resources/
-│       │       ├── application.yml.example
-│       │       └── application.yml
-├── frontend/
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
-│   └── src/
-│       ├── api/
-│       │   └── client.js
-│       ├── context/
-│       │   └── AuthContext.jsx
-│       ├── components/
-│       │   ├── Navbar.jsx
-│       │   └── ProtectedRoute.jsx
-│       ├── pages/
-│       │   ├── HomePage.jsx
-│       │   ├── LoginPage.jsx
-│       │   ├── RegisterPage.jsx
-│       │   ├── ProfilePage.jsx
-│       │   └── modules/
-│       │       ├── PrescriptionPage.jsx
-│       │       ├── InventoryPage.jsx
-│       │       ├── OrderProcessingPage.jsx
-│       │       ├── ColdChainPage.jsx
-│       │       ├── SubscriptionsPage.jsx
-│       │       └── DeliveryPage.jsx
-│       ├── App.jsx
-│       └── main.jsx
-└── .gitignore
+## 4. Business Logic & State Transitions
+- **Initial State:** All new deliveries must default to the `PENDING` status.
+- **Dispatching:** Once a delivery (or batch) is assigned a route/courier and transferred from the management section to the Courier's queue, the status must automatically change from `PENDING` to `DISPATCHED`.
+- **OTP Verification:** Implement logic to generate, store, and verify an OTP for the customer. The system must validate this OTP when the courier attempts to mark a delivery as `DELIVERED`.
 
+---
+
+## 5. Frontend & UI Requirements
+
+### General Layout Constraints
+- **Do not render sections one below the other.**
+- Implement a tabbed or routed navigational structure. When a user clicks on a specific section (e.g., Delivery Management, Courier Dashboard), **only** that section should be visible on the page.
+
+### Delivery Management View
+- Display a comprehensive table/grid of deliveries containing all the fields mentioned in 2A.
+- Implement filtering tags/buttons based on status: `Pending`, `Dispatched`, `In Transit`, `Delivered`, `Failed`.
+- Provide UI controls (checkboxes) to select single or multiple deliveries for batching, and dropdowns to assign routes and couriers.
+- Provide action buttons for `Terminate`, `Hold`, and `Postpone`.
+
+### Courier View
+- Display a simplified view showing only: ID, Recipient Name, Address, and Phone.
+- Provide action buttons for the courier:
+  - Mark as `In Transit`
+  - Mark as `Failed`
+  - Mark as `Delivered` (Clicking this should prompt a modal/input field to enter the customer's OTP).

@@ -40,7 +40,20 @@ public class DeliveryZoneService {
         if (zone.isPresent()) {
             return zone;
         }
-        return deliveryZoneRepository.findByCityOrPostalCode(trimmed);
+        zone = deliveryZoneRepository.findByCityOrPostalCode(trimmed);
+        if (zone.isPresent()) {
+            return zone;
+        }
+
+        // Smart route match for Colombo 1 - 5 geofence coverage
+        String normalized = trimmed.toLowerCase().replaceAll("[^a-z0-9]", "");
+        if (normalized.matches(".*colombo0?[1-5].*") || normalized.matches(".*0[1-5]00.*") || normalized.contains("colombo")) {
+            return deliveryZoneRepository.findAll().stream()
+                    .filter(z -> z.getCity() != null && z.getCity().contains("Colombo 1 - 5"))
+                    .findFirst();
+        }
+
+        return Optional.empty();
     }
 
     public DeliveryZone saveDeliveryZone(DeliveryZone zone) {
@@ -51,7 +64,7 @@ public class DeliveryZoneService {
             zone.setIsActive(1);
         }
         if (zone.getDeliveryFee() == null) {
-            zone.setDeliveryFee(0.0);
+            zone.setDeliveryFee(500.0);
         }
         if (zone.getEstimatedDeliveryTime() != null && zone.getEsitmatedDeliveryTime() == null) {
             zone.setEsitmatedDeliveryTime(zone.getEstimatedDeliveryTime());
@@ -95,5 +108,3 @@ public class DeliveryZoneService {
         deliveryZoneRepository.deleteById(id);
     }
 }
-
-
