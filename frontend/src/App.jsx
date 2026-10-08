@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import Navbar from './components/Navbar';
@@ -76,8 +76,10 @@ const App = () => {
               } />
 
               {/* Module Routes */}
-              <Route path="/prescription" element={<PrescriptionPage />} />
-              <Route path="/modules/prescription" element={<PrescriptionPage />} />
+              <Route path="/prescriptions" element={<PrescriptionPage />} />
+              <Route path="/prescriptions/new" element={<PrescriptionPage />} />
+              <Route path="/prescription" element={<Navigate to="/prescriptions" replace />} />
+              <Route path="/modules/prescription" element={<Navigate to="/prescriptions" replace />} />
               <Route path="/modules/inventory" element={<InventoryPage />} />
               <Route path="/modules/orders" element={<OrderProcessingPage />} />
               <Route path="/modules/cold-chain" element={<ColdChainPage />} />

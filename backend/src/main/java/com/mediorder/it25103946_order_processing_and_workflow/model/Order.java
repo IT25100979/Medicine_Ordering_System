@@ -21,6 +21,16 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private User customer;
+	@Column(name = "prescription_id")
+private Long prescriptionId;
+
+public Long getPrescriptionId() {
+    return prescriptionId;
+}
+
+public void setPrescriptionId(Long prescriptionId) {
+    this.prescriptionId = prescriptionId;
+}
 
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     @Builder.Default

@@ -43,7 +43,9 @@ public class AuthService {
             throw new IllegalArgumentException("Email is already registered: " + request.getEmail());
         }
 
-        Role userRole = request.getRole() != null ? request.getRole() : Role.CUSTOMER;
+        if(request.getRole()!=null && request.getRole()!=Role.CUSTOMER)
+            throw new IllegalArgumentException("Staff accounts must be created by an administrator.");
+        Role userRole = Role.CUSTOMER;
 
         User user = User.builder()
                 .fullName(request.getFullName().trim())

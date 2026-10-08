@@ -7,6 +7,12 @@ public class PrescriptionVerificationRequest {
     private String verificationNotes;
     private String rejectionReason;
     private Boolean deleteFileImmediately;
+    private String rejectionCode;
+    private Integer maxUses;
+    public String getRejectionCode() { return rejectionCode; }
+    public void setRejectionCode(String value) { rejectionCode = value; }
+    public Integer getMaxUses() { return maxUses; }
+    public void setMaxUses(Integer value) { maxUses = value; }
 
     public PrescriptionVerificationRequest() {}
 
@@ -38,6 +44,12 @@ public class PrescriptionVerificationRequest {
         private String verificationNotes;
         private String rejectionReason;
         private Boolean deleteFileImmediately;
+    private String rejectionCode;
+    private Integer maxUses;
+    public String getRejectionCode() { return rejectionCode; }
+    public void setRejectionCode(String value) { rejectionCode = value; }
+    public Integer getMaxUses() { return maxUses; }
+    public void setMaxUses(Integer value) { maxUses = value; }
 
         public PrescriptionVerificationRequestBuilder status(PrescriptionStatus status) {
             this.status = status;

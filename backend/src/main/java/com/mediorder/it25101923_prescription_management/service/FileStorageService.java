@@ -39,29 +39,39 @@ public class FileStorageService {
         }
     }
 
+    public void validateFile(MultipartFile file) {
+        if(file==null || file.isEmpty()) throw new IllegalArgumentException("Choose a prescription document.");
+        if(file.getSize()>MAX_FILE_SIZE_BYTES) throw new IllegalArgumentException("Choose a file smaller than 10 MB.");
+        String name=file.getOriginalFilename();
+        if(name==null || name.contains("..") || name.contains("/") || name.contains("\\")) throw new IllegalArgumentException("Invalid document filename.");
+        String ext=name.substring(Math.max(0,name.lastIndexOf('.'))).toLowerCase(java.util.Locale.ROOT);
+        String mime=detectContentType(file);
+        boolean valid=switch(ext) {
+            case ".pdf" -> mime.equals("application/pdf");
+            case ".jpg", ".jpeg" -> mime.equals("image/jpeg");
+            case ".png" -> mime.equals("image/png");
+            case ".webp" -> mime.equals("image/webp");
+            default -> false;
+        };
+        if(!valid) throw new IllegalArgumentException("Use a valid PDF, JPG, PNG, or WEBP document.");
+    }
+
+    public String detectContentType(MultipartFile file) {
+        try(java.io.InputStream in=file.getInputStream()) {
+            byte[] h=in.readNBytes(12);
+            if(h.length>=5 && new String(h,0,5,java.nio.charset.StandardCharsets.US_ASCII).equals("%PDF-")) return "application/pdf";
+            if(h.length>=3 && (h[0]&255)==255 && (h[1]&255)==216 && (h[2]&255)==255) return "image/jpeg";
+            if(h.length>=8 && java.util.Arrays.equals(java.util.Arrays.copyOf(h,8),new byte[]{(byte)137,80,78,71,13,10,26,10})) return "image/png";
+            if(h.length>=12 && new String(h,0,4,java.nio.charset.StandardCharsets.US_ASCII).equals("RIFF") && new String(h,8,4,java.nio.charset.StandardCharsets.US_ASCII).equals("WEBP")) return "image/webp";
+            return "application/octet-stream";
+        } catch(IOException e) { throw new IllegalArgumentException("Could not read the document.",e); }
+    }
+
     public String storeFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Cannot store an empty prescription file.");
-        }
-
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new IllegalArgumentException("File size exceeds 10MB limit. Current size: " + (file.getSize() / (1024 * 1024)) + "MB");
-        }
-
-        String originalFilename = StringUtils.cleanPath(file.getOriginalFilename() != null ? file.getOriginalFilename() : "document");
-        if (originalFilename.contains("..")) {
-            throw new IllegalArgumentException("Invalid filename containing path traversal sequence: " + originalFilename);
-        }
-
-        String extension = "";
-        int dotIndex = originalFilename.lastIndexOf('.');
-        if (dotIndex >= 0) {
-            extension = originalFilename.substring(dotIndex).toLowerCase();
-        }
-
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("Invalid file format: " + extension + ". Supported formats: PDF, JPG, PNG, WEBP, HEIC.");
-        }
+        validateFile(file);
+        String originalFilename=StringUtils.cleanPath(file.getOriginalFilename());
+        int dotIndex=originalFilename.lastIndexOf('.');
+        String extension=originalFilename.substring(dotIndex).toLowerCase(java.util.Locale.ROOT);
 
         String baseName = dotIndex >= 0 ? originalFilename.substring(0, dotIndex) : originalFilename;
         String sanitizedBaseName = baseName.replaceAll("[^a-zA-Z0-9-_]", "_");
@@ -73,7 +83,9 @@ public class FileStorageService {
 
         try {
             Path targetLocation = this.fileStorageLocation.resolve(storedFileName);
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            try(java.io.InputStream in=file.getInputStream()) {
+                Files.copy(in, targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            }
             return storedFileName;
         } catch (IOException ex) {
             throw new RuntimeException("Failed to store file " + storedFileName, ex);

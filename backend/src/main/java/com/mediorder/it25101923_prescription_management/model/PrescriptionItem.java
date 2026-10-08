@@ -30,6 +30,30 @@ public class PrescriptionItem {
     @Column(nullable = false)
     private Integer quantity;
 
+	@Column(name = "permitted_quantity")
+private Integer permittedQuantity;
+
+@Enumerated(EnumType.STRING)
+@Builder.Default
+private ItemDecision decision = ItemDecision.PENDING;
+
+public Integer getPermittedQuantity() {
+    return permittedQuantity;
+}
+
+public void setPermittedQuantity(Integer permittedQuantity) {
+    this.permittedQuantity = permittedQuantity;
+}
+
+public ItemDecision getDecision() {
+    return decision;
+}
+
+public void setDecision(ItemDecision decision) {
+    this.decision = decision;
+}
+
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

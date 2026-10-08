@@ -35,8 +35,8 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
-        return ResponseEntity.ok(orderService.createOrder(order));
+    public ResponseEntity<Order> createOrder(@RequestBody Order order, org.springframework.security.core.Authentication authentication) {
+        return ResponseEntity.ok(orderService.createOrder(order, authentication));
     }
 
     @PatchMapping("/{id}/status")

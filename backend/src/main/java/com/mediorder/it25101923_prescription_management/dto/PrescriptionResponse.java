@@ -33,6 +33,17 @@ public class PrescriptionResponse {
     private Boolean isFileDeleted;
     private LocalDateTime createdAt;
 
+    private String rejectionCode;
+    private Integer maxUses;
+    private Integer usedCount;
+    private Long version;
+    private Boolean archived;
+    public String getRejectionCode(){return rejectionCode;} public void setRejectionCode(String v){rejectionCode=v;}
+    public Integer getMaxUses(){return maxUses;} public void setMaxUses(Integer v){maxUses=v;}
+    public Integer getUsedCount(){return usedCount;} public void setUsedCount(Integer v){usedCount=v;}
+    public Long getVersion(){return version;} public void setVersion(Long v){version=v;}
+    public Boolean getArchived(){return archived;} public void setArchived(Boolean v){archived=v;}
+
     public static PrescriptionResponse fromEntity(Prescription p) {
         if (p == null) return null;
         PrescriptionResponse response = new PrescriptionResponse();
@@ -60,6 +71,11 @@ public class PrescriptionResponse {
         response.setRejectionReason(p.getRejectionReason());
         response.setIsFileDeleted(Boolean.TRUE.equals(p.getIsFileDeleted()));
         response.setCreatedAt(p.getCreatedAt());
+        response.setRejectionCode(p.getRejectionCode());
+        response.setMaxUses(p.getMaxUses());
+        response.setUsedCount(p.getUsedCount());
+        response.setVersion(p.getVersion());
+        response.setArchived(p.getArchived());
         return response;
     }
 

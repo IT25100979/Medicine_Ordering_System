@@ -27,6 +27,8 @@ public class PrescriptionCleanupService {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @Autowired private PrescriptionDocumentPurgeService purgeService;
+
     @Value("${app.upload.retention-days-rejected:7}")
     private int retentionDaysRejected;
 
@@ -56,15 +58,7 @@ public class PrescriptionCleanupService {
 
         int purgedFilesCount = 0;
         for (Prescription p : candidates) {
-            if (p.getStoredFileName() != null) {
-                boolean deleted = fileStorageService.deleteFile(p.getStoredFileName());
-                if (deleted || !fileStorageService.fileExists(p.getStoredFileName())) {
-                    p.setIsFileDeleted(true);
-                    p.setFileUrl("[FILE_AUTO_DELETED_PER_RETENTION_POLICY]");
-                    prescriptionRepository.save(p);
-                    purgedFilesCount++;
-                }
-            }
+            if(purgeService.purge(p.getId(),0L,"Storage policy")) purgedFilesCount++;
         }
 
         // 2. Clean up orphaned files in upload directory that have no DB association
@@ -92,7 +86,8 @@ public class PrescriptionCleanupService {
                 for (Path entry : stream) {
                     if (Files.isRegularFile(entry)) {
                         String fileName = entry.getFileName().toString();
-                        if (!activeStoredFileNames.contains(fileName)) {
+                        if (!activeStoredFileNames.contains(fileName)
+                                && Files.getLastModifiedTime(entry).toInstant().isBefore(java.time.Instant.now().minus(java.time.Duration.ofHours(24)))) {
                             try {
                                 Files.deleteIfExists(entry);
                                 count++;

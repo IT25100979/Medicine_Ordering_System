@@ -40,7 +40,7 @@ public class Prescription {
     private Boolean chronicSubscription = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false, length = 50)
     private PrescriptionStatus status = PrescriptionStatus.PENDING;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -61,6 +61,38 @@ public class Prescription {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Version
+    @Column(columnDefinition = "BIGINT DEFAULT 0")
+    private Long version = 0L;
+
+    @Column(name = "file_sha256", length = 64)
+    private String fileSha256;
+
+    @Column(name = "rejection_code", length = 40)
+    private String rejectionCode;
+
+    @Column(name = "max_uses", columnDefinition = "INT DEFAULT 1")
+    private Integer maxUses = 1;
+
+    @Column(name = "used_count", columnDefinition = "INT DEFAULT 0")
+    private Integer usedCount = 0;
+
+    @Column(name = "archived", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean archived = false;
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long value) { version = value; }
+    public String getFileSha256() { return fileSha256; }
+    public void setFileSha256(String value) { fileSha256 = value; }
+    public String getRejectionCode() { return rejectionCode; }
+    public void setRejectionCode(String value) { rejectionCode = value; }
+    public Integer getMaxUses() { return maxUses == null ? 1 : maxUses; }
+    public void setMaxUses(Integer value) { maxUses = value; }
+    public Integer getUsedCount() { return usedCount == null ? 0 : usedCount; }
+    public void setUsedCount(Integer value) { usedCount = value; }
+    public Boolean getArchived() { return Boolean.TRUE.equals(archived); }
+    public void setArchived(Boolean value) { archived = value; }
 
     public Prescription() {}
 

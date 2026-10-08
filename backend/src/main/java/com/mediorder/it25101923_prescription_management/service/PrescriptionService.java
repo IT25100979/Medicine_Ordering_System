@@ -1,32 +1,46 @@
 package com.mediorder.it25101923_prescription_management.service;
 
-import com.mediorder.it25101923_prescription_management.dto.PrescriptionResponse;
-import com.mediorder.it25101923_prescription_management.dto.PrescriptionVerificationRequest;
-import com.mediorder.system_build_functions.model.Notification;
-import com.mediorder.system_build_functions.model.NotificationChannel;
-import com.mediorder.it25101923_prescription_management.model.Prescription;
-import com.mediorder.it25101923_prescription_management.model.PrescriptionStatus;
-import com.mediorder.system_build_functions.model.Role;
-import com.mediorder.system_build_functions.model.User;
-import com.mediorder.system_build_functions.repository.NotificationRepository;
-import com.mediorder.it25101923_prescription_management.repository.PrescriptionRepository;
-import com.mediorder.system_build_functions.repository.UserRepository;
+import com.mediorder.it25101923_prescription_management.dto.*;
+import com.mediorder.it25101923_prescription_management.model.*;
+import com.mediorder.it25101923_prescription_management.repository.*;
+import com.mediorder.it25101923_prescription_management.strategy.PrescriptionRetentionStrategy;
+import com.mediorder.system_build_functions.model.*;
+import com.mediorder.system_build_functions.repository.*;
+import com.mediorder.it25103946_order_processing_and_workflow.model.Order;
+import com.mediorder.it25103946_order_processing_and_workflow.model.OrderStatus;
+import com.mediorder.it25103946_order_processing_and_workflow.repository.OrderRepository;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.*;
 
+/**
+ * Service implementation for Prescription Management System
+ * IT25101923
+ *
+ * Handles prescription upload, SHA-256 fingerprint deduplication, clinical review,
+ * status transitions, order usage linking, audit history, and retention policies.
+ */
 @Service
 @Transactional
 public class PrescriptionService {
+
+    private static final Logger log = LoggerFactory.getLogger(PrescriptionService.class);
 
     @Autowired
     private PrescriptionRepository prescriptionRepository;
@@ -40,256 +54,511 @@ public class PrescriptionService {
     @Autowired(required = false)
     private NotificationRepository notificationRepository;
 
+    @Autowired
+    private List<PrescriptionRetentionStrategy> retentionStrategies;
+
+    @Autowired
+    private PrescriptionAuditRepository auditRepository;
+
+    @Autowired
+    private PrescriptionFingerprintRepository fingerprintRepository;
+
+    @Autowired
+    private PrescriptionUsageRepository usageRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private PrescriptionDocumentPurgeService purgeService;
+
     @Value("${app.upload.auto-delete-rejected-files:false}")
     private boolean autoDeleteRejectedFiles;
 
-    private User getAuthenticatedUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            throw new AccessDeniedException("User is not authenticated");
+    // ─── Helper Methods ─────────────────────────────────────────────
+
+    private User current(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated() || auth.getName() == null) {
+            throw new AccessDeniedException("Please sign in.");
         }
-        return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("Authenticated user not found with email: " + authentication.getName()));
+        return userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new AccessDeniedException("Account not found."));
     }
 
-    private boolean isStaffUser(User user) {
-        if (user == null || user.getRole() == null) return false;
-        Role r = user.getRole();
-        return r == Role.PHARMACIST || r == Role.CHIEF_PHARMACIST || r == Role.ADMIN || r == Role.OPERATIONS_MANAGER || r == Role.FINANCE_MANAGER;
+    private boolean isStaff(User user) {
+        return user.getRole() == Role.PHARMACIST
+                || user.getRole() == Role.CHIEF_PHARMACIST
+                || user.getRole() == Role.ADMIN;
     }
 
+    private void requireStaff(User user) {
+        if (!isStaff(user)) {
+            throw new AccessDeniedException("Only licensed clinical staff and administrators can verify prescriptions.");
+        }
+    }
+
+// Add this new method here:
+public void requireClinicalStaff(Authentication authentication) {
+    requireStaff(current(authentication));
+}
+
+    private Prescription find(Long id) {
+        return prescriptionRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prescription not found."));
+    }
+
+    private void authorize(Prescription p, User user) {
+        if (!isStaff(user) && (p.getCustomer() == null || !Objects.equals(p.getCustomer().getId(), user.getId()))) {
+            throw new AccessDeniedException("You are not authorized to view this prescription.");
+        }
+    }
+
+    private void active(Prescription p) {
+        if (Boolean.TRUE.equals(p.getArchived())) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This prescription has been removed.");
+        }
+    }
+
+    private void editable(Prescription p) {
+        active(p);
+        if (p.getStatus() != PrescriptionStatus.PENDING && p.getStatus() != PrescriptionStatus.CLARIFICATION_REQUIRED) {
+            throw new IllegalStateException("Only pending submissions or submissions needing clarification can be edited.");
+        }
+    }
+
+    private String bounded(String value, int limit, String label) {
+        String text = (value == null) ? null : value.trim();
+        if (text != null && text.length() > limit) {
+            throw new IllegalArgumentException(label + " must be at most " + limit + " characters.");
+        }
+        return text;
+    }
+
+    private void audit(Prescription p, User actor, String action, PrescriptionStatus from, String details) {
+        auditRepository.save(new PrescriptionAudit(
+                p.getId(),
+                actor.getId(),
+                actor.getFullName(),
+                action,
+                from == null ? null : from.name(),
+                p.getStatus().name(),
+                details
+        ));
+    }
+
+    private void notifyCustomer(Prescription p, String title, String message) {
+        if (notificationRepository == null) return;
+        Notification n = new Notification();
+        n.setRecipient(p.getCustomer());
+        n.setTitle(title);
+        n.setMessage(message);
+        n.setChannel(NotificationChannel.IN_APP);
+        n.setIsRead(false);
+        n.setSentAt(LocalDateTime.now());
+        notificationRepository.save(n);
+    }
+
+    private String fingerprint(MultipartFile file) {
+        fileStorageService.validateFile(file);
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(file.getBytes()));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Could not read the document.", e);
+        }
+    }
+
+    private void ensureNewFingerprint(String hash) {
+        if (fingerprintRepository.existsById(hash) || prescriptionRepository.existsByFileSha256(hash)) {
+            throw new IllegalStateException("This document has already been submitted. Use the existing prescription or upload a newly issued document.");
+        }
+    }
+
+    private String store(MultipartFile file) {
+        String name = fileStorageService.storeFile(file);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != STATUS_COMMITTED) {
+                        fileStorageService.deleteFile(name);
+                    }
+                }
+            });
+        }
+        return name;
+    }
+
+    private void applyFile(Prescription p, MultipartFile file, String name, String hash) {
+        p.setFileUrl("/api/v1/prescriptions/" + p.getId() + "/file");
+        p.setStoredFileName(name);
+        p.setOriginalFileName(file.getOriginalFilename());
+        p.setContentType(fileStorageService.detectContentType(file));
+        p.setFileSizeBytes(file.getSize());
+        p.setFileSha256(hash);
+        p.setIsFileDeleted(false);
+    }
+
+    // ─── Public Business Operations ─────────────────────────────────
+
+    /**
+     * Upload a new prescription document.
+     */
     public PrescriptionResponse uploadPrescription(
             MultipartFile file,
             String doctorName,
             String patientNotes,
-            Boolean chronicSubscription,
-            Authentication authentication) {
+            Boolean chronic,
+            Authentication auth) {
 
-        User customer = getAuthenticatedUser(authentication);
-        String storedFileName = fileStorageService.storeFile(file);
+        User actor = current(auth);
+        if (actor.getRole() != Role.CUSTOMER) {
+            throw new AccessDeniedException("Only customer accounts can submit prescriptions.");
+        }
 
-        Prescription prescription = Prescription.builder()
-                .customer(customer)
-                .fileUrl("/api/v1/prescriptions/files/" + storedFileName)
-                .originalFileName(file.getOriginalFilename())
-                .storedFileName(storedFileName)
-                .contentType(file.getContentType())
-                .fileSizeBytes(file.getSize())
-                .doctorName(doctorName)
-                .patientNotes(patientNotes)
-                .chronicSubscription(Boolean.TRUE.equals(chronicSubscription))
+        String doctor = bounded(doctorName, 150, "Doctor name");
+        String notes = bounded(patientNotes, 2000, "Notes");
+        String hash = fingerprint(file);
+
+        ensureNewFingerprint(hash);
+        String name = store(file);
+
+        Prescription p = Prescription.builder()
+                .customer(actor)
+                .doctorName(doctor)
+                .patientNotes(notes)
+                .chronicSubscription(Boolean.TRUE.equals(chronic))
                 .status(PrescriptionStatus.PENDING)
+                .fileUrl("/api/v1/prescriptions/files/" + name)
+                .storedFileName(name)
+                .originalFileName(file.getOriginalFilename())
+                .contentType(fileStorageService.detectContentType(file))
+                .fileSizeBytes(file.getSize())
                 .isFileDeleted(false)
-                .createdAt(LocalDateTime.now())
                 .build();
 
-        Prescription saved = prescriptionRepository.save(prescription);
-        return PrescriptionResponse.fromEntity(saved);
-    }
+        p.setFileSha256(hash);
+        p = prescriptionRepository.saveAndFlush(p);
+        p.setFileUrl("/api/v1/prescriptions/" + p.getId() + "/file");
 
-    @Transactional(readOnly = true)
-    public List<PrescriptionResponse> getAllPrescriptions(
-            PrescriptionStatus status,
-            Boolean chronicOnly,
-            Authentication authentication) {
-        return getAllPrescriptions(status, chronicOnly, null, authentication);
-    }
-
-    @Transactional(readOnly = true)
-    public List<PrescriptionResponse> getAllPrescriptions(
-            PrescriptionStatus status,
-            Boolean chronicOnly,
-            String search,
-            Authentication authentication) {
-
-        User currentUser = getAuthenticatedUser(authentication);
-        List<Prescription> list;
-
-        if (!isStaffUser(currentUser)) {
-            // Regular customer: only view own prescriptions
-            if (status != null) {
-                list = prescriptionRepository.findByCustomerIdAndStatusOrderByCreatedAtDesc(currentUser.getId(), status);
-            } else {
-                list = prescriptionRepository.findByCustomerIdOrderByCreatedAtDesc(currentUser.getId());
-            }
-        } else {
-            // Staff: Pharmacist / Admin
-            if (search != null && !search.trim().isEmpty()) {
-                // When search is requested by staff, search across ALL prescriptions in the DB (Approved, Rejected, Pending, Chronic)
-                String q = search.trim().toLowerCase();
-                return prescriptionRepository.findAllByOrderByCreatedAtDesc().stream()
-                        .filter(p -> matchesPrescriptionSearch(p, q))
-                        .map(PrescriptionResponse::fromEntity)
-                        .collect(Collectors.toList());
-            }
-
-            if (Boolean.TRUE.equals(chronicOnly)) {
-                list = prescriptionRepository.findByChronicSubscriptionTrueOrderByCreatedAtDesc();
-            } else if (status != null) {
-                list = prescriptionRepository.findByStatusOrderByCreatedAtDesc(status);
-            } else {
-                list = prescriptionRepository.findAllByOrderByCreatedAtDesc();
-            }
-        }
-
-        if (search != null && !search.trim().isEmpty()) {
-            String q = search.trim().toLowerCase();
-            list = list.stream()
-                    .filter(p -> matchesPrescriptionSearch(p, q))
-                    .collect(Collectors.toList());
-        }
-
-        return list.stream()
-                .map(PrescriptionResponse::fromEntity)
-                .collect(Collectors.toList());
-    }
-
-    private boolean matchesPrescriptionSearch(Prescription p, String q) {
-        if (p == null) return false;
-        boolean matchId = p.getId() != null && String.valueOf(p.getId()).contains(q);
-        boolean matchCustId = p.getCustomer() != null && p.getCustomer().getId() != null && String.valueOf(p.getCustomer().getId()).contains(q);
-        boolean matchCustEmail = p.getCustomer() != null && p.getCustomer().getEmail() != null && p.getCustomer().getEmail().toLowerCase().contains(q);
-        boolean matchCustName = p.getCustomer() != null && p.getCustomer().getFullName() != null && p.getCustomer().getFullName().toLowerCase().contains(q);
-        boolean matchDoctor = p.getDoctorName() != null && p.getDoctorName().toLowerCase().contains(q);
-        boolean matchStatus = p.getStatus() != null && p.getStatus().name().toLowerCase().contains(q);
-        return matchId || matchCustId || matchCustEmail || matchCustName || matchDoctor || matchStatus;
-    }
-
-    @Transactional(readOnly = true)
-    public PrescriptionResponse getPrescriptionById(Long id, Authentication authentication) {
-        User currentUser = getAuthenticatedUser(authentication);
-        Prescription p = prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
-
-        if (!isStaffUser(currentUser) && !p.getCustomer().getId().equals(currentUser.getId())) {
-            throw new AccessDeniedException("You are not authorized to view this prescription.");
-        }
+        fingerprintRepository.saveAndFlush(new PrescriptionFingerprint(hash, p.getId()));
+        audit(p, actor, "UPLOADED", null, "Document submitted for review.");
 
         return PrescriptionResponse.fromEntity(p);
     }
 
+    @Transactional(readOnly = true)
+    public List<PrescriptionResponse> getAllPrescriptions(
+            PrescriptionStatus status,
+            Boolean chronic,
+            Authentication auth) {
+        return getAllPrescriptions(status, chronic, null, auth);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PrescriptionResponse> getAllPrescriptions(
+            PrescriptionStatus status,
+            Boolean chronic,
+            String search,
+            Authentication auth) {
+
+        User actor = current(auth);
+        List<Prescription> all = isStaff(actor)
+                ? prescriptionRepository.findAllByOrderByCreatedAtDesc()
+                : prescriptionRepository.findByCustomerIdOrderByCreatedAtDesc(actor.getId());
+
+        String q = (search == null) ? "" : search.trim().toLowerCase(Locale.ROOT);
+
+        return all.stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getArchived()))
+                .filter(p -> status == null || p.getStatus() == status)
+                .filter(p -> !Boolean.TRUE.equals(chronic) || Boolean.TRUE.equals(p.getChronicSubscription()))
+                .filter(p -> q.isEmpty() || matches(p, q))
+                .map(PrescriptionResponse::fromEntity)
+                .toList();
+    }
+
+    private boolean matches(Prescription p, String q) {
+        String haystack = (p.getId() + " " + p.getDoctorName() + " " + p.getStatus() + " "
+                + p.getCustomer().getId() + " " + p.getCustomer().getFullName() + " "
+                + p.getCustomer().getEmail()).toLowerCase(Locale.ROOT);
+        return haystack.contains(q);
+    }
+
+    @Transactional(readOnly = true)
+    public PrescriptionResponse getPrescriptionById(Long id, Authentication auth) {
+        Prescription p = find(id);
+        authorize(p, current(auth));
+        return PrescriptionResponse.fromEntity(p);
+    }
+
+    /**
+     * Resubmit or update prescription details.
+     */
+    public PrescriptionResponse updatePrescription(
+            Long id,
+            PrescriptionUpdateRequest request,
+            MultipartFile file,
+            Authentication auth) {
+
+        User actor = current(auth);
+        Prescription p = find(id);
+        authorize(p, actor);
+        editable(p);
+
+        if (request.version() != null && !Objects.equals(request.version(), p.getVersion())) {
+            throw new IllegalStateException("This submission changed. Refresh before editing.");
+        }
+
+        String doctor = bounded(request.doctorName(), 150, "Doctor name");
+        String notes = bounded(request.patientNotes(), 2000, "Notes");
+
+        if (file != null && !file.isEmpty()) {
+            String hash = fingerprint(file);
+            if (!Objects.equals(hash, p.getFileSha256())) {
+                ensureNewFingerprint(hash);
+                String old = p.getStoredFileName();
+                String name = store(file);
+                applyFile(p, file, name, hash);
+                fingerprintRepository.saveAndFlush(new PrescriptionFingerprint(hash, id));
+
+                if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            if (old != null) fileStorageService.deleteFile(old);
+                        }
+                    });
+                }
+            }
+        }
+
+        PrescriptionStatus from = p.getStatus();
+        p.setDoctorName(doctor);
+        p.setPatientNotes(notes);
+        p.setChronicSubscription(Boolean.TRUE.equals(request.chronicSubscription()));
+        p.setStatus(PrescriptionStatus.PENDING);
+        p.setRejectionReason(null);
+        p.setRejectionCode(null);
+        p.setVerificationNotes(null);
+        p.setVerifiedAt(null);
+        p.setVerifiedBy(null);
+
+        prescriptionRepository.saveAndFlush(p);
+        audit(p, actor, from == PrescriptionStatus.CLARIFICATION_REQUIRED ? "RESUBMITTED" : "UPDATED", from, "Submission updated and ready for review.");
+
+        return PrescriptionResponse.fromEntity(p);
+    }
+
+    /**
+     * Pharmacist verification: approve/reject/request clarification.
+     */
     public PrescriptionResponse verifyPrescription(
             Long id,
             PrescriptionVerificationRequest request,
-            Authentication authentication) {
+            Authentication auth) {
 
-        User pharmacist = getAuthenticatedUser(authentication);
-        if (!isStaffUser(pharmacist)) {
-            throw new AccessDeniedException("Only licensed clinical staff and administrators can verify prescriptions.");
-        }
-
-        Prescription p = prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+        User actor = current(auth);
+        requireStaff(actor);
+        Prescription p = find(id);
+        active(p);
 
         if (p.getStatus() != PrescriptionStatus.PENDING) {
             throw new IllegalStateException("Prescription #" + id + " has already been finalized as " + p.getStatus() + " and cannot be re-reviewed.");
         }
 
         if (request.getStatus() == null) {
-            throw new IllegalArgumentException("Verification status must be either APPROVED or REJECTED.");
+            throw new IllegalArgumentException("Verification status is required.");
         }
 
-        p.setStatus(request.getStatus());
-        p.setVerifiedBy(pharmacist);
-        p.setVerifiedAt(LocalDateTime.now());
-        p.setVerificationNotes(request.getVerificationNotes());
-        p.setRejectionReason(request.getRejectionReason());
+        if (request.getStatus() != PrescriptionStatus.APPROVED
+                && request.getStatus() != PrescriptionStatus.REJECTED
+                && request.getStatus() != PrescriptionStatus.CLARIFICATION_REQUIRED) {
+            throw new IllegalArgumentException("Choose approve, reject, or request clarification.");
+        }
 
-        // Conditional Auto-Deletion Logic
+        String notes = bounded(request.getVerificationNotes(), 2000, "Review notes");
+        RejectionCode code = null;
+        String reason = null;
+
         if (request.getStatus() == PrescriptionStatus.REJECTED) {
-            // Send user notification with rejection reason
-            if (p.getCustomer() != null && notificationRepository != null) {
-                String reasonText = (request.getRejectionReason() != null && !request.getRejectionReason().isBlank())
-                        ? request.getRejectionReason()
-                        : "Requirements not met";
-                String notesText = (request.getVerificationNotes() != null && !request.getVerificationNotes().isBlank())
-                        ? " - " + request.getVerificationNotes()
-                        : "";
-                Notification rejectionNotification = new Notification();
-                rejectionNotification.setRecipient(p.getCustomer());
-                rejectionNotification.setTitle("Prescription #" + p.getId() + " Review Notice: Rejected");
-                rejectionNotification.setMessage("Your prescription was reviewed and rejected. Reason: " + reasonText + notesText);
-                rejectionNotification.setChannel(NotificationChannel.IN_APP);
-                rejectionNotification.setIsRead(false);
-                rejectionNotification.setSentAt(LocalDateTime.now());
-                notificationRepository.save(rejectionNotification);
+            if (request.getRejectionCode() == null) {
+                throw new IllegalArgumentException("Choose a rejection reason code.");
             }
-
-            // Chronic Subscription Check:
-            // If chronicSubscription is TRUE, the prescription and its file MUST be preserved
-            // until a pharmacist/administrator explicitly deletes it.
-            if (Boolean.TRUE.equals(p.getChronicSubscription())) {
-                // Preserved: Do not auto-delete.
-            } else {
-                // Non-chronic: If immediate deletion is requested or configured, purge file from disk
-                boolean deleteNow = Boolean.TRUE.equals(request.getDeleteFileImmediately()) || autoDeleteRejectedFiles;
-                if (deleteNow && p.getStoredFileName() != null && !Boolean.TRUE.equals(p.getIsFileDeleted())) {
-                    fileStorageService.deleteFile(p.getStoredFileName());
-                    p.setIsFileDeleted(true);
-                    p.setFileUrl("[FILE_AUTO_DELETED_UPON_REJECTION]");
-                }
+            try {
+                code = RejectionCode.valueOf(request.getRejectionCode());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid rejection reason code.");
             }
-        } else if (request.getStatus() == PrescriptionStatus.APPROVED) {
-            if (p.getCustomer() != null && notificationRepository != null) {
-                Notification approvalNotification = new Notification();
-                approvalNotification.setRecipient(p.getCustomer());
-                approvalNotification.setTitle("Prescription #" + p.getId() + " Approved");
-                approvalNotification.setMessage("Your prescription #" + p.getId() + " has been approved by our licensed clinical pharmacist and is cleared for dispensing.");
-                approvalNotification.setChannel(NotificationChannel.IN_APP);
-                approvalNotification.setIsRead(false);
-                approvalNotification.setSentAt(LocalDateTime.now());
-                notificationRepository.save(approvalNotification);
+            reason = bounded(request.getRejectionReason(), 255, "Rejection reason");
+            if (code == RejectionCode.OTHER && (reason == null || reason.isBlank())) {
+                throw new IllegalArgumentException("Explain the rejection reason.");
+            }
+            if (reason == null || reason.isBlank()) {
+                reason = code.getLabel();
             }
         }
 
-        Prescription saved = prescriptionRepository.save(p);
-        return PrescriptionResponse.fromEntity(saved);
+        if (request.getStatus() == PrescriptionStatus.CLARIFICATION_REQUIRED && (notes == null || notes.isBlank())) {
+            throw new IllegalArgumentException("Tell the customer what needs clarification.");
+        }
+
+        int maxUses = (request.getMaxUses() == null) ? 1 : request.getMaxUses();
+        if (maxUses < 1 || maxUses > 12 || (!Boolean.TRUE.equals(p.getChronicSubscription()) && maxUses != 1)) {
+            throw new IllegalArgumentException("Standard prescriptions allow one use. Chronic prescriptions allow 1 to 12 approved uses.");
+        }
+
+        PrescriptionStatus from = p.getStatus();
+        p.setStatus(request.getStatus());
+        p.setVerifiedBy(actor);
+        p.setVerifiedAt(LocalDateTime.now());
+        p.setVerificationNotes(notes);
+        p.setRejectionReason(reason);
+        p.setRejectionCode(code == null ? null : code.name());
+        p.setMaxUses(maxUses);
+
+        if (p.getStatus() == PrescriptionStatus.REJECTED
+                && retentionStrategies.stream()
+                .filter(s -> s.supports(p))
+                .findFirst()
+                .orElseThrow()
+                .shouldDeleteRejectedFile(request, autoDeleteRejectedFiles)) {
+
+            Long prescriptionId = p.getId();
+            Long actorId = actor.getId();
+            String actorName = actor.getFullName();
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        purgeService.purge(prescriptionId, actorId, actorName);
+                    } catch (RuntimeException ex) {
+                        log.warn("Document purge will be retried by retention cleanup for prescription #{}", prescriptionId);
+                    }
+                }
+            });
+        }
+
+        prescriptionRepository.saveAndFlush(p);
+        audit(p, actor, p.getStatus().name(), from, reason != null ? reason : notes);
+
+        notifyCustomer(p, "Prescription #" + id + ": " + p.getStatus().name().replace('_', ' '),
+                p.getStatus() == PrescriptionStatus.CLARIFICATION_REQUIRED ? notes : reason != null ? reason : "Your prescription has been approved.");
+
+        return PrescriptionResponse.fromEntity(p);
     }
 
-    public void deletePrescription(Long id, Authentication authentication) {
-        User currentUser = getAuthenticatedUser(authentication);
-        Prescription p = prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+    /**
+     * Soft-delete a prescription record.
+     */
+    public void deletePrescription(Long id, Authentication auth) {
+        User actor = current(auth);
+        Prescription p = find(id);
+        authorize(p, actor);
+        active(p);
 
-        // Ownership and permission check
-        if (!isStaffUser(currentUser)) {
-            if (!p.getCustomer().getId().equals(currentUser.getId())) {
-                throw new AccessDeniedException("You do not have permission to delete this prescription.");
-            }
-            if (p.getStatus() != PrescriptionStatus.PENDING) {
-                throw new IllegalStateException("Customers can only cancel prescriptions that are still PENDING review.");
-            }
+        if (!isStaff(actor)) {
+            editable(p);
         }
 
-        // Immediately purge physical file from disk
-        if (p.getStoredFileName() != null && !Boolean.TRUE.equals(p.getIsFileDeleted())) {
-            fileStorageService.deleteFile(p.getStoredFileName());
+        PrescriptionStatus from = p.getStatus();
+        if (p.getStatus() == PrescriptionStatus.PENDING || p.getStatus() == PrescriptionStatus.CLARIFICATION_REQUIRED) {
+            p.setStatus(PrescriptionStatus.CANCELLED);
         }
 
-        prescriptionRepository.delete(p);
+        p.setArchived(true);
+        prescriptionRepository.saveAndFlush(p);
+        audit(p, actor, "REMOVED", from, "Removed from active lists; history retained.");
     }
 
     @Transactional(readOnly = true)
-    public Resource getFileResource(Long id, Authentication authentication) {
-        User currentUser = getAuthenticatedUser(authentication);
-        Prescription p = prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
-
-        if (!isStaffUser(currentUser) && !p.getCustomer().getId().equals(currentUser.getId())) {
-            throw new AccessDeniedException("You are not authorized to view this prescription document.");
-        }
+    public Resource getFileResource(Long id, Authentication auth) {
+        Prescription p = find(id);
+        authorize(p, current(auth));
+        active(p);
 
         if (Boolean.TRUE.equals(p.getIsFileDeleted())) {
-            throw new RuntimeException("Prescription document file has been deleted per policy.");
+            throw new ResponseStatusException(HttpStatus.GONE, "Document has been removed under the retention policy.");
         }
-
         return fileStorageService.loadFileAsResource(p.getStoredFileName());
     }
 
     @Transactional(readOnly = true)
+    public Resource getFileResourceByStoredName(String name, Authentication auth) {
+        Prescription p = prescriptionRepository.findByStoredFileName(name)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found."));
+        return getFileResource(p.getId(), auth);
+    }
+
+    @Transactional(readOnly = true)
     public Prescription getPrescriptionEntity(Long id) {
-        return prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+        return find(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PrescriptionAudit> getAudit(Long id, Authentication auth) {
+        Prescription p = find(id);
+        authorize(p, current(auth));
+        return auditRepository.findByPrescriptionIdOrderByCreatedAtAscIdAsc(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PrescriptionUsage> getUsage(Long id, Authentication auth) {
+        Prescription p = find(id);
+        authorize(p, current(auth));
+        return usageRepository.findByPrescriptionIdOrderByCreatedAtDesc(id);
+    }
+
+    /**
+     * Link an approved prescription to a customer order fill.
+     */
+    public PrescriptionResponse recordUsage(Long id, Long orderId, Authentication auth) {
+        User actor = current(auth);
+        requireStaff(actor);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found."));
+
+        if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("A cancelled order cannot use a prescription.");
+        }
+        if (order.getPrescriptionId() != null && !Objects.equals(order.getPrescriptionId(), id)) {
+            throw new IllegalStateException("This order is already linked to another prescription.");
+        }
+
+        Prescription p = reserveForOrder(id, order, actor);
+        order.setPrescriptionId(id);
+        orderRepository.save(order);
+
+        return PrescriptionResponse.fromEntity(p);
+    }
+
+    public Prescription reserveForOrder(Long id, Order order, User actor) {
+        Prescription p = prescriptionRepository.findForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prescription not found."));
+        active(p);
+
+        if (order.getCustomer() == null || !Objects.equals(order.getCustomer().getId(), p.getCustomer().getId())) {
+            throw new AccessDeniedException("Order and prescription must belong to the same customer.");
+        }
+        if (!isStaff(actor) && !Objects.equals(actor.getId(), p.getCustomer().getId())) {
+            throw new AccessDeniedException("Use your own prescription.");
+        }
+        if (p.getStatus() != PrescriptionStatus.APPROVED) {
+            throw new IllegalStateException("Only approved prescriptions can be used.");
+        }
+        if (p.getUsedCount() >= p.getMaxUses()) {
+            throw new IllegalStateException("This prescription has reached its approved usage limit.");
+        }
+        if (usageRepository.existsByPrescriptionIdAndOrderId(id, order.getId())) {
+            throw new IllegalStateException("This prescription is already linked to this order.");
+        }
+
+        usageRepository.saveAndFlush(new PrescriptionUsage(id, order.getId(), actor.getId()));
+        p.setUsedCount(p.getUsedCount() + 1);
+        prescriptionRepository.saveAndFlush(p);
+
+        audit(p, actor, "USED_FOR_ORDER", p.getStatus(), "Linked to order #" + order.getId() + ". Usage " + p.getUsedCount() + " of " + p.getMaxUses() + ".");
+        return p;
     }
 }
-
-

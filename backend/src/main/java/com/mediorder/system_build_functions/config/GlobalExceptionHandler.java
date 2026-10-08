@@ -48,6 +48,23 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler({IllegalStateException.class, org.springframework.dao.OptimisticLockingFailureException.class,
+            org.springframework.dao.DataIntegrityViolationException.class})
+    public ResponseEntity<ApiResponse<Void>> handleConflict(Exception ex) {
+        String message = ex instanceof IllegalStateException ? ex.getMessage() : "This record changed or was already submitted. Refresh and try again.";
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(message));
+    }
+
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStatus(org.springframework.web.server.ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode()).body(ApiResponse.error(ex.getReason()));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSize(Exception ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(ApiResponse.error("Choose a file smaller than 10 MB."));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
