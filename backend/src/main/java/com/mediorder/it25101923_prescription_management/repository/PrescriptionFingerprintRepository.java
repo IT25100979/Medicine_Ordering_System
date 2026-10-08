@@ -1,0 +1,4 @@
+package com.mediorder.it25101923_prescription_management.repository;
+import com.mediorder.it25101923_prescription_management.model.PrescriptionFingerprint;
+import org.springframework.data.jpa.repository.JpaRepository;
+public interface PrescriptionFingerprintRepository extends JpaRepository<PrescriptionFingerprint,String> {}

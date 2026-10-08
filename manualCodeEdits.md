@@ -1,8 +1,5 @@
 # Antigravity Prompt: Build Delivery Management Dashboard & Backend
 
-Copy and paste the prompt below directly into the Antigravity chat window:
-
-```text
 Build the Delivery Management core function for the MediOrder project. Implement the backend CRUD operations, database entity updates, and the React frontend dashboard based on the exact specifications below. Skip the Notification Engine for now.
 
 ### 1. Backend: Entities and Mock Adjustments

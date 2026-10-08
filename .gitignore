@@ -10,6 +10,7 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+.vite/
 
 # --- IDE Settings (VS Code & IntelliJ) ---
 .vscode/
@@ -33,3 +34,4 @@ Thumbs.db
 Desktop.ini
 .agents/
 .mcp.json
+uploads/

@@ -45,13 +45,27 @@ export const AuthProvider = ({ children }) => {
     throw new Error('Invalid login response');
   };
 
-  const register = async (fullName, email, password) => {
+  const adminLogin = async (email, password) => {
+    const response = await client.post('/api/v1/auth/admin/login', { email, password });
+    const authData = response.data.data;
+    if (authData && authData.token) {
+      localStorage.setItem('token', authData.token);
+      localStorage.setItem('user', JSON.stringify(authData.user));
+      setToken(authData.token);
+      setUser(authData.user);
+      return authData;
+    }
+    throw new Error('Invalid admin login response');
+  };
+
+  const register = async (fullName, email, password, role = 'CUSTOMER', phoneNumber = '') => {
     const response = await client.post('/api/v1/auth/register', {
       fullName,
       email,
       password,
-      role: 'CUSTOMER',
-      contactNumber: '0000000000' // dummy default to pass backend validation if required
+      role: role || 'CUSTOMER',
+      contactNumber: phoneNumber || '0770000000',
+      phoneNumber: phoneNumber || '0770000000'
     });
     const authData = response.data.data;
     if (authData && authData.token) {
@@ -79,6 +93,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!token && !!user,
         loading,
         login,
+        adminLogin,
         register,
         logout,
       }}

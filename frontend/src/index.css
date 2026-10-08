@@ -6,3 +6,171 @@ body {
   font-family: 'Poppins', sans-serif;
   @apply bg-gray-50 text-gray-900;
 }
+
+/* -------------------------------------------------------------
+ * 3D Floating Bottles & Perspective Physics
+ * ------------------------------------------------------------- */
+@keyframes float-subtle {
+  0%, 100% {
+    transform: rotate(-14deg) translateY(-8px);
+  }
+  50% {
+    transform: rotate(-11deg) translateY(7px);
+  }
+}
+
+@keyframes float-center {
+  0%, 100% {
+    transform: rotate(-3deg) translateY(4px);
+  }
+  50% {
+    transform: rotate(-1deg) translateY(-10px);
+  }
+}
+
+@keyframes float-right {
+  0%, 100% {
+    transform: rotate(12deg) translateY(-6px);
+  }
+  50% {
+    transform: rotate(14deg) translateY(8px);
+  }
+}
+
+.bottle-float-left {
+  animation: float-subtle 6s ease-in-out infinite;
+  filter: drop-shadow(0 20px 25px rgba(28, 57, 84, 0.20));
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.4s ease;
+}
+.bottle-float-left:hover {
+  animation-play-state: paused;
+  transform: rotate(-8deg) translateY(-18px) scale(1.05);
+  filter: drop-shadow(0 28px 35px rgba(28, 57, 84, 0.30));
+}
+
+.bottle-float-center {
+  animation: float-center 5s ease-in-out infinite;
+  filter: drop-shadow(0 24px 30px rgba(28, 57, 84, 0.25));
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.4s ease;
+}
+.bottle-float-center:hover {
+  animation-play-state: paused;
+  transform: rotate(0deg) translateY(-14px) scale(1.06);
+  filter: drop-shadow(0 32px 40px rgba(28, 57, 84, 0.35));
+}
+
+.bottle-float-right {
+  animation: float-right 6.5s ease-in-out infinite;
+  filter: drop-shadow(0 20px 25px rgba(28, 57, 84, 0.20));
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.4s ease;
+}
+.bottle-float-right:hover {
+  animation-play-state: paused;
+  transform: rotate(8deg) translateY(-18px) scale(1.05);
+  filter: drop-shadow(0 28px 35px rgba(28, 57, 84, 0.30));
+}
+
+/* -------------------------------------------------------------
+ * Ambient Cloud Drift & Gradient Breathing
+ * ------------------------------------------------------------- */
+@keyframes cloud-drift {
+  0%, 100% {
+    transform: scale(1) translate(0, 0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.08) translate(15px, -10px);
+    opacity: 0.65;
+  }
+}
+.animate-cloud-drift {
+  animation: cloud-drift 10s ease-in-out infinite;
+}
+
+/* -------------------------------------------------------------
+ * Radar Scan-Line on QR Box
+ * ------------------------------------------------------------- */
+@keyframes radar-sweep {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.95;
+  }
+  80% {
+    opacity: 0.95;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+.animate-radar-sweep {
+  animation: radar-sweep 2.4s ease-in-out infinite;
+}
+
+/* -------------------------------------------------------------
+ * Gleam / Shine Sweep Effect on Hover
+ * ------------------------------------------------------------- */
+.card-gleam {
+  position: relative;
+  overflow: hidden;
+}
+.card-gleam::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -70%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(30deg);
+  pointer-events: none;
+  transition: none;
+}
+.card-gleam:hover::after {
+  left: 140%;
+  transition: left 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* -------------------------------------------------------------
+ * Dynamic Pill Glow Animation
+ * ------------------------------------------------------------- */
+@keyframes pill-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.85);
+    transform: scale(1.08);
+  }
+}
+.animate-pill-glow {
+  animation: pill-glow 2.5s ease-in-out infinite;
+}
+
+/* -------------------------------------------------------------
+ * Dropdown & Modal Animations
+ * ------------------------------------------------------------- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scaleUp {
+  animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

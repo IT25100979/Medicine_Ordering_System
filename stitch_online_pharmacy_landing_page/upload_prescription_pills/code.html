@@ -1,0 +1,497 @@
+<!DOCTYPE html><html lang="en" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_standard" name="shell-type"><title>PILLS - Modern Online Pharmacy</title><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "background": "#f9f9ff",
+          "tertiary": "#000000",
+          "primary": "#000000",
+          "primary-container": "#1b1b1b",
+          "on-secondary-container": "#004d6a",
+          "tertiary-fixed": "#a6f2cf",
+          "secondary": "#00668a",
+          "on-error": "#ffffff",
+          "surface-container-high": "#e1e8fd",
+          "on-error-container": "#93000a",
+          "surface-container": "#e9edff",
+          "on-secondary-fixed-variant": "#004c69",
+          "outline-variant": "#cfc4c5",
+          "inverse-on-surface": "#edf0ff",
+          "on-surface-variant": "#4c4546",
+          "surface-dim": "#d3daef",
+          "on-secondary-fixed": "#001e2c",
+          "on-surface": "#141b2b",
+          "surface-tint": "#5e5e5e",
+          "on-primary": "#ffffff",
+          "error": "#ba1a1a",
+          "on-primary-container": "#848484",
+          "primary-fixed-dim": "#c6c6c6",
+          "on-tertiary-container": "#479173",
+          "on-tertiary-fixed-variant": "#00513a",
+          "on-secondary": "#ffffff",
+          "surface-variant": "#dce2f7",
+          "tertiary-fixed-dim": "#8bd6b4",
+          "surface-bright": "#f9f9ff",
+          "tertiary-container": "#002115",
+          "surface-container-highest": "#dce2f7",
+          "primary-fixed": "#e2e2e2",
+          "on-tertiary-fixed": "#002115",
+          "on-primary-fixed": "#1b1b1b",
+          "on-primary-fixed-variant": "#474747",
+          "surface-container-lowest": "#ffffff",
+          "secondary-fixed": "#c4e7ff",
+          "surface": "#f9f9ff",
+          "secondary-fixed-dim": "#7bd0ff",
+          "surface-container-low": "#f1f3ff",
+          "inverse-primary": "#c6c6c6",
+          "secondary-container": "#40c2fd",
+          "on-tertiary": "#ffffff",
+          "outline": "#7e7576",
+          "on-background": "#141b2b",
+          "inverse-surface": "#293040",
+          "error-container": "#ffdad6"
+        },
+        "borderRadius": {
+          "DEFAULT": "1rem",
+          "lg": "2rem",
+          "xl": "3rem",
+          "full": "9999px"
+        },
+        "spacing": {
+          "space-sm": "0.5rem",
+          "space-md": "1rem",
+          "gutter": "1.5rem",
+          "margin": "1rem",
+          "space-xs": "0.25rem",
+          "gutter-lg": "2rem",
+          "gutter-sm": "1rem",
+          "margin-md": "2rem",
+          "space-lg": "1.5rem",
+          "space-xl": "2.5rem",
+          "margin-lg": "4rem"
+        },
+        "fontFamily": {
+          "display-mobile": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-sm": [
+            "Plus Jakarta Sans"
+          ],
+          "display": [
+            "Plus Jakarta Sans"
+          ],
+          "label-sm": [
+            "Plus Jakarta Sans"
+          ],
+          "label-md": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-md": [
+            "Plus Jakarta Sans"
+          ],
+          "body-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "label-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-lg-mobile": [
+            "Plus Jakarta Sans"
+          ],
+          "body-md": [
+            "Plus Jakarta Sans"
+          ],
+          "body-sm": [
+            "Plus Jakarta Sans"
+          ]
+        },
+        "fontSize": {
+          "display-mobile": [
+            "40px",
+            {
+              "lineHeight": "48px",
+              "letterSpacing": "-0.025em",
+              "fontWeight": "800"
+            }
+          ],
+          "headline-sm": [
+            "20px",
+            {
+              "lineHeight": "28px",
+              "letterSpacing": "-0.005em",
+              "fontWeight": "600"
+            }
+          ],
+          "display": [
+            "56px",
+            {
+              "lineHeight": "64px",
+              "letterSpacing": "-0.03em",
+              "fontWeight": "800"
+            }
+          ],
+          "label-sm": [
+            "11px",
+            {
+              "lineHeight": "16px",
+              "letterSpacing": "0.04em",
+              "fontWeight": "700"
+            }
+          ],
+          "label-md": [
+            "13px",
+            {
+              "lineHeight": "18px",
+              "letterSpacing": "0.01em",
+              "fontWeight": "600"
+            }
+          ],
+          "headline-md": [
+            "24px",
+            {
+              "lineHeight": "32px",
+              "letterSpacing": "-0.01em",
+              "fontWeight": "700"
+            }
+          ],
+          "body-lg": [
+            "18px",
+            {
+              "lineHeight": "28px",
+              "fontWeight": "400"
+            }
+          ],
+          "label-lg": [
+            "15px",
+            {
+              "lineHeight": "20px",
+              "letterSpacing": "-0.005em",
+              "fontWeight": "600"
+            }
+          ],
+          "headline-lg": [
+            "36px",
+            {
+              "lineHeight": "44px",
+              "letterSpacing": "-0.02em",
+              "fontWeight": "700"
+            }
+          ],
+          "headline-lg-mobile": [
+            "28px",
+            {
+              "lineHeight": "36px",
+              "letterSpacing": "-0.015em",
+              "fontWeight": "700"
+            }
+          ],
+          "body-md": [
+            "16px",
+            {
+              "lineHeight": "24px",
+              "fontWeight": "400"
+            }
+          ],
+          "body-sm": [
+            "14px",
+            {
+              "lineHeight": "20px",
+              "fontWeight": "400"
+            }
+          ]
+        }
+      },
+    },
+  }</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased selection:bg-tertiary-fixed selection:text-on-tertiary-fixed"><header class="fixed top-0 left-0 right-0 z-50 bg-background/85 backdrop-blur-md"><div class="h-20 max-w-[1280px] mx-auto px-margin md:px-margin-md lg:px-margin-lg flex items-center justify-between"><nav class="flex items-center gap-space-sm" data-active-classes="bg-primary text-on-primary rounded-full px-space-lg py-space-sm font-label-md text-label-md"><a class="text-on-surface-variant hover:text-on-surface px-space-md py-space-sm font-label-md text-label-md tracking-wider uppercase transition-colors" data-path="home" href="#">HOME</a><a aria-current="page" class="tracking-wider uppercase transition-colors bg-primary text-on-primary rounded-full px-space-lg py-space-sm font-label-md text-label-md" data-path="request-order" href="#">REQUEST ORDER</a><div class="relative group"><a class="text-on-surface-variant hover:text-on-surface px-space-md py-space-sm font-label-md text-label-md tracking-wider uppercase transition-colors inline-flex items-center gap-space-xs" data-path="special-offers" href="#">SPECIAL OFFERS<span class="material-symbols-outlined text-[16px]">expand_more</span></a></div></nav><div class="flex items-center justify-center"><a class="font-display text-[32px] font-extrabold tracking-tight text-on-surface uppercase flex items-center" data-path="home" href="#">PILLS<span class="inline-block w-2 h-2 rounded-full bg-primary ml-0.5"></span></a></div><div class="flex items-center gap-space-md"><a class="text-on-surface-variant hover:text-on-surface font-label-md text-label-md tracking-wider uppercase px-space-md py-space-sm transition-colors" data-path="search-medications" href="#">SEARCH</a><a class="text-on-surface-variant hover:text-on-surface font-label-md text-label-md tracking-wider uppercase px-space-md py-space-sm transition-colors" data-path="patient-account" href="#">ACCOUNT</a><a class="inline-flex items-center gap-space-xs bg-primary text-on-primary font-label-md text-label-md px-space-lg py-space-sm rounded-full transition-opacity hover:opacity-90" data-path="pharmacy-cart" href="#"><span class="">CART</span><span class="font-bold">(04)</span></a><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-20 bg-background"><div class="flex flex-col w-full">
+<div class="max-w-[1280px] w-full mx-auto px-margin md:px-margin-md lg:px-margin-lg py-space-lg lg:py-space-xl">
+<!-- Breadcrumb & Status Tracker Strip -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm mb-space-lg">
+<nav class="flex items-center gap-space-xs font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase">
+<a class="hover:text-on-surface transition-colors" data-path="home" href="#">HOME</a>
+<span class="">/</span>
+<a class="hover:text-on-surface transition-colors" data-path="request-order" href="#">REQUEST ORDER</a>
+<span class="">/</span>
+<span class="text-on-surface font-semibold">UPLOAD PRESCRIPTION</span>
+</nav>
+
+</div>
+<!-- Main Asymmetric Bento Grid -->
+<div class="w-full bg-surface-container-low rounded-2xl p-space-md shadow-sm mb-space-lg"><div class="flex items-center justify-between text-on-surface font-label-md text-label-md mb-space-xs"><span class="flex items-center gap-1.5 font-bold uppercase tracking-wider"><span class="material-symbols-outlined text-[18px] text-secondary">verified</span> Protocol Phase 1 of 3: Document Ingestion</span><span class="text-on-surface-variant font-medium">Ready</span></div><div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full transition-all duration-500" style="width: 35%;"></div></div><div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant mt-2"><span class="text-on-surface font-semibold">1. Image &amp; Script Audit</span><span class="">2. Doctor Tele-Check</span><span class="">3. Dispensing</span></div></div><div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter-lg items-start">
+<!-- Left Column: Verification Guidelines & Clinical Steps (7 Cols) -->
+<div class="lg:col-span-7 flex flex-col gap-space-lg">
+<!-- Header Group -->
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface uppercase tracking-tight mb-space-xs">
+            UPLOAD YOUR PRESCRIPTION
+          </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">
+            Our licensed pharmacists review and verify your doctor's order before direct-to-door fulfillment.
+          </p>
+</div>
+<!-- Progress Timeline Micro-Widget -->
+
+<!-- Numbered Instruction Cards Stack -->
+<div class="flex flex-col gap-space-sm">
+<!-- Step 1 -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex items-start gap-space-md transition-all hover:translate-y-[-2px]">
+<div class="w-9 h-9 rounded-full bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center shrink-0">
+              1
+            </div>
+<div class="min-w-0">
+<h2 class="font-label-lg text-label-lg text-on-surface mb-0.5">
+                Ensure Patient &amp; Doctor Information Is Clearly Visible
+              </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                Full legal name, date of birth, prescriber's clinic name, DEA/NPI license number, and signature must be sharp and legible.
+              </p>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex items-start gap-space-md transition-all hover:translate-y-[-2px]">
+<div class="w-9 h-9 rounded-full bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center shrink-0">
+              2
+            </div>
+<div class="min-w-0">
+<h2 class="font-label-lg text-label-lg text-on-surface mb-0.5">
+                Verify Medication Details &amp; Dosages
+              </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                Double-check that the drug name, exact strength (e.g., mg, mcg), quantity, and specific intake frequency are uncropped.
+              </p>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex items-start gap-space-md transition-all hover:translate-y-[-2px]">
+<div class="w-9 h-9 rounded-full bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center shrink-0">
+              3
+            </div>
+<div class="min-w-0">
+<h2 class="font-label-lg text-label-lg text-on-surface mb-0.5">
+                Capture High-Resolution, Well-Lit Photos or PDFs
+              </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                Place physical paper scripts on a flat dark surface with even lighting to avoid glare, shadows, or blurry text.
+              </p>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex items-start gap-space-md transition-all hover:translate-y-[-2px]">
+<div class="w-9 h-9 rounded-full bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center shrink-0">
+              4
+            </div>
+<div class="min-w-0">
+<h2 class="font-label-lg text-label-lg text-on-surface mb-0.5">
+                Check the Prescription Expiration Date
+              </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                Most standard prescriptions must be dated within the past 12 months (or 6 months for regulated maintenance medications).
+              </p>
+</div>
+</div>
+<!-- Step 5 -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-sm flex items-start gap-space-md transition-all hover:translate-y-[-2px]">
+<div class="w-9 h-9 rounded-full bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center shrink-0">
+              5
+            </div>
+<div class="min-w-0">
+<h2 class="font-label-lg text-label-lg text-on-surface mb-0.5">
+                Upload All Pages If Multi-Sheet or Electronic E-Script
+              </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                If your prescription includes supplementary dosage schedules, refills, or physician notes, attach all pages together.
+              </p>
+</div>
+</div>
+</div>
+<!-- Trust Assurance / Security Box -->
+
+<!-- Regulatory Clinician Micro-Feature -->
+
+</div>
+<!-- Right Column: Interactive Intake & Upload Engine (5 Cols) -->
+<div class="lg:col-span-5">
+<div class="bg-surface-container-lowest rounded-3xl p-space-lg lg:p-space-xl shadow-md sticky top-24 mt-space-md">
+<!-- Alternative Option Tab -->
+<div class="mb-space-lg">
+<button class="w-full py-space-sm px-space-md rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all flex items-center justify-center gap-2 shadow-sm text-center" type="button">
+<span class="material-symbols-outlined text-[18px] text-secondary">sync_alt</span>
+<span class="">Have an E-Script? Transfer directly from Doctor</span>
+</button>
+</div>
+<!-- Drag and Drop Zone Container -->
+<div class="relative group cursor-pointer bg-[#F5F7F8] hover:bg-[#FAF8DE]/60 transition-colors rounded-2xl p-space-xl text-center flex flex-col items-center justify-center" id="drop-zone">
+<!-- Cloud Icon with Plus Indicator Badge -->
+<div class="relative mb-space-md">
+<div class="w-20 h-20 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-primary text-[36px]">cloud_upload</span>
+</div>
+<div class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-sm shadow">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</div>
+</div>
+<!-- Upload Instructions -->
+<p class="font-headline-sm text-headline-sm text-on-surface mb-space-xs">
+              Drag &amp; drop prescription here
+            </p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-md">
+              or <span class="font-bold text-primary underline underline-offset-4 decoration-primary/40">Browse Files</span> from your device
+            </p>
+<!-- Hidden Actual File Input -->
+<input accept=".pdf,.jpg,.jpeg,.png,.heic" class="hidden" id="rx-file-input" type="file">
+<!-- Pill Tags for Formats -->
+<div class="inline-flex items-center gap-space-xs px-space-md py-1 rounded-full bg-surface-container-lowest text-on-surface-variant font-label-sm text-label-sm shadow-sm">
+<span class="material-symbols-outlined text-[15px]">description</span>
+<span class="">PDF, JPG, PNG, HEIC up to 25MB</span>
+</div>
+<!-- Camera Quick Action for Mobile / Quick Capture -->
+<button class="mt-space-md inline-flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm uppercase tracking-wider transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">photo_camera</span>
+<span class="">Use device camera instead</span>
+</button>
+</div>
+<!-- Attached Files Stack / Document Card -->
+<div class="mt-space-md space-y-space-sm" id="attached-files-container">
+<div class="bg-[#ECFDF5] rounded-2xl p-space-md flex items-center justify-between gap-space-sm shadow-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-xl bg-surface-container-lowest text-on-tertiary-container flex items-center justify-center shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[22px]">picture_as_pdf</span>
+</div>
+<div class="min-w-0">
+<div class="flex items-center gap-1.5">
+<p class="font-label-md text-label-md text-on-surface font-bold truncate">
+                      Dr_Reynolds_Rx_Lipitor.pdf
+                    </p>
+<span class="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant">
+                    1.8 MB • <span class="text-[#065F46] font-semibold">Ready for upload</span>
+</p>
+</div>
+</div>
+<!-- Action icons -->
+<div class="flex items-center gap-1 shrink-0">
+<button aria-label="Preview Document" class="w-8 h-8 rounded-full hover:bg-surface-container-lowest/80 text-on-surface-variant flex items-center justify-center transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button aria-label="Remove File" class="w-8 h-8 rounded-full hover:bg-error-container text-error flex items-center justify-center transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Patient Order Metadata Chips -->
+<div class="mt-space-md p-space-md bg-surface-container-low rounded-2xl">
+<div class="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant mb-2">
+<span class="uppercase tracking-wider">Patient Profile</span>
+<a class="text-primary font-bold hover:underline" data-path="patient-account" href="#">Change</a>
+</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1 bg-surface-container-lowest px-3 py-1 rounded-full font-label-md text-label-md text-on-surface shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">person</span>
+                Eleanor Vance (Self)
+              </span>
+<span class="inline-flex items-center gap-1 bg-surface-container-lowest px-3 py-1 rounded-full font-label-md text-label-md text-on-surface shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-tertiary-container">local_shipping</span>
+                Overnight Dispense
+              </span>
+</div>
+</div>
+<!-- Primary Submit Action Button -->
+<div class="mt-space-lg">
+<button class="w-full h-12 bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg rounded-full shadow-md transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2" type="button">
+<span class="">Submit Prescription for Review</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+<!-- Support & Hotline Note -->
+<p class="mt-space-md text-center font-body-sm text-body-sm text-on-surface-variant">
+              Need assistance? Call our 24/7 pharmacist hotline at 
+              <a class="font-bold text-on-surface hover:underline inline-block whitespace-nowrap" href="tel:18007455789">
+                1 (800) 745-5789
+              </a>
+</p>
+</div>
+</div>
+</div>
+</div><div class="w-full bg-[#FAF8DE] rounded-2xl p-space-md shadow-sm mt-space-lg"><div class="flex flex-col items-center justify-center gap-space-sm py-1"><div class="flex items-center justify-center gap-space-xs text-on-surface font-label-md text-label-md uppercase tracking-wider font-bold text-center"><span class="material-symbols-outlined text-[20px] text-secondary">shield_lock</span> Clinical Integrity &amp; Patient Safeguards</div><div class="flex flex-wrap items-center justify-center gap-space-lg text-center"><div class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface"><span class="material-symbols-outlined text-secondary text-[18px]">check_circle</span><span class="">HIPAA Compliant 256-bit Encryption</span></div><div class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface"><span class="material-symbols-outlined text-secondary text-[18px]">check_circle</span><span class="">Licensed Pharmacist Pre-Screening</span></div><div class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface"><span class="material-symbols-outlined text-secondary text-[18px]">check_circle</span><span class="">Insurance Direct Billing Available</span></div></div></div></div>
+<!-- Supplementary Clinical Trust & Temperature Control Band -->
+<div class="mt-space-xl grid grid-cols-1 md:grid-cols-3 gap-gutter-md">
+<div class="bg-surface-container-low rounded-3xl p-space-lg flex items-start gap-space-md shadow-sm">
+<div class="w-12 h-12 rounded-2xl bg-surface-container-lowest text-secondary flex items-center justify-center shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[26px]">thermostat</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1">Cold-Chain Packaging</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+            Temperature-sensitive formulations are dispatched with certified thermal monitors and compostable insulating wool.
+          </p>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-3xl p-space-lg flex items-start gap-space-md shadow-sm">
+<div class="w-12 h-12 rounded-2xl bg-surface-container-lowest text-on-tertiary-container flex items-center justify-center shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[26px]">history_edu</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1">Direct Clinic Coordination</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+            Unclear handwriting or missing refill count? Our staff reaches out directly to your provider so you don't play phone tag.
+          </p>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-3xl p-space-lg flex items-start gap-space-md shadow-sm">
+<div class="w-12 h-12 rounded-2xl bg-surface-container-lowest text-primary flex items-center justify-center shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[26px]">lock_reset</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1">Zero Discarded Data</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+            All medical records, images, and doctor orders are encrypted end-to-end and stored in our SOC-2 compliant health cloud.
+          </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('rx-file-input');
+    
+    if (dropZone && fileInput) {
+      dropZone.addEventListener('click', function(e) {
+        if (!e.target.closest('button')) {
+          fileInput.click();
+        }
+      });
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('bg-[#FAF8DE]');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove('bg-[#FAF8DE]');
+        }, false);
+      });
+
+      dropZone.addEventListener('drop', function(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length) {
+          fileInput.files = files;
+        }
+      }, false);
+    }
+  })();
+</script></main><footer class="w-full bg-[#FAF8DE] text-on-surface pt-space-xl pb-space-lg"><div class="max-w-[1280px] mx-auto px-margin md:px-margin-md lg:px-margin-lg"><div class="bg-surface-container-lowest rounded-xl p-space-lg mb-space-xl flex flex-col md:flex-row items-center justify-between gap-space-md shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex items-center gap-space-md"><div class="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center"><span class="material-symbols-outlined text-on-tertiary-fixed text-[24px]">verified</span></div><div><p class="font-headline-sm text-headline-sm text-on-surface">Hand us the script, we'll handle the rest.</p><p class="font-body-sm text-body-sm text-on-surface-variant">Transfer any prescription in 60 seconds with free temperature-safe overnight delivery.</p></div></div><a class="inline-flex items-center bg-primary text-on-primary font-label-lg text-label-lg px-space-xl py-space-md rounded-full hover:bg-primary-container transition-colors" data-path="request-order" href="#">Transfer Prescription</a></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-gutter-lg mb-space-xl"><div class="lg:col-span-2 flex flex-col justify-between pr-0 lg:pr-space-xl"><div><div class="font-display text-[32px] font-extrabold tracking-tight text-on-surface uppercase flex items-center mb-space-md">PILLS<span class="inline-block w-2.5 h-2.5 rounded-full bg-primary ml-1"></span></div><p class="font-body-md text-body-md text-on-surface-variant max-w-sm mb-space-lg">The calm, clinical pharmacy designed for humans. Board-certified pharmacists, transparent pricing, and doorstep discretion.</p><div class="flex items-center gap-space-sm mb-space-lg"><span class="inline-flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-surface-container-lowest font-label-sm text-label-sm text-on-surface shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><span class="material-symbols-outlined text-[16px] text-on-tertiary-container">health_and_safety</span>HIPAA Compliant</span><span class="inline-flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-surface-container-lowest font-label-sm text-label-sm text-on-surface shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><span class="material-symbols-outlined text-[16px] text-secondary">verified_user</span>LegitScript Certified</span></div></div><div class="flex items-center gap-space-sm"><a aria-label="Instagram" class="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface hover:bg-primary hover:text-on-primary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" href="#"><span class="material-symbols-outlined text-[18px]">photo_camera</span></a><a aria-label="X Platform" class="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface hover:bg-primary hover:text-on-primary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" href="#"><span class="material-symbols-outlined text-[18px]">tag</span></a><a aria-label="LinkedIn" class="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface hover:bg-primary hover:text-on-primary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" href="#"><span class="material-symbols-outlined text-[18px]">business</span></a><a aria-label="Facebook" class="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface hover:bg-primary hover:text-on-primary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" href="#"><span class="material-symbols-outlined text-[18px]">public</span></a><a aria-label="YouTube" class="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface hover:bg-primary hover:text-on-primary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" href="#"><span class="material-symbols-outlined text-[18px]">smart_display</span></a></div></div><div><p class="font-label-lg text-label-lg text-on-surface mb-space-md uppercase tracking-wider">Categories</p><ul class="space-y-space-sm font-body-sm text-body-sm text-on-surface-variant"><li class=""><a class="hover:text-on-surface transition-colors" data-path="browse-medications" href="#">Prescription Rx</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="browse-medications" href="#">Chronic Care</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="browse-medications" href="#">Everyday Wellness</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="browse-medications" href="#">Dermatology</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="browse-medications" href="#">Mental Health</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="browse-medications" href="#">Cold &amp; Immunity</a></li></ul></div><div><p class="font-label-lg text-label-lg text-on-surface mb-space-md uppercase tracking-wider">Quick Links</p><ul class="space-y-space-sm font-body-sm text-body-sm text-on-surface-variant"><li class=""><a class="hover:text-on-surface transition-colors" data-path="request-order" href="#">Refill Prescription</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="special-offers" href="#">Discount Programs</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="clinical-team" href="#">Our Clinicians</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="faq" href="#">Insurance &amp; Pricing</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="faq" href="#">Delivery Timelines</a></li><li class=""><a class="hover:text-on-surface transition-colors" data-path="faq" href="#">Pharmacy Licensing</a></li></ul></div><div class="bg-surface-container-lowest rounded-xl p-space-md shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><p class="font-label-lg text-label-lg text-on-surface mb-space-xs uppercase tracking-wider">Clinical Care &amp; Support</p><p class="font-body-sm text-body-sm text-on-surface-variant mb-space-md">Pharmacists on call 24 hours a day, 7 days a week.</p><div class="space-y-space-sm font-body-sm text-body-sm text-on-surface"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">call</span><span class="font-semibold">+1 800 745-5789</span></div><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">mail</span><span class="">care@pills.co</span></div><div class="flex items-start gap-space-xs text-on-surface-variant"><span class="material-symbols-outlined text-[18px] mt-0.5">location_on</span><span class="">450 Healthcare Way, Suite 300, South San Francisco, CA 94080</span></div></div></div></div><div class="pt-space-lg mb-space-lg flex flex-col md:flex-row items-center justify-between gap-space-md font-body-sm text-body-sm text-on-surface-variant"><div class="flex flex-wrap items-center gap-space-md"><a class="hover:text-on-surface transition-colors" data-path="privacy-policy" href="#">Privacy Policy</a><a class="hover:text-on-surface transition-colors" data-path="terms-of-service" href="#">Terms of Service</a><a class="hover:text-on-surface transition-colors" data-path="notice-of-privacy-practices" href="#">HIPAA Notice</a><a class="hover:text-on-surface transition-colors" data-path="accessibility" href="#">Accessibility</a></div><p class="">© 2025 PILLS Health Inc. All rights reserved.</p></div><div class="bg-surface-container-lowest/60 rounded-xl p-space-md font-label-sm text-label-sm text-on-surface-variant leading-relaxed text-justify"><p class=""><strong class="text-on-surface">FDA &amp; Clinical Regulatory Disclaimer:</strong> Content on this application is provided for informational and logistical purposes only and is not intended to substitute professional medical advice, diagnosis, or treatment. Prescription medications are dispensed strictly upon review and approval by a licensed medical provider and filled by state-board-certified partner pharmacies. Statements regarding dietary supplements and wellness goods have not been evaluated by the Food and Drug Administration.</p></div></div></footer>
+
+</body></html>

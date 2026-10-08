@@ -1,0 +1,154 @@
+================================================================================
+PULL REQUEST AUDIT & MERGE CONFLICT REPORT
+Repository: Medicine_Ordering_System
+Target Branch: development
+Pull Request: #6 ("Cold chain tagging & monitoring module")
+Author: IT25101882
+Head Branch: Cold-Chain-Tagging-&-Monitoring-module
+Generated: October 8, 2026
+================================================================================
+
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+Pull Request #6 introduces the "Cold Chain Tagging & Logistics Security" 
+module (UC-04) developed by member IT25101882. It implements tracking for 
+temperature-sensitive pharmaceuticals (2°C - 8°C cold chain handling), automatic 
+temperature excursion / breach detection, age-verification delivery security, and 
+a comprehensive Cold Chain Management dashboard on the React frontend.
+
+However, merging PR #6 directly into 'development' as currently committed will 
+cause multiple severe repository conflicts, accidental repository bloat, and 
+frontend regressions. This document provides a detailed breakdown of all code 
+changes, identified conflicts, and the recommended clean-merge strategy.
+
+
+================================================================================
+2. DETAILED BREAKDOWN OF CODE CHANGES IN PR #6
+================================================================================
+
+A. Backend Components (Cold Chain Domain):
+   1. Model (`ColdChainDelivery.java`):
+      - New JPA entity mapped to table `cold_chain_deliveries`.
+      - Attributes: `orderId`, `medicationName`, `temperatureSensitive`, 
+        `minTemperature` (def. 2.0°C), `maxTemperature` (def. 8.0°C), 
+        `currentTemperature`, `temperatureStatus` (SAFE / BREACH), 
+        `ageVerificationRequired`, `minimumAge`, `ageVerificationStatus` 
+        (Pending / Verified / Failed), `courierName`, `packageType`, 
+        `deliveryStatus`, `notes`, `createdAt`.
+   
+   2. DTO (`ColdChainRequest.java`):
+      - Data transfer object with Jakarta validation annotations: `@NotBlank`, 
+        `@NotNull`, `@Min`, `@Max`.
+   
+   3. Repository (`ColdChainRepository.java`):
+      - JPA repository supporting custom searches: `findByMedicationNameContainingIgnoreCase`, 
+        `findByTemperatureStatus`, `findByDeliveryStatus`.
+   
+   4. Service (`ColdChainService.java`):
+      - Implements UC-04 Business Rules:
+        a) Temperature Excursion Protocol: If current temp < min (2°C) or > max (8°C), 
+           automatically flags status as `BREACH` and appends `[TEMPERATURE EXCURSION DETECTED]`.
+        b) Age-Verification Security: If age verification fails, delivery status is 
+           automatically updated to `RETURN TO PHARMACY`.
+        c) Full CRUD operations: create, update, delete, getById, getAll.
+        d) Telemetry compatibility: Preserves telemetry logging queries.
+   
+   5. Controller (`ColdChainController.java`):
+      - Exposes REST endpoints at both `/api/v1/cold-chain` and `/api/cold-chain`:
+        * GET    `/api/v1/cold-chain`           - List all deliveries (supports search & filter)
+        * GET    `/api/v1/cold-chain/{id}`      - Retrieve single delivery
+        * POST   `/api/v1/cold-chain`           - Create new cold chain shipment
+        * PUT    `/api/v1/cold-chain/{id}`      - Update shipment & evaluate breach
+        * DELETE `/api/v1/cold-chain/{id}`      - Remove shipment record
+   
+   6. Data Initializer (`ColdChainDataInitializer.java`):
+      - Seeds sample initial shipments (Insulin Glargine, COVID-19 Vaccine, Amoxicillin, 
+        Morphine Sulfate) into `cold_chain_deliveries`.
+   
+   7. Unit Tests (`ColdChainServiceTest.java`):
+      - Mockito test suite testing normal flows, temperature breach detection, 
+        and age-verification rejection.
+
+B. Frontend Components:
+   1. `ColdChainPage.jsx`:
+      - Interactive dashboard containing:
+        * 4 Metric Stat Cards (Total Shipments, Temperature Breaches, Active Deliveries, Age-Restricted).
+        * Dynamic Temperature Excursion Alert Banner with quick filters.
+        * Search & Status Filter bar.
+        * Comprehensive Shipments Table with live temperature gauges, status badges, and action buttons.
+        * "Record New Shipment" and "Edit Shipment" modals with real-time temperature status previews.
+        * Audit & Telemetry modal.
+   
+   2. `App.jsx`:
+      - Registers protected route `/admin/cold-chain` with role protection for 
+        `['OPERATIONS_MANAGER', 'ADMIN', 'DELIVERY_COORDINATOR']`.
+   
+   3. `OperationsCatalogDashboard.jsx`:
+      - Adds a "Cold Chain Management" button in the navigation drawer linking to `/admin/cold-chain`.
+
+
+================================================================================
+3. CONFLICTS & RISKS IDENTIFIED IN PR #6
+================================================================================
+
+[CRITICAL - SEVERITY 1] ACCIDENTAL REPOSITORY BLOAT & STRAY COMMITS
+--------------------------------------------------------------------------------
+- File: `frontend.zip` (24,738,071 bytes / ~24.7 MB)
+  * Issue: A compressed archive of the entire frontend was accidentally committed 
+    to the root repository directory.
+  * Impact: Will permanently bloat the Git repository history size if merged.
+- Directory: `src/main/java/com/medilink/...` & `target/classes/com/medilink/...`
+  * Issue: 18 stray files from an external/unrelated `medilink` project, including 
+    compiled Java `.class` binary files, were committed at the workspace root.
+  * Impact: Pollutes root directory and violates repository clean-code standards.
+
+[HIGH - SEVERITY 2] FRONTEND OVERWRITES & REGRESSIONS
+--------------------------------------------------------------------------------
+- File: `frontend/src/components/Navbar.jsx`
+  * Issue: PR #6 removed the Admin Dashboard topbar navigation (`ADMIN CONSOLE`) and 
+    suppressed routes logic, while reformatting the entire file.
+  * Impact: Breaks top navigation for administrators and causes git merge conflicts.
+- File: `frontend/src/utils/roleRoutes.js`
+  * Issue: PR #6 changed `DELIVERY_COORDINATOR: '/modules/delivery'` to 
+    `DELIVERY_COORDINATOR: '/admin/cold-chain'`.
+  * Impact: Delivery Coordinators lose access to their primary Delivery Management 
+    workspace (`/modules/delivery`).
+- File: `frontend/src/pages/modules/DeliveryPage.jsx`
+  * Issue: PR #6 added a link inside the old deprecated tab layout of `DeliveryPage.jsx`.
+  * Impact: Merging directly will cause a conflict with the newly implemented 
+    tabbed delivery management interface.
+
+[MODERATE - SEVERITY 3] APPLICATION PACKAGE SCAN CONFIGURATION
+--------------------------------------------------------------------------------
+- File: `backend/src/main/java/com/mediorder/MediorderApplication.java`
+  * Issue: PR #6 reverted `@SpringBootApplication(scanBasePackages = "com.mediorder")` 
+    back to `{"com.mediorder", "com.online_pharmacy"}`.
+  * Impact: Unnecessary legacy package scan configuration since `com.online_pharmacy` 
+    was already migrated to `com.mediorder.system_build_functions`.
+
+
+================================================================================
+4. TRIAL ISOLATION PLAN (`test_package`)
+================================================================================
+To test and preview the Cold Chain functionality locally in your browser before 
+performing any merge on the `development` branch:
+
+1. Create a dedicated trial package:
+   `backend/src/main/java/com/mediorder/test_package/`
+   ├── config/       (TestColdChainDataInitializer)
+   ├── controller/   (TestColdChainController)
+   ├── dto/          (TestColdChainRequest)
+   ├── exception/    (TestResourceNotFoundException)
+   ├── model/        (TestColdChainDelivery)
+   ├── repository/   (TestColdChainRepository)
+   └── service/      (TestColdChainService)
+
+2. Copy the full Cold Chain backend logic into `test_package`, cleanly namespaced.
+3. Keep the frontend `ColdChainPage.jsx` and `/admin/cold-chain` route active.
+4. Run Maven unit tests and frontend build to verify error-free execution.
+5. Launch the application so you can test and interact with the Cold Chain module 
+   in your web browser.
+
+================================================================================
+END OF REPORT
+================================================================================

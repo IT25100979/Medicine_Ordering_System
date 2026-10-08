@@ -1,0 +1,756 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>PILLS - Online Pharmacy</title>
+<!-- Tailwind CSS v3 with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Plus Jakarta Sans for clean modern editorial grotesk -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<!-- FontAwesome for precise UI symbols -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              sky: '#D4E8F4',
+              mint: '#D8F0DE',
+              butter: '#FCF5CE',
+              butterdark: '#EFE298',
+              lavender: '#E5E8FD',
+              charcoal: '#111315',
+              border: '#E8ECEF',
+              sand: '#F7F3EB'
+            }
+          },
+          borderRadius: {
+            '4xl': '2rem',
+            '5xl': '2.5rem',
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-scroll-and-effects">
+    /* Custom subtle glass & rotation effects matching reference image */
+    .bottle-float-left {
+      transform: rotate(-14deg) translateY(-8px);
+      filter: drop-shadow(0 20px 25px rgba(28, 57, 84, 0.18));
+      transition: transform 0.3s ease;
+    }
+    .bottle-float-left:hover {
+      transform: rotate(-10deg) translateY(-14px);
+    }
+    .bottle-float-center {
+      transform: rotate(-3deg) translateY(4px);
+      filter: drop-shadow(0 24px 30px rgba(28, 57, 84, 0.22));
+      transition: transform 0.3s ease;
+    }
+    .bottle-float-center:hover {
+      transform: rotate(0deg) translateY(-4px);
+    }
+    .bottle-float-right {
+      transform: rotate(12deg) translateY(-6px);
+      filter: drop-shadow(0 20px 25px rgba(28, 57, 84, 0.18));
+      transition: transform 0.3s ease;
+    }
+    .bottle-float-right:hover {
+      transform: rotate(8deg) translateY(-12px);
+    }
+  </style>
+</head>
+<body class="bg-[#ECEEF0] text-[#16181B] font-sans antialiased p-3 sm:p-5 md:p-8 min-h-screen selection:bg-black selection:text-white">
+<!-- BEGIN: MasterCanvasContainer -->
+<!-- Outer rounded canvas wrapper simulating the cohesive editorial aesthetic -->
+<main class="max-w-[1580px] mx-auto bg-[#F6F7F9] rounded-[2.5rem] md:rounded-[3rem] p-4 sm:p-6 lg:p-8 shadow-2xl border border-white/70">
+<!-- BEGIN: MainHeader -->
+<!-- Removed white pill/box floating container so elements sit directly on webpage background -->
+<header class="w-full mb-6">
+<nav aria-label="Main Navigation" class="flex items-center justify-between px-2 sm:px-4 py-2 bg-transparent">
+<!-- Left Nav Links -->
+<div class="flex items-center space-x-6 text-xs sm:text-sm font-semibold tracking-wider text-gray-700">
+<a class="hover:text-black transition-colors uppercase tracking-widest text-xs" href="#">Home</a>
+<a class="hover:text-black transition-colors uppercase tracking-widest text-xs hidden sm:inline-block" href="#">Request Order</a>
+<div class="relative group hidden md:flex items-center cursor-pointer space-x-1">
+<span class="hover:text-black transition-colors uppercase tracking-widest text-xs">Special Offer</span>
+<i class="fa-solid fa-chevron-down text-[10px] text-gray-400 group-hover:text-black"></i>
+</div>
+</div>
+<!-- Center Brand Logo -->
+<div class="flex items-center justify-center">
+<a class="text-2xl sm:text-3xl font-extrabold tracking-tight text-black font-sans uppercase" href="#">
+            PILLS
+          </a>
+</div>
+<!-- Right User Actions -->
+<div class="flex items-center space-x-5 text-xs sm:text-sm font-semibold tracking-wider text-gray-700">
+<button aria-label="Search" class="hover:text-black transition-colors uppercase tracking-widest text-xs flex items-center gap-1.5">
+<span class="hidden sm:inline">Search</span>
+<i class="fa-solid fa-magnifying-glass text-xs sm:hidden"></i>
+</button>
+<a class="hover:text-black transition-colors uppercase tracking-widest text-xs hidden sm:inline-block" href="#">Account</a>
+<a class="bg-black hover:bg-zinc-800 text-white px-4 py-2 rounded-full uppercase tracking-wider text-[11px] font-bold transition-all shadow-sm" href="#">
+            Cart <span class="text-zinc-400 font-medium">(04)</span>
+</a>
+</div>
+</nav>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: MainContentFlow (Centered Full-Width Hierarchy) -->
+<div class="space-y-8 lg:space-y-10">
+<!-- BEGIN: HeroBanner (Full Width across container) -->
+<section class="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-[#A5CBE4] via-[#BFDCF0] to-[#E9F3FA] p-8 sm:p-14 lg:p-16 min-h-[500px] flex flex-col justify-between border border-white/50 shadow-inner w-full">
+<!-- Realistic Cloud Overlays (Pure CSS & SVG gradients) -->
+<div class="absolute inset-0 bg-no-repeat bg-cover pointer-events-none opacity-40 mix-blend-screen" style="background-image: radial-gradient(circle at 50% 20%, #ffffff 0%, rgba(255,255,255,0.6) 40%, transparent 75%);"></div>
+<div class="absolute -bottom-16 -left-12 w-96 h-96 bg-white/50 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute -top-12 -right-12 w-96 h-96 bg-white/60 rounded-full blur-3xl pointer-events-none"></div>
+<!-- Hero Top Heading: 3 Angled Floating Pill Bottles -->
+<div class="relative z-10 w-full flex justify-center items-center py-6 sm:py-12">
+<div class="flex items-center justify-center space-x-3 sm:space-x-10 max-w-3xl mx-auto">
+<!-- Left Prescription Bottle -->
+<div class="bottle-float-left w-28 sm:w-36 md:w-48 select-none">
+<div class="bg-gradient-to-br from-amber-700 via-amber-800 to-amber-950 rounded-[1.8rem] p-1.5 shadow-2xl border border-white/30">
+<div class="h-6 w-16 mx-auto bg-stone-100 rounded-t-lg border-b border-stone-300 shadow-inner"></div>
+<div class="bg-white rounded-[1.4rem] p-3 text-center my-1 text-[10px] space-y-1 shadow-sm">
+<p class="font-black text-black tracking-tight text-xs uppercase">MedRelief</p>
+<div class="w-10 h-0.5 bg-blue-600 mx-auto my-1"></div>
+<div class="bg-gray-100 h-6 flex items-center justify-center rounded px-1">
+<span class="font-mono text-[8px] text-gray-500 tracking-tighter">||| | | |||| |||</span>
+</div>
+<p class="text-[7px] leading-tight text-gray-500 line-clamp-2">Fast acting pain relief capsule formula</p>
+<span class="inline-block bg-sky-100 text-sky-800 text-[8px] px-2 py-0.5 rounded-full font-bold">60 CAPS</span>
+</div>
+</div>
+</div>
+<!-- Center Prescription Bottle (Prominent) -->
+<div class="bottle-float-center w-32 sm:w-44 md:w-56 z-20 select-none">
+<div class="bg-gradient-to-br from-amber-600 via-amber-800 to-stone-900 rounded-[2.2rem] p-2 shadow-2xl border border-white/40 ring-4 ring-white/20">
+<div class="h-7 w-20 mx-auto bg-stone-100 rounded-t-xl border-b border-stone-300 shadow-sm flex items-center justify-center">
+<span class="w-8 h-1 bg-gray-300 rounded-full"></span>
+</div>
+<div class="bg-white rounded-[1.6rem] p-4 text-center my-1 text-[10px] space-y-1.5 shadow-md">
+<p class="font-black text-gray-950 text-sm tracking-tight uppercase">MedRelief</p>
+<div class="w-12 h-0.5 bg-blue-600 mx-auto"></div>
+<div class="bg-gray-100 h-7 flex items-center justify-center rounded px-2">
+<span class="font-mono text-[9px] text-gray-600 tracking-tight">||| |||| | |||||</span>
+</div>
+<p class="text-[8px] leading-snug text-gray-500 font-medium">Fast-acting premium medical formula</p>
+<div class="pt-1">
+<span class="bg-blue-50 text-blue-900 font-bold text-[8px] px-2.5 py-1 rounded-full border border-blue-200 uppercase tracking-wider">Verified 100%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Prescription Bottle -->
+<div class="bottle-float-right w-28 sm:w-36 md:w-48 select-none">
+<div class="bg-gradient-to-br from-amber-700 via-amber-800 to-amber-950 rounded-[1.8rem] p-1.5 shadow-2xl border border-white/30">
+<div class="h-6 w-16 mx-auto bg-stone-100 rounded-t-lg border-b border-stone-300 shadow-inner"></div>
+<div class="bg-white rounded-[1.4rem] p-3 text-center my-1 text-[10px] space-y-1 shadow-sm">
+<p class="font-black text-black tracking-tight text-xs uppercase">MedRelief</p>
+<div class="w-10 h-0.5 bg-blue-600 mx-auto my-1"></div>
+<div class="bg-gray-100 h-6 flex items-center justify-center rounded px-1">
+<span class="font-mono text-[8px] text-gray-500 tracking-tighter">|||| | ||| ||||</span>
+</div>
+<p class="text-[7px] leading-tight text-gray-500 line-clamp-2">Clinical daily protection essential</p>
+<span class="inline-block bg-emerald-100 text-emerald-800 text-[8px] px-2 py-0.5 rounded-full font-bold">60 CAPS</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Hero Bottom Title and CTA -->
+<div class="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-6">
+<h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-black max-w-xl leading-[1.05] uppercase">
+        Bringing Health<br>To Your Doorstep
+      </h1>
+<a class="inline-flex items-center justify-center self-start sm:self-auto bg-black hover:bg-neutral-800 text-white font-bold text-xs uppercase tracking-widest px-8 py-4 rounded-full transition-all duration-200 shadow-md" href="#">
+        Explore
+      </a>
+</div>
+</section>
+<!-- END: HeroBanner -->
+<!-- BEGIN: ThreeBentoFeatureCards -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+<!-- Bento 1: Prescription Medicine -->
+<div class="bg-[#E4F0F8] rounded-3xl p-6 flex flex-col justify-between h-96 border border-white/80 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div>
+<h2 class="text-2xl font-bold tracking-tight text-gray-900 leading-snug">Prescription<br>medicine</h2>
+</div>
+<!-- Graphic Illustration: Pill hands -->
+<div class="my-auto py-2 flex items-center justify-center">
+<div class="relative w-40 h-32 flex items-center justify-center">
+<!-- Soft realistic pill container simulation -->
+<div class="w-32 h-20 bg-gradient-to-r from-blue-400 via-teal-400 to-cyan-500 rounded-full flex items-center justify-around px-3 shadow-lg transform -rotate-12 group-hover:rotate-0 transition-transform">
+<span class="w-6 h-10 bg-white/90 rounded-full border border-blue-200 shadow-sm"></span>
+<span class="w-6 h-10 bg-emerald-300 rounded-full border border-teal-200 shadow-sm"></span>
+<span class="w-6 h-10 bg-cyan-200 rounded-full border border-cyan-300 shadow-sm"></span>
+</div>
+</div>
+</div>
+<div class="flex items-end justify-between pt-2 border-t border-blue-100/60">
+<p class="text-[10px] font-bold tracking-widest uppercase text-gray-700 max-w-[170px] leading-tight">
+          Over 1000+ Prescription Meds At Your Fingertips
+        </p>
+<div class="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-gray-800 group-hover:bg-black group-hover:text-white transition-all">
+<i class="fa-solid fa-arrow-up-right text-xs"></i>
+</div>
+</div>
+</div>
+<!-- Bento 2: Surgical Product -->
+<div class="bg-[#E5F4E9] rounded-3xl p-6 flex flex-col justify-between h-96 border border-white/80 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div>
+<h2 class="text-2xl font-bold tracking-tight text-gray-900 leading-snug">Surgical<br>product</h2>
+</div>
+<!-- Graphic Illustration: Surgical tools & gloved hand -->
+<div class="my-auto py-2 flex items-center justify-center">
+<div class="relative w-36 h-32 flex items-center justify-center">
+<div class="flex items-end space-x-3">
+<div class="w-2.5 h-24 bg-gradient-to-t from-gray-300 to-gray-100 rounded-full shadow-md transform -rotate-12"></div>
+<div class="w-3 h-28 bg-gradient-to-t from-gray-400 via-zinc-200 to-gray-100 rounded-full shadow-md"></div>
+<div class="w-2.5 h-20 bg-gradient-to-t from-gray-300 to-gray-100 rounded-full shadow-md transform rotate-12"></div>
+</div>
+</div>
+</div>
+<div class="flex items-end justify-between pt-2 border-t border-emerald-100/60">
+<p class="text-[10px] font-bold tracking-widest uppercase text-gray-700 max-w-[170px] leading-tight">
+          Trusted Surgical Tools At Your Disposal
+        </p>
+<div class="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-gray-800 group-hover:bg-black group-hover:text-white transition-all">
+<i class="fa-solid fa-arrow-up-right text-xs"></i>
+</div>
+</div>
+</div>
+<!-- Bento 3: Supplements & Vitamins -->
+<div class="bg-[#FAF3D1] rounded-3xl p-6 flex flex-col justify-between h-96 border border-white/80 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div>
+<h2 class="text-2xl font-bold tracking-tight text-gray-900 leading-snug">Supplements<br>&amp; vitamins</h2>
+</div>
+<!-- Graphic Illustration: Spilling golden gel pills -->
+<div class="my-auto py-2 flex items-center justify-center">
+<div class="relative flex items-center">
+<div class="w-16 h-24 bg-amber-900 rounded-2xl rotate-45 border-2 border-amber-800/40 shadow-xl flex items-end justify-center p-2">
+<div class="w-10 h-3 bg-amber-400 rounded-full opacity-60"></div>
+</div>
+<div class="flex flex-wrap gap-1.5 w-20 -ml-4 z-10">
+<span class="w-5 h-5 bg-amber-400 rounded-full shadow-md ring-2 ring-yellow-300/60 animate-pulse"></span>
+<span class="w-4 h-4 bg-amber-300 rounded-full shadow-sm"></span>
+<span class="w-5 h-5 bg-amber-500 rounded-full shadow-md"></span>
+<span class="w-4 h-4 bg-yellow-400 rounded-full shadow"></span>
+</div>
+</div>
+</div>
+<div class="flex items-end justify-between pt-2 border-t border-amber-200/60">
+<p class="text-[10px] font-bold tracking-widest uppercase text-gray-700 max-w-[170px] leading-tight">
+          Essential Nutrients For A Healthier You
+        </p>
+<div class="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-gray-800 group-hover:bg-black group-hover:text-white transition-all">
+<i class="fa-solid fa-arrow-up-right text-xs"></i>
+</div>
+</div>
+</div>
+</section>
+<!-- END: ThreeBentoFeatureCards -->
+<!-- BEGIN: CategoryPillsBar -->
+<section class="space-y-3">
+<!-- Row 1 Categories -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+<!-- Category: Diabetes Care -->
+<a class="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm transition-all group" href="#">
+<span class="text-xs font-bold text-gray-800">Diabetes Care</span>
+<span class="w-7 h-7 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+<i class="fa-solid fa-droplet text-xs"></i>
+</span>
+</a>
+<!-- Category: Vitamins & Supplements -->
+<a class="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm transition-all group" href="#">
+<span class="text-xs font-bold text-gray-800">Vitamins &amp; Supps</span>
+<span class="w-7 h-7 rounded-xl bg-amber-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+<div class="w-4 h-2 rounded-full bg-amber-400 border border-amber-500"></div>
+</span>
+</a>
+<!-- Category: Pain Relief -->
+<a class="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm transition-all group" href="#">
+<span class="text-xs font-bold text-gray-800">Pain Relief</span>
+<span class="w-7 h-7 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+<div class="w-3.5 h-3.5 rounded-full bg-emerald-500 rotate-45 border border-emerald-600"></div>
+</span>
+</a>
+<!-- Category: Allergy -->
+<a class="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm transition-all group" href="#">
+<span class="text-xs font-bold text-gray-800">Allergy</span>
+<span class="w-7 h-7 rounded-xl bg-yellow-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+<div class="w-4 h-2 rounded-full bg-yellow-400"></div>
+</span>
+</a>
+</div>
+<!-- Row 2 Categories -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+<!-- Category: Skin Care Treatments -->
+<a class="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm transition-all group" href="#">
+<span class="text-xs font-bold text-gray-800">Skin Care Treatments</span>
+<span class="w-7 h-7 rounded-xl bg-teal-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+<div class="w-4 h-3 bg-teal-400 rounded-sm"></div>
+</span>
+</a>
+<!-- Category: Mental Wellness -->
+<a class="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm transition-all group" href="#">
+<span class="text-xs font-bold text-gray-800">Mental Wellness</span>
+<span class="w-7 h-7 rounded-xl bg-indigo-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+<div class="w-4 h-2 bg-indigo-500 rounded-full"></div>
+</span>
+</a>
+<!-- Category: Bone & Joint Support -->
+<a class="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm transition-all group" href="#">
+<span class="text-xs font-bold text-gray-800">Bone &amp; Joint Support</span>
+<span class="w-7 h-7 rounded-xl bg-rose-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+<div class="w-4 h-2 bg-rose-400 rounded-full"></div>
+</span>
+</a>
+</div>
+</section>
+<!-- END: CategoryPillsBar -->
+<!-- BEGIN: MiddleProductCatalog (Relocated from top right into dedicated clean horizontal grid) -->
+<section class="space-y-4">
+<div class="flex items-center justify-between px-1">
+<h3 class="text-xl font-extrabold uppercase tracking-tight text-gray-900">Featured Medications</h3>
+<a class="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-black transition-colors" href="#">View All Catalog →</a>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<!-- Product: Cloroxomin -->
+<div class="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-md transition-all">
+<div class="space-y-0.5">
+<span class="text-[9px] uppercase font-bold tracking-wider text-gray-400">Antibacterial</span>
+<h4 class="text-sm font-bold text-gray-900">Cloroxomin</h4>
+</div>
+<div class="h-28 flex items-center justify-center py-2">
+<!-- Blister pack mockup -->
+<div class="w-20 h-16 bg-slate-100 rounded-lg border border-slate-300 grid grid-cols-3 gap-1 p-1.5 shadow-inner">
+<div class="bg-blue-400 rounded-full h-3"></div>
+<div class="bg-blue-400 rounded-full h-3"></div>
+<div class="bg-blue-400 rounded-full h-3"></div>
+<div class="bg-blue-400 rounded-full h-3"></div>
+<div class="bg-blue-400 rounded-full h-3"></div>
+<div class="bg-blue-400 rounded-full h-3"></div>
+</div>
+</div>
+<div class="space-y-1 pt-2 border-t border-gray-50">
+<p class="text-xs font-bold text-black">$34.00</p>
+<a class="inline-block text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-black" href="#">Shop Now</a>
+</div>
+</div>
+<!-- Product: The Killer -->
+<div class="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-md transition-all">
+<div class="space-y-0.5">
+<span class="text-[9px] uppercase font-bold tracking-wider text-gray-400">Pain Killer</span>
+<h4 class="text-sm font-bold text-gray-900">The Killer</h4>
+</div>
+<div class="h-28 flex items-center justify-center py-2">
+<div class="w-16 h-20 bg-rose-50 rounded-xl border border-rose-200 flex flex-col items-center justify-center p-2 text-center shadow-sm">
+<span class="text-[8px] font-bold text-rose-700 leading-tight">The Killer</span>
+<div class="w-6 h-0.5 bg-rose-300 my-1"></div>
+<div class="text-[6px] text-gray-400">10 Caplets</div>
+</div>
+</div>
+<div class="space-y-1 pt-2 border-t border-gray-50">
+<p class="text-xs font-bold text-black">$29.00</p>
+<a class="inline-block text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-black" href="#">Shop Now</a>
+</div>
+</div>
+<!-- Product: OnychoBath -->
+<div class="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-md transition-all">
+<div class="space-y-0.5">
+<span class="text-[9px] uppercase font-bold tracking-wider text-gray-400">Fingernails</span>
+<h4 class="text-sm font-bold text-gray-900">Onychobath</h4>
+</div>
+<div class="h-28 flex items-center justify-center py-2">
+<div class="w-16 h-18 bg-cyan-50 rounded-xl border border-cyan-200 flex flex-col items-center justify-center p-2 text-center shadow-sm">
+<span class="text-[8px] font-bold text-cyan-800">Onychobath</span>
+<div class="w-5 h-5 mt-1 rounded-full bg-cyan-400/20 flex items-center justify-center">
+<div class="w-2.5 h-2.5 rounded-full bg-cyan-600"></div>
+</div>
+</div>
+</div>
+<div class="space-y-1 pt-2 border-t border-gray-50">
+<p class="text-xs font-bold text-black">$66.00</p>
+<a class="inline-block text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-black" href="#">Shop Now</a>
+</div>
+</div>
+<!-- Product: Medrelief -->
+<div class="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-md transition-all">
+<div class="space-y-0.5">
+<span class="text-[9px] uppercase font-bold tracking-wider text-gray-400">Pain Killer</span>
+<h4 class="text-sm font-bold text-gray-900">Medrelief</h4>
+</div>
+<div class="h-28 flex items-center justify-center py-2">
+<div class="w-14 h-20 bg-teal-50 rounded-xl border border-teal-300 flex flex-col items-center justify-between p-1 shadow-sm">
+<div class="w-8 h-2.5 bg-stone-700 rounded-t-md"></div>
+<span class="text-[7px] font-extrabold text-teal-900 uppercase">MedRelief</span>
+<div class="w-6 h-0.5 bg-teal-300"></div>
+</div>
+</div>
+<div class="space-y-1 pt-2 border-t border-gray-50">
+<p class="text-xs font-bold text-black">$48.00</p>
+<a class="inline-block text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-black" href="#">Shop Now</a>
+</div>
+</div>
+</div>
+</section>
+<!-- END: MiddleProductCatalog -->
+<!-- BEGIN: PromoBannersStack (Moved downward into subsequent section below middle catalog) -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+<!-- Promo 1: Exclusive Pain Relief Formula -->
+<div class="bg-[#E7F8EC] rounded-3xl p-6 relative overflow-hidden border border-white flex justify-between items-center shadow-sm">
+<div class="space-y-3 z-10 max-w-[65%]">
+<h4 class="text-lg font-bold text-gray-900 leading-tight">Exclusive pain<br>Relief formula</h4>
+<p class="text-[10px] text-gray-600 leading-snug">Fast-acting pain relief for headaches, joint pain, and more</p>
+<a class="inline-block bg-black hover:bg-neutral-800 text-white text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full shadow-sm" href="#">
+        Explore
+      </a>
+</div>
+<!-- Small Angled Bottle Image Mockup -->
+<div class="w-20 transform rotate-12 -mr-2">
+<div class="bg-amber-800 rounded-xl p-1 shadow-md border border-white/40">
+<div class="bg-white rounded-lg p-1.5 text-center text-[7px] font-bold">MedRelief</div>
+</div>
+</div>
+</div>
+<!-- Promo 2: Soothing Skin Repair Cream -->
+<div class="bg-[#DCEBFA] rounded-3xl p-6 relative overflow-hidden border border-white flex flex-col justify-between min-h-[220px] shadow-sm">
+<div class="space-y-2 z-10">
+<h4 class="text-lg font-bold text-gray-900 leading-tight">Soothing skin<br>repair cream</h4>
+<p class="text-[10px] text-gray-600 leading-snug max-w-[200px]">Deeply hydrates, heals, and restores dry, irritated skin for a radiant glow.</p>
+<div class="pt-2">
+<a class="inline-block bg-black hover:bg-neutral-800 text-white text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full shadow-sm" href="#">
+          Explore
+        </a>
+</div>
+</div>
+<!-- Hand applying cream visual representation -->
+<div class="absolute right-0 bottom-0 w-44 h-36 opacity-90 pointer-events-none flex items-end justify-end">
+<div class="relative w-36 h-28 bg-gradient-to-tl from-orange-100 to-amber-50 rounded-tl-full border-t-2 border-l-2 border-white/60 shadow-lg flex items-center justify-center">
+<span class="w-8 h-8 rounded-full bg-white/95 shadow-md flex items-center justify-center">
+<span class="w-4 h-4 rounded-full bg-blue-100"></span>
+</span>
+</div>
+</div>
+</div>
+<!-- Promo 3: RestEase Sleep Support -->
+<div class="bg-[#F8F2E6] rounded-3xl p-6 relative overflow-hidden border border-white flex justify-between items-center shadow-sm">
+<div class="space-y-3 z-10 max-w-[65%]">
+<h4 class="text-lg font-bold text-gray-900 leading-tight">RestEase<br>Sleep Support</h4>
+<p class="text-[10px] text-gray-600 leading-snug">Restful sleep, helping you fall asleep faster and wake up refreshed.</p>
+<a class="inline-block bg-black hover:bg-neutral-800 text-white text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full shadow-sm" href="#">
+        Explore
+      </a>
+</div>
+<!-- Sleep supplement bottle mockup -->
+<div class="relative w-20 flex flex-col items-center">
+<span class="absolute -top-2 -right-2 bg-emerald-700 text-white text-[7px] font-bold px-1.5 py-0.5 rounded-full">best seller</span>
+<div class="w-14 h-22 bg-stone-900 rounded-xl p-1 text-center text-white border border-stone-700 shadow-md">
+<div class="w-8 h-2 bg-stone-600 rounded mx-auto mb-1"></div>
+<span class="text-[7px] font-bold text-amber-200">Sleep Support</span>
+</div>
+</div>
+</div>
+</section>
+<!-- END: PromoBannersStack -->
+<!-- BEGIN: LowerGridProductsLeft -->
+<section class="space-y-4">
+<div class="flex items-center justify-between px-1">
+<h3 class="text-xl font-extrabold uppercase tracking-tight text-gray-900">Daily Essentials &amp; Vitamins</h3>
+<a class="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-black transition-colors" href="#">Browse All →</a>
+</div>
+<!-- 4 Column Product row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<!-- Item 1: Biotin Supplement -->
+<div class="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-lg transition-all">
+<div class="space-y-1">
+<span class="text-[9px] uppercase font-bold tracking-widest text-gray-400">Vitamins</span>
+<h3 class="text-sm font-bold text-gray-900">Biotin Supplement</h3>
+</div>
+<div class="h-36 flex items-center justify-center py-2">
+<!-- Pill Bottle Mockup -->
+<div class="w-16 h-28 bg-emerald-50 rounded-2xl border-2 border-emerald-200/60 flex flex-col items-center justify-between p-1.5 shadow-sm">
+<div class="w-10 h-3 bg-white rounded border border-emerald-200"></div>
+<div class="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-emerald-900 uppercase">Biotin</div>
+<div class="w-6 h-1 bg-emerald-200 rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2 pt-2 border-t border-gray-50">
+<p class="text-xs font-bold text-black">$56.00</p>
+<a class="inline-block text-[10px] font-extrabold uppercase tracking-widest text-gray-400 hover:text-black transition-colors" href="#">Shop Now</a>
+</div>
+</div>
+<!-- Item 2: Goji Berry -->
+<div class="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-lg transition-all">
+<div class="space-y-1">
+<span class="text-[9px] uppercase font-bold tracking-widest text-gray-400">Vitamins</span>
+<h3 class="text-sm font-bold text-gray-900">Goji Berry</h3>
+</div>
+<div class="h-36 flex items-center justify-center py-2">
+<div class="w-16 h-28 bg-rose-50 rounded-2xl border-2 border-rose-200/60 flex flex-col items-center justify-between p-1.5 shadow-sm">
+<div class="w-10 h-3 bg-white rounded border border-rose-200"></div>
+<div class="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-rose-900 uppercase">Goji Berry</div>
+<div class="w-6 h-1 bg-rose-200 rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2 pt-2 border-t border-gray-50">
+<p class="text-xs font-bold text-black">$65.00</p>
+<a class="inline-block text-[10px] font-extrabold uppercase tracking-widest text-gray-400 hover:text-black transition-colors" href="#">Shop Now</a>
+</div>
+</div>
+<!-- Item 3: Turmeric -->
+<div class="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-lg transition-all">
+<div class="space-y-1">
+<span class="text-[9px] uppercase font-bold tracking-widest text-gray-400">Vitamins</span>
+<h3 class="text-sm font-bold text-gray-900">Turmeric</h3>
+</div>
+<div class="h-36 flex items-center justify-center py-2">
+<div class="w-16 h-28 bg-amber-50 rounded-2xl border-2 border-amber-200/60 flex flex-col items-center justify-between p-1.5 shadow-sm">
+<div class="w-10 h-3 bg-white rounded border border-amber-200"></div>
+<div class="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-amber-900 uppercase">Turmeric</div>
+<div class="w-6 h-1 bg-amber-200 rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2 pt-2 border-t border-gray-50">
+<p class="text-xs font-bold text-black">$84.00</p>
+<a class="inline-block text-[10px] font-extrabold uppercase tracking-widest text-gray-400 hover:text-black transition-colors" href="#">Shop Now</a>
+</div>
+</div>
+<!-- Item 4: Celluar Nutrition -->
+<div class="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-lg transition-all">
+<div class="space-y-1">
+<span class="text-[9px] uppercase font-bold tracking-widest text-gray-400">Vitamins</span>
+<h3 class="text-sm font-bold text-gray-900">Celluar Nutrition</h3>
+</div>
+<div class="h-36 flex items-center justify-center py-2">
+<div class="w-16 h-28 bg-stone-900 rounded-2xl border border-stone-800 flex flex-col items-center justify-between p-1.5 shadow-sm text-white">
+<div class="w-10 h-3 bg-stone-700 rounded"></div>
+<div class="bg-stone-800 w-full rounded-lg py-1 text-center text-[7px] font-bold text-red-400 uppercase">Cellular</div>
+<div class="w-6 h-1 bg-stone-700 rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2 pt-2 border-t border-gray-50">
+<p class="text-xs font-bold text-black">$90.00</p>
+<a class="inline-block text-[10px] font-extrabold uppercase tracking-widest text-gray-400 hover:text-black transition-colors" href="#">Shop Now</a>
+</div>
+</div>
+</div>
+</section>
+<!-- END: LowerGridProductsLeft -->
+<!-- BEGIN: SocialAndCommunitySection -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
+<!-- Card 1: Family / Warm Care (@heision) -->
+<div class="bg-amber-100/50 rounded-3xl p-6 relative overflow-hidden border border-white flex flex-col justify-between min-h-[220px]">
+<div class="flex items-center justify-between z-10">
+<span class="bg-black/10 backdrop-blur-md text-gray-900 text-xs font-semibold px-3 py-1 rounded-full">@heision</span>
+<i class="fa-brands fa-instagram text-gray-700 text-base"></i>
+</div>
+<div class="my-auto py-4">
+<p class="text-lg font-semibold text-gray-800 italic">"Safe, gentle daily relief that our entire family trusts."</p>
+</div>
+<div class="text-[11px] font-bold uppercase tracking-wider text-gray-500">Childhood Care Verified</div>
+</div>
+<!-- Card 2: Pharmacist Support (@robinson) -->
+<div class="bg-slate-200/60 rounded-3xl p-6 relative overflow-hidden border border-white flex flex-col justify-between min-h-[220px]">
+<div class="flex items-center justify-between z-10">
+<span class="bg-black/10 backdrop-blur-md text-gray-900 text-xs font-semibold px-3 py-1 rounded-full">@robinson</span>
+<i class="fa-brands fa-instagram text-gray-700 text-base"></i>
+</div>
+<div class="my-auto py-4">
+<p class="text-lg font-semibold text-gray-800 italic">"Prescriptions double checked by licensed clinicians."</p>
+</div>
+<div class="text-[11px] font-bold uppercase tracking-wider text-gray-500">Professional Advice</div>
+</div>
+<!-- Card 3: Social Tag & QR Block -->
+<div class="bg-white rounded-3xl p-6 border border-gray-200/80 flex flex-col justify-between min-h-[220px]">
+<div class="space-y-1">
+<span class="text-[10px] uppercase font-bold tracking-widest text-gray-400">Social Media</span>
+<h4 class="text-2xl font-extrabold text-black">@pills.co</h4>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-gray-100">
+<div class="space-y-0.5">
+<p class="text-xs font-bold text-gray-800">Scan to join with us</p>
+<p class="text-[10px] text-gray-400">Daily health tips &amp; drops</p>
+</div>
+<!-- Simulated QR Code Icon -->
+<div class="w-14 h-14 bg-gray-50 rounded-2xl border border-gray-200 p-2 flex items-center justify-center shadow-inner">
+<i class="fa-solid fa-qrcode text-3xl text-gray-800"></i>
+</div>
+</div>
+</div>
+</section>
+<!-- END: SocialAndCommunitySection -->
+<!-- BEGIN: FooterBrandSection -->
+<footer class="bg-[#F5F5CE] rounded-3xl p-8 sm:p-12 relative overflow-hidden border border-yellow-200/50"><!-- Subtle Large Watermark Typography in Background -->
+<div class="absolute -bottom-10 left-6 text-[110px] sm:text-[180px] font-black tracking-tighter text-black/5 pointer-events-none select-none uppercase">
+  PILLS
+</div>
+
+<div class="relative z-10 space-y-10">
+  <!-- Top Banner: Provider Callout Card -->
+  <div class="bg-white/90 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-yellow-300/40 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+    <div class="space-y-2 text-center md:text-left">
+      <div class="flex items-center justify-center md:justify-start gap-2">
+        <span class="inline-block bg-black text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
+          PILLS FOR PROVIDERS
+        </span>
+        <span class="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          Live Pharmacist On Call
+        </span>
+      </div>
+      <h3 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-950 leading-snug">
+        Hand us the script, we'll handle the rest.
+      </h3>
+      <p class="text-xs text-gray-600 max-w-xl">
+        Partner with our licensed pharmacy network for streamlined direct-to-patient dispatch, automated refills, and real-time adherence analytics.
+      </p>
+    </div>
+    <div class="flex items-center gap-4 shrink-0">
+      <a href="#" class="inline-flex items-center justify-center bg-black hover:bg-neutral-800 text-white font-bold text-xs uppercase tracking-widest px-6 py-3.5 rounded-full transition-all shadow-sm">
+        Provider Portal →
+      </a>
+      <div class="w-16 shrink-0 hidden sm:block">
+        <div class="bg-gradient-to-b from-amber-700 to-amber-900 rounded-2xl p-1 shadow-lg border border-amber-500/50">
+          <div class="bg-white rounded-xl p-2 text-center text-[7px] font-bold space-y-1">
+            <span class="block text-gray-900 font-extrabold uppercase">MedRelief</span>
+            <div class="w-8 h-0.5 bg-blue-500 mx-auto"></div>
+            <div class="h-3.5 bg-gray-100 flex items-center justify-center rounded">
+              <span class="font-mono text-[7px] text-gray-500">||| ||</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Footer Content Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pt-4 items-start">
+    <!-- Col 1: Brand Info (5 cols) -->
+    <div class="lg:col-span-4 space-y-4">
+      <div class="flex items-baseline space-x-3">
+        <h2 class="text-3xl font-extrabold tracking-tight uppercase text-black">PILLS</h2>
+        <span class="w-2.5 h-2.5 rounded-full bg-black"></span>
+      </div>
+      <p class="text-xs text-gray-800 font-medium leading-relaxed max-w-sm">
+        Quality medications delivered directly to your doorstep with speed, care, and clinical precision. Certified online pharmacy serving thousands nationwide.
+      </p>
+      <div class="inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm border border-yellow-300/40 px-3 py-1.5 rounded-full text-[10px] font-bold text-gray-800 uppercase tracking-wider">
+        <i class="fa-solid fa-shield-halved text-emerald-700"></i>
+        <span class="">HIPAA Compliant &amp; LegitScript Certified</span>
+      </div>
+      <!-- Social Media Icons -->
+      <div class="pt-2">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-600 mb-2">Join Our Community</p>
+        <div class="flex items-center gap-2">
+          <a href="#" aria-label="Instagram" class="w-9 h-9 rounded-full bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center border border-yellow-200/50 text-gray-800 shadow-sm">
+            <i class="fa-brands fa-instagram text-xs"></i>
+          </a>
+          <a href="#" aria-label="X Twitter" class="w-9 h-9 rounded-full bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center border border-yellow-200/50 text-gray-800 shadow-sm">
+            <i class="fa-brands fa-x-twitter text-xs"></i>
+          </a>
+          <a href="#" aria-label="LinkedIn" class="w-9 h-9 rounded-full bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center border border-yellow-200/50 text-gray-800 shadow-sm">
+            <i class="fa-brands fa-linkedin-in text-xs"></i>
+          </a>
+          <a href="#" aria-label="Facebook" class="w-9 h-9 rounded-full bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center border border-yellow-200/50 text-gray-800 shadow-sm">
+            <i class="fa-brands fa-facebook-f text-xs"></i>
+          </a>
+          <a href="#" aria-label="YouTube" class="w-9 h-9 rounded-full bg-white hover:bg-black hover:text-white transition-colors flex items-center justify-center border border-yellow-200/50 text-gray-800 shadow-sm">
+            <i class="fa-brands fa-youtube text-xs"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 2: Shop & Categories (2.5 cols) -->
+    <div class="lg:col-span-3 space-y-3">
+      <h4 class="text-xs font-black uppercase tracking-widest text-black border-b border-black/10 pb-2">Shop &amp; Categories</h4>
+      <ul class="space-y-2 text-xs font-semibold text-gray-700">
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Prescription Medicine</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Surgical Products</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Daily Vitamins &amp; Supps</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Skin Care Treatments</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Pain Relief Formulas</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Sleep &amp; Wellness</a></li>
+      </ul>
+    </div>
+
+    <!-- Col 3: Quick Links (2.5 cols) -->
+    <div class="lg:col-span-2 space-y-3">
+      <h4 class="text-xs font-black uppercase tracking-widest text-black border-b border-black/10 pb-2">Quick Links</h4>
+      <ul class="space-y-2 text-xs font-semibold text-gray-700">
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Request Order</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Special Offers</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Doctor Consultations</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Refill Prescription</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">How It Works</a></li>
+        <li class=""><a href="#" class="hover:text-black transition-colors block">Store Locator</a></li>
+      </ul>
+    </div>
+
+    <!-- Col 4: Contact & Clinical HQ (3 cols) -->
+    <div class="lg:col-span-3 space-y-3 bg-white/60 backdrop-blur-sm p-5 rounded-2xl border border-yellow-200/60 shadow-sm">
+      <h4 class="text-xs font-black uppercase tracking-widest text-black flex items-center justify-between">
+        <span class="">Contact &amp; Support</span>
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      </h4>
+      <div class="space-y-2.5 text-xs text-gray-700">
+        <div>
+          <p class="font-bold text-black">+1 (800) 745-5789</p>
+          <p class="text-[10px] text-gray-500">Mon-Fri 8am-8pm EST • 24/7 Hotline</p>
+        </div>
+        <div>
+          <p class="font-bold text-black">care@pills.co</p>
+          <p class="text-[10px] text-gray-500">General: support@pills.co</p>
+        </div>
+        <div>
+          <p class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Clinical HQ</p>
+          <p class="text-[11px] leading-tight text-gray-800">450 Healthway Blvd, Suite 300<br>San Francisco, CA 94107</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legal & Policies Row -->
+  <div class="pt-4 border-t border-black/10 flex flex-wrap items-center justify-between gap-3 text-[11px] font-semibold text-gray-600">
+    <div class="flex flex-wrap gap-4 sm:gap-6 uppercase tracking-wider">
+      <a href="#" class="hover:text-black transition-colors">Privacy Policy</a>
+      <a href="#" class="hover:text-black transition-colors">Terms of Service</a>
+      <a href="#" class="hover:text-black transition-colors">HIPAA Compliance</a>
+      <a href="#" class="hover:text-black transition-colors">Prescription Drug Disclaimer</a>
+      <a href="#" class="hover:text-black transition-colors">Refund Policy</a>
+      <a href="#" class="hover:text-black transition-colors">Cookie Settings</a>
+    </div>
+    <div class="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+      Verified LegitScript Partner
+    </div>
+  </div>
+
+  <!-- Pharmaceutical FDA Disclaimer -->
+  <div class="bg-white/40 rounded-xl p-3 border border-yellow-200/50">
+    <p class="text-[9px] text-gray-500 leading-relaxed">
+      * Statements on this site have not been evaluated by the FDA for unprescribed dietary supplements. Prescription medicines are strictly dispensed by fully licensed, accredited partner pharmacies in compliance with state and federal regulations. In case of a medical emergency, call 911 immediately.
+    </p>
+  </div>
+
+  <!-- Copyright & Precision Signature Bar -->
+  <div class="pt-2 border-t border-black/10 flex flex-col sm:flex-row justify-between items-center text-[10px] font-bold text-gray-600 uppercase tracking-widest gap-2">
+    <span class="">© 2025 PILLS HEALTH INC. ALL RIGHTS RESERVED.</span>
+    <span class="">DESIGNED WITH CARE &amp; PRECISION</span>
+  </div>
+</div></footer>
+<!-- END: FooterBrandSection -->
+</div>
+<!-- END: MainContentFlow -->
+</main>
+<!-- END: MasterCanvasContainer -->
+
+
+</body></html>
