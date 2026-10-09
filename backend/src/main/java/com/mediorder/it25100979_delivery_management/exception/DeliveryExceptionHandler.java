@@ -26,6 +26,11 @@ public class DeliveryExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(PrescriptionRequiredException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePrescriptionRequired(PrescriptionRequiredException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(InvalidOtpException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidOtp(InvalidOtpException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));

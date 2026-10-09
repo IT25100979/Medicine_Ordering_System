@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { CLINICAL_FALLBACK_IMAGES } from './CatalogPage';
 import { deliveryApi, COURIER_PARTNERS_FALLBACK } from '../api/deliveryApi';
-import { errorMessage } from '../api/client';
+import client, { errorMessage, unwrap } from '../api/client';
 import useFeatureStatus from '../hooks/useFeatureStatus';
 import FeaturePausedBanner from '../components/FeaturePausedBanner';
 
@@ -68,6 +68,36 @@ const CartPage = () => {
     if (!contactPhone && user?.contactNumber) setContactPhone(user.contactNumber);
   }, [user]);
 
+  // Prescription-only items need one of the customer's APPROVED prescriptions (checked again by the server)
+  const [rxMedicineIds, setRxMedicineIds] = useState(new Set());
+  const [approvedPrescriptions, setApprovedPrescriptions] = useState([]);
+  const [prescriptionId, setPrescriptionId] = useState('');
+
+  useEffect(() => {
+    client.get('/api/v1/medicines')
+      .then((res) => {
+        const list = unwrap(res);
+        const meds = Array.isArray(list) ? list : (list?.content || []);
+        setRxMedicineIds(new Set(meds.filter((m) => m.requiresPrescription).map((m) => Number(m.id))));
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (actualIsGuest) return;
+    client.get('/api/v1/prescriptions', { params: { status: 'APPROVED' } })
+      .then((res) => {
+        const list = unwrap(res);
+        const approved = (Array.isArray(list) ? list : []).filter((p) => p.status === 'APPROVED');
+        setApprovedPrescriptions(approved);
+        if (approved.length === 1) setPrescriptionId(String(approved[0].id));
+      })
+      .catch(() => {});
+  }, [actualIsGuest]);
+
+  const rxItems = cartItems.filter((item) => rxMedicineIds.has(Number(item.medicineId)) || item.requiresPrescription);
+  const needsPrescription = rxItems.length > 0;
+
   const actualIsGuest = isGuest || !isAuthenticated || !user;
 
   const subtotal = cartItems.reduce((acc, item) => acc + (Number(item.price || item.unitPrice) || 0) * item.quantity, 0);
@@ -93,6 +123,7 @@ const CartPage = () => {
     if (!PHONE_PATTERN.test(contactPhone.trim())) errors.phone = 'Enter a valid phone number (7-15 digits).';
     if (deliveryNotes.length > 1000) errors.notes = 'Instructions must be at most 1000 characters.';
     if (cartItems.length === 0) errors.cart = 'Your cart is empty.';
+    if (needsPrescription && !prescriptionId) errors.prescription = 'Choose an approved prescription for the prescription-only items.';
     setCheckoutErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -114,6 +145,7 @@ const CartPage = () => {
         deliveryAddress: deliveryAddress.trim(),
         customerPhone: contactPhone.trim(),
         specialInstructions: deliveryNotes.trim() || null,
+        prescriptionId: needsPrescription ? Number(prescriptionId) : null,
         deliveryFee: subtotal > 0 ? deliveryFee : 0,
         items: cartItems.map((item) => ({
           medicineId: Number(item.medicineId) || null,
@@ -424,6 +456,42 @@ const CartPage = () => {
                   </div>
                   {checkoutErrors.courier && <p className="text-[11px] text-red-600 font-semibold mt-1.5">{checkoutErrors.courier}</p>}
                 </div>
+
+                {needsPrescription && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs space-y-2">
+                    <p className="font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                      <i className="fa-solid fa-file-prescription" /> Prescription required
+                    </p>
+                    <p className="text-amber-900">
+                      {rxItems.map((i) => i.name).join(', ')} can only be sold against a pharmacist-approved prescription.
+                    </p>
+                    {approvedPrescriptions.length > 0 ? (
+                      <select
+                        aria-label="Approved prescription"
+                        value={prescriptionId}
+                        onChange={(e) => {
+                          setPrescriptionId(e.target.value);
+                          setCheckoutErrors((prev) => ({ ...prev, prescription: undefined }));
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl bg-white border ${checkoutErrors.prescription ? 'border-red-400' : 'border-amber-300'}`}
+                      >
+                        <option value="">Select an approved prescription</option>
+                        {approvedPrescriptions.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            Rx #{p.id}{p.doctorName ? ` · ${p.doctorName}` : ''}{p.verifiedAt ? ` · approved ${new Date(p.verifiedAt).toLocaleDateString()}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-amber-900">
+                        You have no approved prescription yet.{' '}
+                        <Link to="/prescription" className="font-bold underline">Upload your prescription</Link>{' '}
+                        and wait for the pharmacist to approve it.
+                      </p>
+                    )}
+                    {checkoutErrors.prescription && <p className="text-red-600 font-semibold">{checkoutErrors.prescription}</p>}
+                  </div>
+                )}
 
                 <div className="space-y-3 text-xs">
                   <div>

@@ -20,6 +20,7 @@ public class CustomerDeliveryResponse {
     private String orderAddress;
     private String customerPhone;
     private String itemsSummary;
+    private Long prescriptionId;
     private BigDecimal orderTotal;
     private Boolean coldChainTag;
     private String actionReason;

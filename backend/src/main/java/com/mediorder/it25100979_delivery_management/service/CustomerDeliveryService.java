@@ -10,6 +10,10 @@ import com.mediorder.it25100979_delivery_management.enums.CourierCompany;
 import com.mediorder.it25100979_delivery_management.enums.DeliveryStatus;
 import com.mediorder.it25100979_delivery_management.event.DeliveryEventType;
 import com.mediorder.it25100979_delivery_management.exception.DeliveryNotFoundException;
+import com.mediorder.it25100979_delivery_management.exception.PrescriptionRequiredException;
+import com.mediorder.it25101923_prescription_management.model.Prescription;
+import com.mediorder.it25101923_prescription_management.model.PrescriptionStatus;
+import com.mediorder.it25101923_prescription_management.repository.PrescriptionRepository;
 import com.mediorder.it25100979_delivery_management.mapper.DeliveryMapper;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryRepository;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryTimelineRepository;
@@ -55,6 +59,7 @@ public class CustomerDeliveryService {
     private final OrderService orderService;
     private final MedicineRepository medicineRepository;
     private final FeatureFlagService featureFlagService;
+    private final PrescriptionRepository prescriptionRepository;
 
     public CustomerDeliveryService(DeliveryRepository deliveryRepository,
                                    DeliveryTimelineRepository timelineRepository,
@@ -63,7 +68,8 @@ public class CustomerDeliveryService {
                                    CurrentUserProvider currentUserProvider,
                                    OrderService orderService,
                                    MedicineRepository medicineRepository,
-                                   FeatureFlagService featureFlagService) {
+                                   FeatureFlagService featureFlagService,
+                                   PrescriptionRepository prescriptionRepository) {
         this.deliveryRepository = deliveryRepository;
         this.timelineRepository = timelineRepository;
         this.lifecycle = lifecycle;
@@ -72,6 +78,7 @@ public class CustomerDeliveryService {
         this.orderService = orderService;
         this.medicineRepository = medicineRepository;
         this.featureFlagService = featureFlagService;
+        this.prescriptionRepository = prescriptionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -100,6 +107,7 @@ public class CustomerDeliveryService {
         List<String> lines = new ArrayList<>();
         BigDecimal subtotal = BigDecimal.ZERO;
         boolean coldChain = false;
+        List<String> prescriptionOnlyItems = new ArrayList<>();
         for (OrderLine line : request.getItems()) {
             Optional<Medicine> medicine = line.getMedicineId() != null
                     ? medicineRepository.findById(line.getMedicineId())
@@ -110,10 +118,17 @@ public class CustomerDeliveryService {
                     .orElse(line.getUnitPrice());
             String name = medicine.map(Medicine::getName).orElse(line.getName().trim());
             coldChain |= medicine.map(m -> Boolean.TRUE.equals(m.getIsTemperatureSensitive())).orElse(false);
+            if (medicine.map(m -> Boolean.TRUE.equals(m.getRequiresPrescription())).orElse(false)) {
+                prescriptionOnlyItems.add(name);
+            }
 
             subtotal = subtotal.add(unitPrice.multiply(BigDecimal.valueOf(line.getQuantity())));
             lines.add(line.getQuantity() + " x " + name);
         }
+
+        Long prescriptionId = prescriptionOnlyItems.isEmpty()
+                ? null
+                : requireApprovedPrescription(customer, request.getPrescriptionId(), prescriptionOnlyItems);
 
         BigDecimal deliveryFee = deliveryZoneService.checkCity(address)
                 .filter(zone -> zone.getIsActive() != null && zone.getIsActive() == 1)
@@ -146,12 +161,33 @@ public class CustomerDeliveryService {
                 .coldChainTag(coldChain)
                 .handlingInstructionsSnapshot(coldChain ? "Cold chain: keep at 2-8°C, insulated box with ice pack" : null)
                 .preferredCourier(courier.getDisplayName())
+                .prescriptionId(prescriptionId)
                 .status(DeliveryStatus.PENDING.name())
                 .build();
 
         Delivery saved = lifecycle.create(delivery, DeliveryEventType.DELIVERY_REQUESTED,
                 "Order #" + order.getId() + " confirmed by customer with courier partner " + courier.getDisplayName());
         return DeliveryMapper.toCustomerResponse(saved, timelineRepository.findByDeliveryIdOrderByCreatedAtAscIdAsc(saved.getId()));
+    }
+
+    /**
+     * Prescription Management integration: prescription-only medicine can only be ordered against
+     * one of the customer's own prescriptions that a pharmacist has APPROVED.
+     */
+    private Long requireApprovedPrescription(User customer, Long prescriptionId, List<String> prescriptionOnlyItems) {
+        String items = String.join(", ", prescriptionOnlyItems);
+        if (prescriptionId == null) {
+            throw new PrescriptionRequiredException(items + " require(s) an approved prescription. "
+                    + "Upload your prescription and choose it at checkout.");
+        }
+        Prescription prescription = prescriptionRepository.findById(prescriptionId)
+                .filter(p -> p.getCustomer() != null && customer.getId().equals(p.getCustomer().getId()))
+                .orElseThrow(() -> new PrescriptionRequiredException("Prescription #" + prescriptionId + " was not found in your account."));
+        if (prescription.getStatus() != PrescriptionStatus.APPROVED) {
+            throw new PrescriptionRequiredException("Prescription #" + prescriptionId + " is " + prescription.getStatus()
+                    + ". Only a pharmacist-approved prescription can be used for " + items + ".");
+        }
+        return prescription.getId();
     }
 
     @Transactional(readOnly = true)

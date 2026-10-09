@@ -1027,6 +1027,11 @@ const DeliveryPage = () => {
                               {delivery.itemsSummary && (
                                 <p className="text-neutral-800 text-[11px] font-semibold line-clamp-2">{delivery.itemsSummary}</p>
                               )}
+                              {delivery.prescriptionId && (
+                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold">
+                                  Rx #{delivery.prescriptionId} approved
+                                </span>
+                              )}
                               <p className="text-neutral-600 text-[11px] line-clamp-2">
                                 {delivery.specialInstructions || 'Standard Handling'}
                               </p>
