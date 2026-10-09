@@ -141,10 +141,15 @@ Roles: Coordinator = `DELIVERY_COORDINATOR`, `ADMIN`, `SYSTEM_ADMIN`; Courier ad
 ## 5. Running locally
 
 ```bash
-./scripts/local-db.sh start          # private MySQL on port 3307 (data in .local-mysql/)
-cd backend && mvn spring-boot:run     # needs backend/src/main/resources/application.yml (see .example)
+./scripts/local-db.sh start           # private MySQL on port 3307 (data in .local-mysql/)
+cd backend && ./mvnw spring-boot:run  # no config file needed (see below)
 cd frontend && npm install && npm run dev
 ./scripts/e2e-delivery-flow.sh        # end-to-end check of the workflow + security
 ```
+
+The backend ships with built-in defaults (`backend/src/main/resources/mediorder-defaults.properties`)
+that point at the local MySQL above. To use a different database either export
+`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, or create your own gitignored
+`backend/src/main/resources/application.yml` from `application.yml.example`; both override the defaults.
 
 Demo accounts (password `admin123`): `customer1@gmail.com`, `deliverycoordinator1@gmail.com`.
