@@ -1,11 +1,19 @@
 package com.mediorder.it25101923_prescription_management.dto;
 
 import com.mediorder.it25101923_prescription_management.model.PrescriptionStatus;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public class PrescriptionVerificationRequest {
+    @NotNull(message = "Verification status is required")
     private PrescriptionStatus status;
+
+    @Size(max = 2000, message = "Verification notes must be at most 2000 characters")
     private String verificationNotes;
+
+    @Size(max = 1000, message = "Rejection reason must be at most 1000 characters")
     private String rejectionReason;
+
     private Boolean deleteFileImmediately;
 
     public PrescriptionVerificationRequest() {}
