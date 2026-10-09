@@ -6,146 +6,83 @@ import { getAdminDashboardRoute } from '../utils/roleRoutes';
 export const DEMO_ROLES = [
   {
     role: 'CUSTOMER',
-    buttonLabel: 'Login as Customer',
-    name: 'John Doe',
-    title: 'Customer / Patient',
-    icon: 'person',
-    badge: 'Storefront',
-    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+    title: 'Customer',
+    email: 'customer1@gmail.com',
     dest: '/catalog',
-    desc: 'Browse certified catalog, add items to cart, place orders, upload Rx',
-  },
-  {
-    role: 'CHIEF_PHARMACIST',
-    buttonLabel: 'Login as Pharmacist',
-    name: 'Dr. Silva',
-    title: 'Chief Pharmacist',
-    icon: 'medical_services',
-    badge: 'Clinical Rx',
-    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    dest: '/pharmacist_dashboard',
-    desc: 'Prescription review, drug interaction checks, dosage validation',
-  },
-  {
-    role: 'OPERATIONS_MANAGER',
-    buttonLabel: 'Login as Operations Manager',
-    name: 'Elena Rostova',
-    title: 'Operations Manager',
-    icon: 'inventory_2',
-    badge: 'Inventory & Stocks',
-    badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
-    dest: '/admin/catalog',
-    desc: 'Stock intake, FEFO batches, cold chain 5-tier classification',
-  },
-  {
-    role: 'DELIVERY_COORDINATOR',
-    buttonLabel: 'Login as Delivery Coordinator',
-    name: 'Kamal Perera',
-    title: 'Delivery Coordinator',
-    icon: 'local_shipping',
-    badge: 'Dispatch Logistics',
-    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
-    dest: '/modules/delivery',
-    desc: 'Zone routing, batch dispatch, courier assignments & holds',
-  },
-  {
-    role: 'DELIVERY_RIDER',
-    buttonLabel: 'Login as Delivery Rider',
-    name: 'Sunil Express',
-    title: 'Fleet Courier Rider',
-    icon: 'two_wheeler',
-    badge: 'Courier Mobile',
-    badgeColor: 'bg-teal-100 text-teal-800 border-teal-200',
-    dest: '/modules/delivery',
-    desc: 'Assigned deliveries, OTP verification at doorstep, delivery proof',
-  },
-  {
-    role: 'FINANCE_MANAGER',
-    buttonLabel: 'Login as Finance Manager',
-    name: 'Anura Kumara',
-    title: 'Finance Manager',
-    icon: 'payments',
-    badge: 'Financial Ledger',
-    badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    dest: '/admin/catalog',
-    desc: 'Settlements, prescription billing audit, subscription billing',
-  },
-  {
-    role: 'IT_MANAGER',
-    buttonLabel: 'Login as IT Manager',
-    name: 'DevOps IT Lead',
-    title: 'IT Systems Manager',
-    icon: 'dns',
-    badge: 'Telemetry & Logs',
-    badgeColor: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-    dest: '/admin/system',
-    desc: 'Error telemetry, audit trail, server health & SSE monitoring',
   },
   {
     role: 'SYSTEM_ADMIN',
-    buttonLabel: 'Login as System Admin',
-    name: 'Master Admin',
-    title: 'Master System Admin',
-    icon: 'admin_panel_settings',
-    badge: 'Full Governance',
-    badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
+    title: 'System Admin',
+    email: 'systemadmin1@gmail.com',
     dest: '/admin/system',
-    desc: '10 master control modules, kill switches, RBAC user provisioning',
+  },
+  {
+    role: 'CHIEF_PHARMACIST',
+    title: 'Pharmacist',
+    email: 'pharmacist1@gmail.com',
+    dest: '/pharmacist_dashboard',
+  },
+  {
+    role: 'OPERATIONS_MANAGER',
+    title: 'Operations Manager',
+    email: 'operationsmanager1@gmail.com',
+    dest: '/admin/catalog',
+  },
+  {
+    role: 'DELIVERY_COORDINATOR',
+    title: 'Delivery Coordinator',
+    email: 'deliverycoordinator1@gmail.com',
+    dest: '/modules/delivery',
   },
 ];
 
 const DemoRoleGrid = ({ onSelectRole }) => {
-  const { demoLogin } = useAuth();
+  const { login, adminLogin, demoLogin } = useAuth();
   const navigate = useNavigate();
   const [activeLoadingRole, setActiveLoadingRole] = useState(null);
   const [error, setError] = useState('');
 
-  const handleDemoClick = async (item) => {
+  const handleRoleLogin = async (item) => {
     setError('');
     setActiveLoadingRole(item.role);
     try {
-      const authData = await demoLogin(item.role);
+      let authData;
+      if (item.role === 'CUSTOMER') {
+        try {
+          authData = await login(item.email, 'admin123');
+        } catch {
+          authData = await demoLogin('CUSTOMER');
+        }
+      } else {
+        try {
+          authData = await adminLogin(item.email, 'admin123');
+        } catch {
+          authData = await demoLogin(item.role);
+        }
+      }
+
       if (onSelectRole) {
         onSelectRole(authData);
       }
       const destination = item.dest || getAdminDashboardRoute(item.role) || '/';
       navigate(destination);
     } catch (err) {
-      console.error('Demo login error', err);
-      setError('Failed to login as demo role: ' + (err.message || 'Unknown error'));
+      console.error('Role login error', err);
+      setError('Failed to sign in as ' + item.title + ': ' + (err.message || 'Unknown error'));
     } finally {
       setActiveLoadingRole(null);
     }
   };
 
   return (
-    <div className="w-full bg-surface-container-low border border-brand-border rounded-3xl p-4 sm:p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[18px]">bolt</span>
-          </div>
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-wider text-brand-charcoal">
-              Instant 1-Click Role Login
-            </h3>
-            <p className="text-[11px] text-on-surface-variant font-medium">
-              Click any box to immediately authenticate into that role.
-            </p>
-          </div>
-        </div>
-        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-          8 Roles Ready
-        </span>
-      </div>
-
+    <div className="w-full space-y-2">
       {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
+        <div className="p-2.5 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="flex flex-wrap gap-2 justify-center">
         {DEMO_ROLES.map((item) => {
           const isLoading = activeLoadingRole === item.role;
           return (
@@ -153,32 +90,10 @@ const DemoRoleGrid = ({ onSelectRole }) => {
               key={item.role}
               type="button"
               disabled={isLoading}
-              onClick={() => handleDemoClick(item)}
-              className="text-left p-3.5 rounded-2xl bg-white border-2 border-slate-200/80 hover:border-black hover:shadow-md transition-all group relative flex flex-col justify-between min-h-[105px] disabled:opacity-50 active:scale-[0.98]"
+              onClick={() => handleRoleLogin(item)}
+              className="flex-1 min-w-[120px] px-3.5 py-2.5 rounded-xl bg-neutral-100 hover:bg-black text-neutral-800 hover:text-white border border-neutral-300 hover:border-black text-xs font-bold transition-all text-center cursor-pointer disabled:opacity-50 active:scale-95 shadow-2xs"
             >
-              <div>
-                <div className="flex items-center justify-between gap-1 mb-1.5">
-                  <span className="inline-flex items-center gap-1.5 font-black text-xs text-black group-hover:text-primary transition-colors">
-                    <span className="material-symbols-outlined text-[17px] text-zinc-700 group-hover:text-black">
-                      {item.icon}
-                    </span>
-                    <span>{item.buttonLabel}</span>
-                  </span>
-                  <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${item.badgeColor}`}>
-                    {item.badge}
-                  </span>
-                </div>
-                <div className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed pl-6">
-                  {item.desc}
-                </div>
-              </div>
-
-              <div className="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] font-extrabold text-black group-hover:text-primary">
-                <span>{isLoading ? 'Authenticating...' : item.buttonLabel}</span>
-                <span className="material-symbols-outlined text-[15px] group-hover:translate-x-1 transition-transform">
-                  arrow_forward
-                </span>
-              </div>
+              <span>{isLoading ? 'Signing in...' : item.title}</span>
             </button>
           );
         })}

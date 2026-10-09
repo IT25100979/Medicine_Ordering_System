@@ -104,31 +104,42 @@ public class GlobalDataInitializer implements CommandLineRunner {
     }
 
     private void seedDemoUsers() {
-        seedUser("customer@mediorder.com", "Customer Demo User", Role.CUSTOMER, "0771000001");
-        seedUser("pharmacist@mediorder.com", "Dr. John Pharmacist", Role.CHIEF_PHARMACIST, "0771000002");
-        seedUser("ops@mediorder.com", "Sarah Operations", Role.OPERATIONS_MANAGER, "0771000003");
-        seedUser("delivery@mediorder.com", "Dave Delivery Coordinator", Role.DELIVERY_COORDINATOR, "0771000004");
-        seedUser("courier@mediorder.com", "Alex Fleet Rider", Role.DELIVERY_RIDER, "0771000005");
-        seedUser("finance@mediorder.com", "Fiona Finance Manager", Role.FINANCE_MANAGER, "0771000006");
-        seedUser("it@mediorder.com", "Ian IT Systems Admin", Role.IT_MANAGER, "0771000007");
-        seedUser("admin@mediorder.com", "Master System Admin", Role.SYSTEM_ADMIN, "0771000008");
+        log.info("Flushing user table and creating new users strictly from manualCodeEdits.md...");
+        try {
+            if (jdbcTemplate != null) {
+                jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
+                jdbcTemplate.execute("TRUNCATE TABLE users");
+                jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
+                log.info("Successfully flushed users table via TRUNCATE.");
+            } else {
+                userRepository.deleteAll();
+            }
+        } catch (Exception ex) {
+            log.warn("Truncate failed, falling back to userRepository.deleteAll(): {}", ex.getMessage());
+            userRepository.deleteAll();
+        }
+
+        // Strictly seed only users from manualCodeEdits.md
+        seedUser("customer1@gmail.com", "customer1", Role.CUSTOMER, "555-010-0001", "admin123");
+        seedUser("systemadmin1@gmail.com", "systemadmin1", Role.SYSTEM_ADMIN, "555-010-0002", "admin123");
+        seedUser("operationsmanager1@gmail.com", "operationsmanager1", Role.OPERATIONS_MANAGER, "555-010-0003", "admin123");
+        seedUser("pharmacist1@gmail.com", "pharmacist1", Role.CHIEF_PHARMACIST, "555-010-0004", "admin123");
+        seedUser("deliverycoordinator1@gmail.com", "deliverycoordinator1", Role.DELIVERY_COORDINATOR, "555-010-0005", "admin123");
     }
 
-    private void seedUser(String email, String fullName, Role role, String phone) {
-        if (!userRepository.existsByEmail(email)) {
-            User user = User.builder()
-                    .email(email)
-                    .fullName(fullName)
-                    .passwordHash(passwordEncoder.encode("Password123!"))
-                    .phoneNumber(phone)
-                    .role(role)
-                    .status(UserStatus.ACTIVE)
-                    .isDemo(true)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-            userRepository.save(user);
-            log.info("Seeded demo user: {} ({})", email, role);
-        }
+    private void seedUser(String email, String fullName, Role role, String phone, String rawPassword) {
+        User user = User.builder()
+                .email(email)
+                .fullName(fullName)
+                .passwordHash(passwordEncoder.encode(rawPassword))
+                .phoneNumber(phone)
+                .role(role)
+                .status(UserStatus.ACTIVE)
+                .isDemo(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+        userRepository.save(user);
+        log.info("Seeded user from manualCodeEdits: {} ({}) with initial credentials.", email, role);
     }
 
     private void seedFeatureFlags() {

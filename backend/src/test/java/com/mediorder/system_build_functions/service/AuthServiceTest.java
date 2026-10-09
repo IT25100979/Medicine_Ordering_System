@@ -216,33 +216,32 @@ public class AuthServiceTest {
     void testDemoLogin_ChiefPharmacist_ReturnsValidTokenAndRole() {
         User pharmUser = User.builder()
                 .id(10L)
-                .email("pharmacist@mediorder.com")
-                .fullName("Dr. Silva")
+                .email("pharmacist1@gmail.com")
+                .fullName("pharmacist1")
                 .role(Role.CHIEF_PHARMACIST)
-                .isDemo(true)
+                .isDemo(false)
                 .build();
 
-        when(userRepository.findByEmail("pharmacist@mediorder.com")).thenReturn(Optional.of(pharmUser));
-        when(tokenProvider.generateTokenFromUsername("pharmacist@mediorder.com")).thenReturn("mock-pharm-token");
+        when(userRepository.findByEmail("pharmacist1@gmail.com")).thenReturn(Optional.of(pharmUser));
+        when(tokenProvider.generateTokenFromUsername("pharmacist1@gmail.com")).thenReturn("mock-pharm-token");
 
         AuthResponse response = authService.demoLogin(new DemoLoginRequest("CHIEF_PHARMACIST"));
 
         assertNotNull(response);
         assertEquals("mock-pharm-token", response.getToken());
         assertEquals(Role.CHIEF_PHARMACIST, response.getUser().getRole());
-        assertTrue(response.getUser().getIsDemo());
         verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
     void testDemoLogin_Customer_SeedsIfMissing() {
-        when(userRepository.findByEmail("customer@mediorder.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("customer1@gmail.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(i -> {
             User u = i.getArgument(0);
             u.setId(101L);
             return u;
         });
-        when(tokenProvider.generateTokenFromUsername("customer@mediorder.com")).thenReturn("mock-cust-token");
+        when(tokenProvider.generateTokenFromUsername("customer1@gmail.com")).thenReturn("mock-cust-token");
 
         AuthResponse response = authService.demoLogin(new DemoLoginRequest("CUSTOMER"));
 

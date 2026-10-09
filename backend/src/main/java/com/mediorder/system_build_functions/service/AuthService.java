@@ -160,59 +160,42 @@ public class AuthService {
             case "CHIEF_PHARMACIST":
             case "PHARMACIST":
                 targetRole = Role.CHIEF_PHARMACIST;
-                email = "pharmacist@mediorder.com";
-                defaultName = "Dr. Silva (Chief Pharmacist)";
-                defaultPhone = "0771122334";
+                email = "pharmacist1@gmail.com";
+                defaultName = "pharmacist1";
+                defaultPhone = "555-010-0004";
                 break;
             case "OPERATIONS_MANAGER":
             case "OPS":
                 targetRole = Role.OPERATIONS_MANAGER;
-                email = "ops@mediorder.com";
-                defaultName = "Elena Rostova (Operations Manager)";
-                defaultPhone = "0772233445";
+                email = "operationsmanager1@gmail.com";
+                defaultName = "operationsmanager1";
+                defaultPhone = "555-010-0003";
                 break;
             case "DELIVERY_COORDINATOR":
             case "COORDINATOR":
-                targetRole = Role.DELIVERY_COORDINATOR;
-                email = "coordinator@mediorder.com";
-                defaultName = "Kamal Perera (Delivery Coordinator)";
-                defaultPhone = "0773344556";
-                break;
             case "DELIVERY_RIDER":
             case "RIDER":
             case "COURIER":
-                targetRole = Role.DELIVERY_RIDER;
-                email = "courier@mediorder.com";
-                defaultName = "Sunil Express (Delivery Rider)";
-                defaultPhone = "0774455667";
-                break;
-            case "FINANCE_MANAGER":
-            case "FINANCE":
-                targetRole = Role.FINANCE_MANAGER;
-                email = "finance@mediorder.com";
-                defaultName = "Anura Kumara (Finance Manager)";
-                defaultPhone = "0775566778";
-                break;
-            case "IT_MANAGER":
-            case "IT":
-                targetRole = Role.IT_MANAGER;
-                email = "it@mediorder.com";
-                defaultName = "DevOps IT Lead (IT Manager)";
-                defaultPhone = "0776677889";
+                targetRole = Role.DELIVERY_COORDINATOR;
+                email = "deliverycoordinator1@gmail.com";
+                defaultName = "deliverycoordinator1";
+                defaultPhone = "555-010-0005";
                 break;
             case "SYSTEM_ADMIN":
             case "ADMIN":
+            case "IT_MANAGER":
+            case "FINANCE_MANAGER":
                 targetRole = Role.SYSTEM_ADMIN;
-                email = "admin@mediorder.com";
-                defaultName = "Master System Admin";
-                defaultPhone = "0777788990";
+                email = "systemadmin1@gmail.com";
+                defaultName = "systemadmin1";
+                defaultPhone = "555-010-0002";
                 break;
             case "CUSTOMER":
             default:
                 targetRole = Role.CUSTOMER;
-                email = "customer@mediorder.com";
-                defaultName = "John Doe (Verified Customer)";
-                defaultPhone = "0778899001";
+                email = "customer1@gmail.com";
+                defaultName = "customer1";
+                defaultPhone = "555-010-0001";
                 break;
         }
 
@@ -224,11 +207,11 @@ public class AuthService {
             User newUser = User.builder()
                     .fullName(finalName)
                     .email(email)
-                    .passwordHash(passwordEncoder.encode("DemoPass123!"))
+                    .passwordHash(passwordEncoder.encode("admin123"))
                     .phoneNumber(finalPhone)
                     .role(finalRole)
                     .status(UserStatus.ACTIVE)
-                    .isDemo(true)
+                    .isDemo(false)
                     .createdAt(LocalDateTime.now())
                     .build();
             return userRepository.save(newUser);
