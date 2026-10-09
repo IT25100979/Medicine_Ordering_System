@@ -15,437 +15,126 @@ export const CLINICAL_FALLBACK_IMAGES = {
   'General': 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80',
 };
 
-// Initial Catalog Items matching the Stitch Product Catalog Screen
+// Initial Catalog Items strictly matching the 5 Live Batch 1 Products from manualCodeEdits.md
 export const CATALOG_ITEMS = [
   {
     id: 1,
-    title: 'Vitamin C 1000mg Bioflavonoid',
+    title: 'Amoxil 500mg',
     brand: 'PHARMA + Lab Clinical',
-    category: 'Vitamins & Nutritional Supplements',
+    category: 'Prescription Medicines',
     healthGoal: 'Immunity',
     gender: 'Unisex & Family',
     form: 'Capsule & Softgel',
-    price: 30.50,
+    price: 850.00,
     rating: 4.9,
     reviewsCount: 142,
-    badge: 'Verified 100%',
-    subtitle: 'IMMUNITY & DEFENSE',
-    description: 'High-absorption ascorbic acid with rose hips',
-    bottleType: 'amber',
-    pillText: '120 VEG CAPS',
-    dosage: '1000 MG',
+    badge: 'Rx Required',
+    subtitle: 'BROAD SPECTRUM RX',
+    description: 'Broad-spectrum antibiotic used to treat various bacterial infections.',
+    imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5e4708709?auto=format&fit=crop&q=80&w=400',
+    requiresPrescription: true,
+    genericName: 'Amoxicillin',
+    sku: 'RX-AMX-500',
   },
   {
     id: 2,
-    title: 'Kids Multi Organic Gummies',
-    brand: "Nature's Life",
-    category: 'Vitamins & Nutritional Supplements',
+    title: 'Panadol Extra',
+    brand: 'PHARMA + Lab Clinical',
+    category: 'Daily Health & Wellness',
     healthGoal: 'Daily Vitality',
     gender: 'Unisex & Family',
-    form: 'Organic Gummies',
-    price: 22.50,
+    form: 'Capsule & Softgel',
+    price: 120.00,
     rating: 4.8,
-    reviewsCount: 89,
-    badge: 'Organic',
-    subtitle: 'PEDIATRIC HEALTH',
-    description: 'Whole food fruit chewables with no added sucrose',
-    bottleType: 'rose',
-    pillText: '60 CHEWABLES',
-    dosage: 'ORGANIC',
+    reviewsCount: 210,
+    badge: 'Fast Relief',
+    subtitle: 'PAIN & FEVER RELIEF',
+    description: 'Fast, effective temporary relief of pain, headaches, and discomfort.',
+    imageUrl: 'https://images.unsplash.com/photo-1550572017-edb799988b48?auto=format&fit=crop&q=80&w=400',
+    requiresPrescription: false,
+    genericName: 'Paracetamol & Caffeine',
+    sku: 'HW-PND-EXT',
   },
   {
     id: 3,
-    title: "Mens Multi Naked Daily",
-    brand: 'Naked Nutrition',
-    category: 'Vitamins & Nutritional Supplements',
-    healthGoal: 'Daily Vitality',
-    gender: 'Male',
-    form: 'Capsule & Softgel',
-    price: 35.50,
+    title: 'Dettol Antiseptic Liquid 250ml',
+    brand: 'Reckitt / PHARMA +',
+    category: 'First Aid & Health Care',
+    healthGoal: 'Immunity',
+    gender: 'Unisex & Family',
+    form: 'Tincture / Syrup',
+    price: 450.00,
     rating: 4.9,
-    reviewsCount: 112,
-    badge: 'Top Rated',
-    subtitle: "MEN'S VITALITY",
-    description: 'Formulated with Saw Palmetto, Zinc & B-Complex',
-    bottleType: 'zinc',
-    pillText: '90 CAPSULES',
-    dosage: 'DAILY',
+    reviewsCount: 178,
+    badge: 'Antiseptic',
+    subtitle: 'FIRST AID & HYGIENE',
+    description: 'Antiseptic disinfectant liquid for first aid, wound cleaning, and personal hygiene.',
+    imageUrl: 'https://images.unsplash.com/photo-1603555543794-df7a76044bf9?auto=format&fit=crop&q=80&w=400',
+    requiresPrescription: false,
+    genericName: 'Chloroxylenol',
+    sku: 'FA-DTL-250',
   },
   {
     id: 4,
-    title: "Nature's Life Daily Multivitamin",
-    brand: "Nature's Life",
+    title: 'Centrum Advance Multivitamin',
+    brand: 'Centrum Clinical',
     category: 'Vitamins & Nutritional Supplements',
     healthGoal: 'Daily Vitality',
     gender: 'Unisex & Family',
     form: 'Capsule & Softgel',
-    price: 28.00,
-    rating: 4.7,
-    reviewsCount: 95,
-    badge: 'Verified 100%',
-    subtitle: 'ESSENTIAL VITAMINS',
-    description: 'Balanced multi-nutrient with clinical lutein & lycopene',
-    bottleType: 'sky',
-    pillText: '100 SOFTGELS',
-    dosage: 'DAILY MULTI',
+    price: 3500.00,
+    rating: 4.9,
+    reviewsCount: 195,
+    badge: 'Complete Multi',
+    subtitle: 'ADULT IMMUNITY & VITALITY',
+    description: 'Comprehensive daily multivitamin tailored to support adult health and immunity.',
+    imageUrl: 'https://images.unsplash.com/photo-1594995855018-8f8373b30e44?auto=format&fit=crop&q=80&w=400',
+    requiresPrescription: false,
+    genericName: 'Multivitamins & Minerals',
+    sku: 'VS-CEN-ADV',
   },
   {
     id: 5,
-    title: 'Suku Complete Multi Gummy',
-    brand: 'Suku Complete',
-    category: 'Vitamins & Nutritional Supplements',
-    healthGoal: 'Daily Vitality',
-    gender: 'Female',
-    form: 'Organic Gummies',
-    price: 32.00,
-    rating: 4.8,
-    reviewsCount: 76,
-    badge: 'Sugar Free',
-    subtitle: 'METABOLIC HEALTH',
-    description: 'Pectin based clean vitamins with CoQ10 & Iodine',
-    bottleType: 'pink',
-    pillText: '60 CHEWS • ZERO SUGAR',
-    dosage: 'THE COMPLETE',
-  },
-  {
-    id: 6,
-    title: 'Wild Mediterranean Oregano Oil',
-    brand: 'MedRelief Lab',
-    category: 'Vitamins & Nutritional Supplements',
-    healthGoal: 'Immunity',
-    gender: 'Unisex & Family',
-    form: 'Capsule & Softgel',
-    price: 24.90,
-    rating: 4.8,
-    reviewsCount: 63,
-    badge: 'Verified 100%',
-    subtitle: 'IMMUNE SUPPORT',
-    description: 'Standardized to 80% Carvacrol for respiratory ease',
-    bottleType: 'emerald',
-    pillText: '150 SOFTGELS',
-    dosage: '4,000 MG EQUIV',
-  },
-  {
-    id: 7,
-    title: 'Biotin 5000mcg High Potency',
-    brand: 'PHARMA + Lab Clinical',
-    category: 'Daily Health & Wellness',
-    secondaryCategory: 'Vitamins & Nutritional Supplements',
-    healthGoal: 'Daily Vitality',
-    gender: 'Female',
-    form: 'Capsule & Softgel',
-    price: 26.50,
-    rating: 4.9,
-    reviewsCount: 168,
-    badge: 'Clinical Grade',
-    subtitle: 'CELLULAR BEAUTY',
-    description: 'Keratin support for dermal regeneration and strength',
-    bottleType: 'teal',
-    pillText: '120 VEG CAPS',
-    dosage: '5000 MCG',
-  },
-  {
-    id: 8,
-    title: 'RestEase Sleep Support Complex',
-    brand: 'MedRelief Lab',
-    category: 'Vitamins & Nutritional Supplements',
-    healthGoal: 'Deep Sleep',
-    gender: 'Unisex & Family',
-    form: 'Capsule & Softgel',
-    price: 34.00,
-    rating: 4.9,
-    reviewsCount: 204,
-    badge: 'Best Seller',
-    subtitle: 'SLEEP RECOVERY',
-    description: 'Restful REM sleep blend with L-Theanine & Magnesium',
-    bottleType: 'zinc',
-    pillText: '60 CAPSULES',
-    dosage: 'SLEEP SUPPORT',
-  },
-  {
-    id: 9,
-    title: 'Turmeric Curcumin C3 Complex',
-    brand: 'PHARMA + Lab Clinical',
-    category: 'First Aid & Wound Care',
-    healthGoal: 'Joints & Bone',
-    gender: 'Unisex & Family',
-    form: 'Capsule & Softgel',
-    price: 42.00,
-    rating: 4.9,
-    reviewsCount: 131,
-    badge: 'Verified 100%',
-    subtitle: 'INFLAMMATION SUPPORT',
-    description: 'Clinically proven joint mobility & antioxidant defense',
-    bottleType: 'amber',
-    pillText: '90 VEG CAPS',
-    dosage: 'CURCUMIN C3',
-  },
-  // Dedicated Category Items for the Standard 5 Categories
-  {
-    id: 10,
-    title: 'Hyaluronic Acid Multi-Depth Hydrating Serum',
-    brand: 'PHARMA + Lab Clinical',
-    category: 'Daily Health & Wellness',
+    title: 'Omron M3 Blood Pressure Monitor',
+    brand: 'Omron Healthcare',
+    category: 'Home Health & medical Care',
     healthGoal: 'Daily Vitality',
     gender: 'Unisex & Family',
-    form: 'Tincture / Syrup',
-    price: 38.00,
-    rating: 4.9,
-    reviewsCount: 182,
-    badge: 'Clinical Grade',
-    subtitle: 'DERMAL RESTORATION',
-    description: 'Triple-molecular weight HA with Vitamin B5 for deep barrier recovery',
-    bottleType: 'teal',
-    pillText: '60 ML DROPPER',
-    dosage: 'HYALURONIC ACID',
-  },
-  {
-    id: 11,
-    title: 'Ceramide Barrier Defense Cream',
-    brand: 'PHARMA + Lab Clinical',
-    category: 'Daily Health & Wellness',
-    healthGoal: 'Daily Vitality',
-    gender: 'Unisex & Family',
-    form: 'Pure Powder',
-    price: 29.50,
-    rating: 4.8,
-    reviewsCount: 94,
-    badge: 'Derm Approved',
-    subtitle: 'SKIN BARRIER',
-    description: 'Lipid replenishment complex for sensitive skin barrier hydration',
-    bottleType: 'amber',
-    pillText: '100 ML JAR',
-    dosage: 'CERAMIDE 3 & 6',
-  },
-  {
-    id: 12,
-    title: 'Rosemary & Biotin Follicle Densifying Serum',
-    brand: "Nature's Life",
-    category: 'Daily Health & Wellness',
-    healthGoal: 'Daily Vitality',
-    gender: 'Unisex & Family',
-    form: 'Tincture / Syrup',
-    price: 34.00,
-    rating: 4.8,
+    form: 'Digital Device',
+    price: 18500.00,
+    rating: 5.0,
     reviewsCount: 88,
-    badge: 'Top Rated',
-    subtitle: 'HAIR RESTORATION',
-    description: 'Cold-pressed rosemary oil with peptides for root nourishment',
-    bottleType: 'emerald',
-    pillText: '50 ML DROPPER',
-    dosage: 'ROSEMARY PEPTIDE',
-  },
-  {
-    id: 13,
-    title: 'Keratin Intensive Nail & Cuticle Strengthener',
-    brand: 'MedRelief Lab',
-    category: 'Daily Health & Wellness',
-    healthGoal: 'Daily Vitality',
-    gender: 'Female',
-    form: 'Tincture / Syrup',
-    price: 18.50,
-    rating: 4.7,
-    reviewsCount: 65,
-    badge: 'Clinical Grade',
-    subtitle: 'NAIL STRENGTH',
-    description: 'Fortified with hydrolyzed keratin and jojoba oil for brittle nails',
-    bottleType: 'rose',
-    pillText: '30 ML APPLICATOR',
-    dosage: 'KERATIN COMPLEX',
-  },
-  {
-    id: 14,
-    title: 'Peptide Lip Restorative Conditioning Balm',
-    brand: 'PHARMA + Lab Clinical',
-    category: 'Daily Health & Wellness',
-    healthGoal: 'Daily Vitality',
-    gender: 'Unisex & Family',
-    form: 'Pure Powder',
-    price: 16.00,
-    rating: 4.9,
-    reviewsCount: 154,
-    badge: 'Best Seller',
-    subtitle: 'LIP HYDRATION',
-    description: 'Tri-peptide and shea butter overnight barrier infusion',
-    bottleType: 'pink',
-    pillText: '15 ML TUBE',
-    dosage: 'PEPTIDE INFUSION',
-  },
-  {
-    id: 15,
-    title: 'Digital Automatic Blood Pressure Monitor Hub',
-    brand: 'PHARMA + Lab Clinical',
-    category: 'Home Health & Medical Care',
-    healthGoal: 'Daily Vitality',
-    gender: 'Unisex & Family',
-    form: 'Capsule & Softgel',
-    price: 78.00,
-    rating: 4.9,
-    reviewsCount: 119,
-    badge: 'Clinical Grade',
-    subtitle: 'CARDIO SURVEILLANCE',
-    description: 'Oscillometric dual-user heart monitor with arrhythmia detection and cuff',
-    bottleType: 'sky',
-    pillText: 'DIGITAL MONITOR',
-    dosage: 'USB-C RECHARGEABLE',
-  },
-  {
-    id: 16,
-    title: 'Amoxicillin Trihydrate 500mg Antibiotic Rx',
-    brand: 'MedRelief Lab',
-    category: 'Prescription Medicines',
-    healthGoal: 'Daily Vitality',
-    gender: 'Unisex & Family',
-    form: 'Capsule & Softgel',
-    price: 24.50,
-    rating: 4.8,
-    reviewsCount: 77,
-    badge: 'Rx Required',
-    subtitle: 'BROAD SPECTRUM RX',
-    description: 'Physician-prescribed oral antibacterial capsules for systemic treatment',
-    bottleType: 'emerald',
-    pillText: '30 STERILE VIALS',
-    dosage: '0.5% EYE RELIEF',
+    badge: 'Clinically Validated',
+    subtitle: 'CARDIO MONITORING HUB',
+    description: 'Clinically validated upper arm blood pressure monitor for accurate home tracking.',
+    imageUrl: 'https://images.unsplash.com/photo-1527613426496-22878f001716?auto=format&fit=crop&q=80&w=400',
+    requiresPrescription: false,
+    genericName: 'N/A (Digital Sphygmomanometer)',
+    sku: 'HH-OMR-M3',
   },
 ];
 
-// Helper Bottle Graphic Component to replicate the exact Stitch 3D Bottle Mockups
-const BottleGraphic = ({ item }) => {
-  const { bottleType, title, brand, dosage, pillText, badge } = item;
+// Helper Product Image Display with Clean Aesthetic and Real Image
+const ProductImageCard = ({ item }) => {
+  const fallbackImg = CLINICAL_FALLBACK_IMAGES[item.category] || CLINICAL_FALLBACK_IMAGES['General'] || '';
+  const imgSrc = item.imageUrl || fallbackImg;
 
-  switch (bottleType) {
-    case 'rose':
-      return (
-        <div className="relative bg-gradient-to-b from-[#fbf8f5] to-[#f5ede4] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
-          <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-emerald-700 tracking-wider shadow-xs">
-            {badge || 'Organic'}
-          </span>
-          <div className="w-24 h-38 bg-rose-50 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border-2 border-rose-200 relative">
-            <div className="w-16 h-7 bg-red-600 rounded-t-xl -mt-5 shadow-sm"></div>
-            <div className="w-full bg-white rounded-lg p-2 text-center my-auto shadow-inner border border-rose-100">
-              <span className="block text-[7px] font-bold uppercase text-slate-400">{brand}</span>
-              <span className="block text-xs font-black text-rose-500 leading-tight">MULTI</span>
-              <span className="block text-[8px] font-bold text-amber-500">{dosage}</span>
-              <div className="flex justify-center gap-1 mt-1">
-                <span className="w-2 h-2 rounded-full bg-rose-400 inline-block"></span>
-                <span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
-              </div>
-            </div>
-            <div className="text-[7px] text-slate-400 font-mono">{pillText}</div>
-          </div>
-        </div>
-      );
-
-    case 'zinc':
-      return (
-        <div className="relative bg-gradient-to-b from-[#f3f6f6] to-[#e7ecee] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
-          <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-slate-800 tracking-wider shadow-xs">
-            {badge || 'Top Rated'}
-          </span>
-          <div className="w-24 h-40 bg-zinc-900 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border border-zinc-700 relative">
-            <div className="w-14 h-6 bg-zinc-800 rounded-t-lg -mt-4 border-b border-white/10 shadow-sm"></div>
-            <div className="w-full bg-zinc-800/90 border border-zinc-700 rounded-lg p-2 text-center my-auto shadow-inner text-white">
-              <span className="block text-[8px] font-mono tracking-widest text-zinc-400 uppercase">{brand}</span>
-              <span className="block text-xs font-black tracking-tight text-white mt-0.5">{dosage}</span>
-              <span className="block text-[7px] text-zinc-400 uppercase mt-0.5 tracking-tighter">Bioactive Trace</span>
-            </div>
-            <div className="text-[7px] text-zinc-400 font-mono">{pillText}</div>
-          </div>
-        </div>
-      );
-
-    case 'sky':
-      return (
-        <div className="relative bg-gradient-to-b from-[#f0f9ff] to-[#e0f2fe] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
-          <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-sky-800 tracking-wider shadow-xs">
-            {badge || 'Verified 100%'}
-          </span>
-          <div className="w-24 h-40 bg-sky-900 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border border-sky-800 relative">
-            <div className="w-14 h-6 bg-sky-950 rounded-t-lg -mt-4 border-b border-white/20 shadow-sm"></div>
-            <div className="w-full bg-gradient-to-b from-yellow-400 to-amber-400 rounded-lg p-2 text-center my-auto shadow-inner text-sky-950">
-              <span className="block text-[7px] font-black uppercase tracking-wider">{brand}</span>
-              <span className="block text-xs font-black leading-tight mt-0.5">{dosage}</span>
-              <span className="block text-[8px] font-extrabold text-sky-900">SOFTGELS</span>
-            </div>
-            <div className="text-[7px] text-sky-200 font-mono">{pillText}</div>
-          </div>
-        </div>
-      );
-
-    case 'pink':
-      return (
-        <div className="relative bg-gradient-to-b from-[#fbf5f8] to-[#f4e8ef] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
-          <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-pink-700 tracking-wider shadow-xs">
-            {badge || 'Sugar Free'}
-          </span>
-          <div className="w-24 h-40 bg-white/80 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border-2 border-pink-200 relative">
-            <div className="w-14 h-6 bg-slate-100 rounded-t-lg -mt-4 border border-slate-200 shadow-sm"></div>
-            <div className="w-full bg-gradient-to-b from-teal-500 to-cyan-600 rounded-lg p-2 text-center my-auto shadow-inner text-white">
-              <span className="block text-[8px] font-black tracking-widest uppercase">{brand}</span>
-              <span className="block text-xs font-black tracking-tight mt-0.5">{dosage}</span>
-              <span className="block text-[9px] font-extrabold text-cyan-100">MULTI GUMMY</span>
-            </div>
-            <div className="text-[7px] text-slate-500 font-mono">{pillText}</div>
-          </div>
-        </div>
-      );
-
-    case 'emerald':
-      return (
-        <div className="relative bg-gradient-to-b from-[#f0fdf4] to-[#dcfce7] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
-          <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-emerald-800 tracking-wider shadow-xs">
-            {badge || 'Verified 100%'}
-          </span>
-          <div className="w-24 h-40 bg-emerald-950 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border border-emerald-800 relative">
-            <div className="w-14 h-6 bg-emerald-700 rounded-t-lg -mt-4 border-b border-white/20 shadow-sm"></div>
-            <div className="w-full bg-white rounded-lg p-2 text-center my-auto shadow-inner border border-emerald-200 text-emerald-950">
-              <span className="block text-[7px] font-black uppercase text-slate-400">HERBAL RX</span>
-              <span className="block text-[11px] font-black text-emerald-800 leading-tight">{dosage}</span>
-              <span className="block text-[10px] font-bold text-amber-600">EXTRACT</span>
-              <span className="block text-[7px] text-slate-500 font-mono mt-0.5">STANDARDIZED</span>
-            </div>
-            <div className="text-[7px] text-emerald-300 font-mono">{pillText}</div>
-          </div>
-        </div>
-      );
-
-    case 'teal':
-      return (
-        <div className="relative bg-gradient-to-b from-[#f0fdf9] to-[#ccfbf1] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
-          <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-teal-700 tracking-wider shadow-xs">
-            {badge || 'Clinical Grade'}
-          </span>
-          <div className="w-22 h-36 bg-white rounded-2xl shadow-xl flex flex-col items-center justify-center p-3 border-2 border-teal-200 text-center">
-            <div className="w-12 h-4 bg-teal-100 rounded-t-md -mt-5 mb-3"></div>
-            <span className="text-[8px] font-mono tracking-widest text-teal-600 uppercase font-bold">PHARMA + LAB</span>
-            <span className="text-xs font-black text-slate-800 tracking-tight mt-1">{dosage}</span>
-            <div className="w-8 h-0.5 bg-teal-300 my-2"></div>
-            <span className="text-[7px] text-slate-400 uppercase font-mono">{pillText}</span>
-          </div>
-        </div>
-      );
-
-    case 'amber':
-    default:
-      return (
-        <div className="relative bg-gradient-to-b from-[#f7f9fb] to-[#edf2f7] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
-          <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-slate-700 tracking-wider shadow-xs">
-            {badge || 'Verified 100%'}
-          </span>
-          <div className="w-24 h-40 bg-amber-950 rounded-2xl shadow-xl flex flex-col items-center justify-between p-2 border-2 border-amber-900/40 relative">
-            <div className="w-14 h-6 bg-slate-900 rounded-t-lg -mt-4 border-b border-white/20 shadow-sm"></div>
-            <div className="w-full bg-gradient-to-b from-amber-400 to-amber-500 rounded-lg p-2 text-center my-auto shadow-inner text-amber-950">
-              <span className="block text-[8px] font-black uppercase tracking-wider">PHARMA + CLINICAL</span>
-              <span className="block text-xs font-black leading-tight mt-0.5">{dosage}</span>
-              <div className="w-5 h-5 mx-auto my-1 rounded-full bg-white/80 flex items-center justify-center font-black text-[9px] text-amber-600">•</div>
-              <span className="block text-[7px] tracking-tighter uppercase font-semibold">BIOACTIVE</span>
-            </div>
-            <div className="text-[7px] text-amber-200 font-mono">{pillText}</div>
-          </div>
-        </div>
-      );
-  }
+  return (
+    <div className="relative bg-gradient-to-b from-[#fbf8f5] to-[#f5ede4] rounded-2xl h-56 flex items-center justify-center p-4 overflow-hidden group-hover:scale-[1.01] transition-transform duration-300">
+      <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full text-slate-800 tracking-wider shadow-xs z-10">
+        {item.badge || (item.requiresPrescription ? 'Rx Required' : 'Verified 100%')}
+      </span>
+      <img
+        src={imgSrc}
+        alt={item.title || item.name}
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = fallbackImg;
+        }}
+        className="h-44 w-auto max-w-[90%] object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+      />
+    </div>
+  );
 };
 
 const CatalogPage = () => {
@@ -456,8 +145,48 @@ const CatalogPage = () => {
   const urlSearch = searchParams.get('search') || '';
   const urlCategory = searchParams.get('category') || '';
 
+  // Dynamic products state from backend
+  const [productsList, setProductsList] = useState(CATALOG_ITEMS);
+
+  useEffect(() => {
+    const fetchCatalog = async () => {
+      try {
+        const res = await client.get('/api/v1/medicines');
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map((m) => {
+            const cat = m.category || 'General';
+            const fallback = CLINICAL_FALLBACK_IMAGES[cat] || CLINICAL_FALLBACK_IMAGES['General'];
+            return {
+              id: m.id,
+              title: m.name,
+              name: m.name,
+              brand: m.brand || (m.name.includes('Centrum') ? 'Centrum Clinical' : m.name.includes('Dettol') ? 'Reckitt / PHARMA +' : m.name.includes('Omron') ? 'Omron Healthcare' : 'PHARMA + Lab Clinical'),
+              category: cat,
+              healthGoal: cat.includes('Immunity') || cat.includes('Vitamin') ? 'Immunity' : 'Daily Vitality',
+              gender: 'Unisex & Family',
+              form: m.name.includes('Monitor') ? 'Digital Device' : m.name.includes('Liquid') ? 'Tincture / Syrup' : 'Capsule & Softgel',
+              price: Number(m.unitPrice) || Number(m.price) || 850,
+              rating: m.rating ? Number(m.rating) : 4.9,
+              reviewsCount: m.reviewsCount || 120,
+              badge: m.requiresPrescription ? 'Rx Required' : 'Verified 100%',
+              subtitle: m.genericName || 'PHARMA + CLINICAL',
+              description: m.description || '',
+              imageUrl: m.imageUrl || fallback,
+              requiresPrescription: Boolean(m.requiresPrescription),
+              sku: m.sku,
+            };
+          });
+          setProductsList(mapped);
+        }
+      } catch (err) {
+        console.warn('Using local fallback catalog dataset:', err);
+      }
+    };
+    fetchCatalog();
+  }, []);
+
   // Interactive Filter States (Empty by default: all products visible)
-  const [priceMax, setPriceMax] = useState(1500);
+  const [priceMax, setPriceMax] = useState(25000);
   const [selectedGenders, setSelectedGenders] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedForms, setSelectedForms] = useState([]);
@@ -503,7 +232,7 @@ const CatalogPage = () => {
   };
 
   const resetAllFilters = () => {
-    setPriceMax(1500);
+    setPriceMax(25000);
     setSelectedGenders([]);
     setSelectedBrands([]);
     setSelectedForms([]);
@@ -518,30 +247,27 @@ const CatalogPage = () => {
 
   // Filter and Sort Products
   const filteredProducts = useMemo(() => {
-    let result = CATALOG_ITEMS.filter((item) => {
+    let result = productsList.filter((item) => {
       // 1. Search Query Filter
       if (activeSearch.trim()) {
         const query = activeSearch.toLowerCase().trim();
-        const matchesName = item.title.toLowerCase().includes(query);
-        const matchesBrand = item.brand.toLowerCase().includes(query);
-        const matchesDesc = item.description.toLowerCase().includes(query);
-        const matchesCat = item.category.toLowerCase().includes(query);
+        const matchesName = (item.title || item.name || '').toLowerCase().includes(query);
+        const matchesBrand = (item.brand || '').toLowerCase().includes(query);
+        const matchesDesc = (item.description || '').toLowerCase().includes(query);
+        const matchesCat = (item.category || '').toLowerCase().includes(query);
         if (!matchesName && !matchesBrand && !matchesDesc && !matchesCat) {
           return false;
         }
       }
 
-      // 2. Category Filter (supports 5 categories: Skin Care, Hair Care, Nail Care, Lips Care, Eye Care, etc.)
+      // 2. Category Filter
       if (activeCategory && activeCategory !== 'All Categories') {
         const catNorm = activeCategory.toLowerCase();
-        const itemCat = item.category.toLowerCase();
-        const secondaryCat = (item.secondaryCategory || '').toLowerCase();
+        const itemCat = (item.category || '').toLowerCase();
         const matches =
           itemCat === catNorm ||
           itemCat.includes(catNorm) ||
-          catNorm.includes(itemCat) ||
-          secondaryCat === catNorm ||
-          secondaryCat.includes(catNorm);
+          catNorm.includes(itemCat);
         if (!matches) return false;
       }
 
@@ -584,6 +310,7 @@ const CatalogPage = () => {
 
     return result;
   }, [
+    productsList,
     activeSearch,
     activeCategory,
     priceMax,
@@ -692,7 +419,7 @@ const CatalogPage = () => {
                   <input
                     aria-label="Price range filter"
                     className="w-full accent-sky-600 cursor-pointer"
-                    max="1500"
+                    max="25000"
                     min="10"
                     type="range"
                     value={priceMax}
@@ -704,7 +431,7 @@ const CatalogPage = () => {
                   <div className="flex justify-between items-center mt-3 text-xs font-bold text-slate-600">
                     <span className="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60">LKR 10</span>
                     <span className="text-slate-400 font-mono text-[10px]">—</span>
-                    <span className="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60">LKR 1500</span>
+                    <span className="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60">LKR 25,000</span>
                   </div>
                 </div>
               </div>
@@ -723,9 +450,9 @@ const CatalogPage = () => {
                 </div>
                 <div className="space-y-2.5 pt-1 text-xs">
                   {[
-                    { label: 'Male', count: 42 },
-                    { label: 'Female', count: 56 },
-                    { label: 'Unisex & Family', count: 31 },
+                    { label: 'Unisex & Family', count: 5 },
+                    { label: 'Male', count: 2 },
+                    { label: 'Female', count: 3 },
                   ].map((g) => (
                     <label key={g.label} className="flex items-center space-x-3 cursor-pointer group select-none">
                       <input
@@ -755,11 +482,10 @@ const CatalogPage = () => {
                 </div>
                 <div className="space-y-2.5 pt-1 text-xs">
                   {[
-                    { label: 'PHARMA + Lab Clinical', count: 19 },
-                    { label: "Nature's Life", count: 24 },
-                    { label: 'Suku Complete', count: 12 },
-                    { label: 'Naked Nutrition', count: 8 },
-                    { label: 'MedRelief Lab', count: 14 },
+                    { label: 'PHARMA + Lab Clinical', count: 2 },
+                    { label: 'Centrum Clinical', count: 1 },
+                    { label: 'Reckitt / PHARMA +', count: 1 },
+                    { label: 'Omron Healthcare', count: 1 },
                   ].map((b) => (
                     <label key={b.label} className="flex items-center space-x-3 cursor-pointer group select-none">
                       <input
@@ -789,10 +515,9 @@ const CatalogPage = () => {
                 </div>
                 <div className="space-y-2.5 pt-1 text-xs">
                   {[
-                    { label: 'Capsule & Softgel', count: 74 },
-                    { label: 'Organic Gummies', count: 22 },
-                    { label: 'Tincture / Syrup', count: 15 },
-                    { label: 'Pure Powder', count: 11 },
+                    { label: 'Capsule & Softgel', count: 3 },
+                    { label: 'Tincture / Syrup', count: 1 },
+                    { label: 'Digital Device', count: 1 },
                   ].map((f) => (
                     <label key={f.label} className="flex items-center space-x-3 cursor-pointer group select-none">
                       <input
@@ -816,7 +541,7 @@ const CatalogPage = () => {
               <div>
                 <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-3">Health Goal</h3>
                 <div className="flex flex-wrap gap-2 text-[11px]">
-                  {['Immunity', 'Daily Vitality', 'Deep Sleep', 'Joints & Bone'].map((goal) => {
+                  {['Immunity', 'Daily Vitality'].map((goal) => {
                     const isSelected = selectedGoals.includes(goal);
                     return (
                       <button
@@ -898,10 +623,10 @@ const CatalogPage = () => {
                 </span>
               ))}
 
-              {priceMax < 1500 && (
+              {priceMax < 25000 && (
                 <span className="inline-flex items-center gap-1 bg-white border border-slate-200 px-3 py-1 rounded-full font-medium text-slate-700 shadow-2xs">
                   Under LKR {priceMax.toLocaleString('en-LK')}
-                  <button onClick={() => setPriceMax(1500)} className="hover:text-black font-bold ml-1">×</button>
+                  <button onClick={() => setPriceMax(25000)} className="hover:text-black font-bold ml-1">×</button>
                 </span>
               )}
 
@@ -925,7 +650,7 @@ const CatalogPage = () => {
                 selectedBrands.length > 0 ||
                 selectedForms.length > 0 ||
                 selectedGoals.length > 0 ||
-                priceMax < 1500 ||
+                priceMax < 25000 ||
                 activeCategory !== 'All Categories') && (
                 <button
                   type="button"
@@ -969,16 +694,16 @@ const CatalogPage = () => {
                     >
                       {/* Clickable Product Header leading to Product Page */}
                       <Link to={`/product/${product.id}`} className="block group/link cursor-pointer">
-                        {/* Bottle Graphic Container */}
-                        <BottleGraphic item={product} />
+                        {/* Product Image Container */}
+                        <ProductImageCard item={product} />
 
                         {/* Product Details */}
                         <div className="pt-5">
                           <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                            {product.subtitle}
+                            {product.subtitle || product.genericName}
                           </span>
                           <h2 className="text-base font-bold text-slate-900 mt-1 leading-snug group-hover/link:text-sky-700 transition-colors">
-                            {product.title}
+                            {product.title || product.name}
                           </h2>
                           <p className="text-xs text-slate-500 mt-1 line-clamp-1">
                             {product.description}

@@ -4,50 +4,162 @@ import { useAuth } from '../context/AuthContext';
 import { isStaffRole, getAdminDashboardRoute } from '../utils/roleRoutes';
 import client from '../api/client';
 
+export const HOMEPAGE_PRODUCTS = [
+  {
+    id: 1,
+    name: 'Amoxil 500mg',
+    genericName: 'Amoxicillin',
+    sku: 'RX-AMX-500',
+    category: 'Prescription Medicines',
+    price: 850,
+    imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5e4708709?auto=format&fit=crop&q=80&w=400',
+    description: 'Broad-spectrum antibiotic used to treat various bacterial infections.',
+    badge: 'Rx Required',
+    requiresPrescription: true,
+  },
+  {
+    id: 2,
+    name: 'Panadol Extra',
+    genericName: 'Paracetamol & Caffeine',
+    sku: 'HW-PND-EXT',
+    category: 'Daily Health & Wellness',
+    price: 120,
+    imageUrl: 'https://images.unsplash.com/photo-1550572017-edb799988b48?auto=format&fit=crop&q=80&w=400',
+    description: 'Fast, effective temporary relief of pain, headaches, and discomfort.',
+    badge: 'Fast Relief',
+    requiresPrescription: false,
+  },
+  {
+    id: 3,
+    name: 'Dettol Antiseptic Liquid 250ml',
+    genericName: 'Chloroxylenol',
+    sku: 'FA-DTL-250',
+    category: 'First Aid & Health Care',
+    price: 450,
+    imageUrl: 'https://images.unsplash.com/photo-1603555543794-df7a76044bf9?auto=format&fit=crop&q=80&w=400',
+    description: 'Antiseptic disinfectant liquid for first aid, wound cleaning, and personal hygiene.',
+    badge: 'First Aid',
+    requiresPrescription: false,
+  },
+  {
+    id: 4,
+    name: 'Centrum Advance Multivitamin',
+    genericName: 'Multivitamins & Minerals',
+    sku: 'VS-CEN-ADV',
+    category: 'Vitamins & Nutritional Supplements',
+    price: 3500,
+    imageUrl: 'https://images.unsplash.com/photo-1594995855018-8f8373b30e44?auto=format&fit=crop&q=80&w=400',
+    description: 'Comprehensive daily multivitamin tailored to support adult health and immunity.',
+    badge: 'Complete Multi',
+    requiresPrescription: false,
+  },
+  {
+    id: 5,
+    name: 'Omron M3 Blood Pressure Monitor',
+    genericName: 'N/A (Digital Sphygmomanometer)',
+    sku: 'HH-OMR-M3',
+    category: 'Home Health & medical Care',
+    price: 18500,
+    imageUrl: 'https://images.unsplash.com/photo-1527613426496-22878f001716?auto=format&fit=crop&q=80&w=400',
+    description: 'Clinically validated upper arm blood pressure monitor for accurate home tracking.',
+    badge: 'Clinical Device',
+    requiresPrescription: false,
+  },
+  {
+    id: 6,
+    name: 'Lipitor 20mg',
+    genericName: 'Atorvastatin',
+    sku: 'RX-LPT-020',
+    category: 'Prescription Medicines',
+    price: 1200,
+    imageUrl: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?auto=format&fit=crop&q=80&w=400',
+    description: 'Cholesterol-lowering medication used to reduce the risk of heart disease.',
+    badge: 'Rx Required',
+    requiresPrescription: true,
+  },
+  {
+    id: 7,
+    name: 'Hansaplast Fabric Plasters',
+    genericName: 'N/A (Adhesive Bandage)',
+    sku: 'FA-HNS-040',
+    category: 'First Aid & Health Care',
+    price: 250,
+    imageUrl: 'https://images.pexels.com/photos/4096053/pexels-photo-4096053.jpeg?auto=compress&cs=tinysrgb&w=400',
+    description: 'Breathable and durable fabric plasters for protecting minor cuts and scrapes.',
+    badge: 'Wound Care',
+    requiresPrescription: false,
+  },
+  {
+    id: 8,
+    name: 'Seven Seas Cod Liver Oil',
+    genericName: 'Omega-3 & Vitamins A, D, E',
+    sku: 'VS-SSC-120',
+    category: 'Vitamins & Nutritional Supplements',
+    price: 2800,
+    imageUrl: 'https://images.unsplash.com/photo-1550572620-176840d046c8?auto=format&fit=crop&q=80&w=400',
+    description: 'Traditional Omega-3 rich fish oil supplement to support heart, brain, and joint health.',
+    badge: 'Omega-3',
+    requiresPrescription: false,
+  },
+];
+
 const HomePage = () => {
   const { user, isAuthenticated } = useAuth();
-  const [dbProducts, setDbProducts] = useState({});
+  const [dbProducts, setDbProducts] = useState(HOMEPAGE_PRODUCTS);
 
-  // Fetch live products for category 'Dietary & Vits' to link to actual database IDs
+  // Fetch live products to get exact database IDs
   useEffect(() => {
     let isMounted = true;
-    const fetchCategoryProducts = async () => {
+    const fetchLiveProducts = async () => {
       try {
-        const res = await client.get('/api/v1/medicines?category=Dietary%20%26%20Vits');
-        if (isMounted && res.data && Array.isArray(res.data)) {
-          const map = {};
-          res.data.forEach((p) => {
-            if (p.name) {
-              map[p.name.toLowerCase()] = p.id;
+        const res = await client.get('/api/v1/medicines?all=true');
+        if (isMounted && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const merged = HOMEPAGE_PRODUCTS.map((local) => {
+            const match = res.data.find(
+              (d) => (d.sku && d.sku === local.sku) ||
+                     (d.name && d.name.toLowerCase() === local.name.toLowerCase())
+            );
+            if (match) {
+              return {
+                ...local,
+                id: match.id,
+                price: match.unitPrice || match.price || local.price,
+                imageUrl: match.imageUrl || local.imageUrl,
+              };
             }
+            return local;
           });
-          setDbProducts(map);
+          setDbProducts(merged);
         }
       } catch (err) {
-        console.warn('Could not fetch live vitamins for landing page:', err);
+        console.warn('Could not fetch dynamic catalog for homepage:', err);
       }
     };
-    fetchCategoryProducts();
+    fetchLiveProducts();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Helper to find DB ID by partial name
-  const getProductLink = (nameQuery, fallbackParam) => {
-    const key = Object.keys(dbProducts).find((k) => k.includes(nameQuery.toLowerCase()));
-    if (key && dbProducts[key]) {
-      return `/catalog/${dbProducts[key]}`;
-    }
-    return `/catalog?category=Dietary%20%26%20Vits${fallbackParam ? `&search=${fallbackParam}` : ''}`;
+  // Helper to find item by SKU or fallback
+  const getProduct = (sku) => {
+    return dbProducts.find((p) => p.sku === sku) || HOMEPAGE_PRODUCTS.find((p) => p.sku === sku) || dbProducts[0];
   };
 
   // The landing page is strictly for regular customers and visitors.
-  // Any logged-in administrator is automatically redirected into their specific dashboard.
   if (isAuthenticated && isStaffRole(user?.role)) {
     const targetDashboard = getAdminDashboardRoute(user.role) || '/admin/catalog';
     return <Navigate to={targetDashboard} replace />;
   }
+
+  const pAmoxil = getProduct('RX-AMX-500');
+  const pPanadol = getProduct('HW-PND-EXT');
+  const pDettol = getProduct('FA-DTL-250');
+  const pCentrum = getProduct('VS-CEN-ADV');
+  const pOmron = getProduct('HH-OMR-M3');
+  const pLipitor = getProduct('RX-LPT-020');
+  const pHansaplast = getProduct('FA-HNS-040');
+  const pSevenSeas = getProduct('VS-SSC-120');
 
   return (
     <div className="pt-28 pb-16 px-3 sm:px-5 md:px-8 max-w-[1580px] mx-auto selection:bg-black selection:text-white">
@@ -59,7 +171,7 @@ const HomePage = () => {
           {/* SECTION 1: HERO BANNER (Full Width across container)      */}
           {/* ========================================================= */}
           <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-[#A5CBE4] via-[#BFDCF0] to-[#E9F3FA] p-8 sm:p-14 lg:p-16 min-h-[520px] flex flex-col justify-between border border-white/50 shadow-inner w-full">
-            {/* Realistic Cloud Overlays (Pure CSS & SVG gradients) */}
+            {/* Realistic Cloud Overlays */}
             <div
               className="absolute inset-0 bg-no-repeat bg-cover pointer-events-none opacity-40 mix-blend-screen animate-cloud-drift"
               style={{
@@ -69,62 +181,89 @@ const HomePage = () => {
             <div className="absolute -bottom-16 -left-12 w-96 h-96 bg-white/50 rounded-full blur-3xl pointer-events-none animate-pulse" />
             <div className="absolute -top-12 -right-12 w-96 h-96 bg-white/60 rounded-full blur-3xl pointer-events-none animate-pulse" />
 
-            {/* Hero Top Heading: 3 Angled Floating Pill Bottles */}
-            <div className="relative z-10 w-full flex justify-center items-center py-6 sm:py-12">
-              <div className="flex items-center justify-center space-x-3 sm:space-x-10 max-w-3xl mx-auto">
-                {/* Left Prescription Bottle */}
-                <div className="bottle-float-left w-28 sm:w-36 md:w-48 select-none group cursor-pointer">
-                  <div className="bg-gradient-to-br from-amber-700 via-amber-800 to-amber-950 rounded-[1.8rem] p-1.5 shadow-2xl border border-white/30 group-hover:border-amber-400/50 transition-colors">
-                    <div className="h-6 w-16 mx-auto bg-stone-100 rounded-t-lg border-b border-stone-300 shadow-inner" />
-                    <div className="bg-white rounded-[1.4rem] p-3 text-center my-1 text-[10px] space-y-1 shadow-sm">
-                      <p className="font-black text-black tracking-tight text-xs uppercase">MedRelief</p>
-                      <div className="w-10 h-0.5 bg-blue-600 mx-auto my-1" />
-                      <div className="bg-gray-100 h-6 flex items-center justify-center rounded px-1">
-                        <span className="font-mono text-[8px] text-gray-500 tracking-tighter">||| | | |||| |||</span>
-                      </div>
-                      <p className="text-[7px] leading-tight text-gray-500 line-clamp-2">Fast acting pain relief capsule formula</p>
-                      <span className="inline-block bg-sky-100 text-sky-800 text-[8px] px-2 py-0.5 rounded-full font-bold">60 CAPS</span>
+            {/* Hero Top Heading: 3 Angled Floating Product Cards with Real Images */}
+            <div className="relative z-10 w-full flex justify-center items-center py-6 sm:py-10">
+              <div className="flex items-center justify-center space-x-3 sm:space-x-8 max-w-4xl mx-auto">
+                {/* Left Floating Card: Panadol Extra */}
+                <Link
+                  to={`/catalog/${pPanadol.id}`}
+                  className="bottle-float-left w-32 sm:w-44 md:w-52 select-none group cursor-pointer block hover:scale-105 transition-all duration-300"
+                >
+                  <div className="bg-white/95 backdrop-blur-md rounded-[2rem] p-3 shadow-2xl border border-white/80 group-hover:border-emerald-400/80 transition-all">
+                    <div className="relative h-32 sm:h-40 rounded-2xl bg-gradient-to-b from-emerald-50/60 to-white flex items-center justify-center p-2 overflow-hidden">
+                      <span className="absolute top-2 left-2 bg-emerald-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-xs">
+                        LKR {pPanadol.price}
+                      </span>
+                      <img
+                        src={pPanadol.imageUrl}
+                        alt={pPanadol.name}
+                        className="h-28 sm:h-36 w-auto object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="p-2 text-center space-y-0.5">
+                      <p className="font-extrabold text-gray-900 text-xs tracking-tight truncate">{pPanadol.name}</p>
+                      <p className="text-[9px] text-gray-500 font-medium">Fast Pain Relief</p>
+                      <span className="inline-block bg-emerald-100 text-emerald-800 text-[8px] px-2 py-0.5 rounded-full font-bold">
+                        100% Authentic
+                      </span>
                     </div>
                   </div>
-                </div>
+                </Link>
 
-                {/* Center Prescription Bottle (Prominent) */}
-                <div className="bottle-float-center w-32 sm:w-44 md:w-56 z-20 select-none group cursor-pointer">
-                  <div className="bg-gradient-to-br from-amber-600 via-amber-800 to-stone-900 rounded-[2.2rem] p-2 shadow-2xl border border-white/40 ring-4 ring-white/30 group-hover:ring-amber-300/50 transition-all">
-                    <div className="h-7 w-20 mx-auto bg-stone-100 rounded-t-xl border-b border-stone-300 shadow-sm flex items-center justify-center">
-                      <span className="w-8 h-1 bg-gray-300 rounded-full" />
+                {/* Center Floating Card: Amoxil 500mg (Prominent) */}
+                <Link
+                  to={`/catalog/${pAmoxil.id}`}
+                  className="bottle-float-center w-36 sm:w-52 md:w-60 z-20 select-none group cursor-pointer block hover:scale-105 transition-all duration-300"
+                >
+                  <div className="bg-white rounded-[2.2rem] p-3.5 shadow-2xl border-2 border-white ring-4 ring-blue-200/50 group-hover:ring-blue-400/80 transition-all">
+                    <div className="relative h-40 sm:h-48 rounded-2xl bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-3 overflow-hidden">
+                      <span className="absolute top-2.5 left-2.5 bg-blue-600 text-white text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-sm">
+                        LKR {pAmoxil.price}
+                      </span>
+                      <span className="absolute top-2.5 right-2.5 bg-rose-100 text-rose-700 text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full">
+                        Rx Required
+                      </span>
+                      <img
+                        src={pAmoxil.imageUrl}
+                        alt={pAmoxil.name}
+                        className="h-32 sm:h-44 w-auto object-contain drop-shadow-lg group-hover:scale-110 transition-transform duration-500"
+                      />
                     </div>
-                    <div className="bg-white rounded-[1.6rem] p-4 text-center my-1 text-[10px] space-y-1.5 shadow-md">
-                      <p className="font-black text-gray-950 text-sm tracking-tight uppercase">MedRelief</p>
-                      <div className="w-12 h-0.5 bg-blue-600 mx-auto" />
-                      <div className="bg-gray-100 h-7 flex items-center justify-center rounded px-2">
-                        <span className="font-mono text-[9px] text-gray-600 tracking-tight">||| |||| | |||||</span>
-                      </div>
-                      <p className="text-[8px] leading-snug text-gray-500 font-medium">Fast-acting premium medical formula</p>
-                      <div className="pt-1">
-                        <span className="bg-blue-50 text-blue-900 font-bold text-[8px] px-2.5 py-1 rounded-full border border-blue-200 uppercase tracking-wider">
-                          Verified 100%
-                        </span>
-                      </div>
+                    <div className="p-2.5 text-center space-y-1">
+                      <p className="font-black text-gray-950 text-sm tracking-tight truncate">{pAmoxil.name}</p>
+                      <p className="text-[9px] text-gray-600 font-medium">Broad-Spectrum Antibiotic</p>
+                      <span className="bg-blue-50 text-blue-900 font-bold text-[9px] px-3 py-1 rounded-full border border-blue-200 uppercase tracking-wider inline-block">
+                        Batch 1 Live Verified
+                      </span>
                     </div>
                   </div>
-                </div>
+                </Link>
 
-                {/* Right Prescription Bottle */}
-                <div className="bottle-float-right w-28 sm:w-36 md:w-48 select-none group cursor-pointer">
-                  <div className="bg-gradient-to-br from-amber-700 via-amber-800 to-amber-950 rounded-[1.8rem] p-1.5 shadow-2xl border border-white/30 group-hover:border-amber-400/50 transition-colors">
-                    <div className="h-6 w-16 mx-auto bg-stone-100 rounded-t-lg border-b border-stone-300 shadow-inner" />
-                    <div className="bg-white rounded-[1.4rem] p-3 text-center my-1 text-[10px] space-y-1 shadow-sm">
-                      <p className="font-black text-black tracking-tight text-xs uppercase">MedRelief</p>
-                      <div className="w-10 h-0.5 bg-blue-600 mx-auto my-1" />
-                      <div className="bg-gray-100 h-6 flex items-center justify-center rounded px-1">
-                        <span className="font-mono text-[8px] text-gray-500 tracking-tighter">|||| | ||| ||||</span>
-                      </div>
-                      <p className="text-[7px] leading-tight text-gray-500 line-clamp-2">Clinical daily protection essential</p>
-                      <span className="inline-block bg-emerald-100 text-emerald-800 text-[8px] px-2 py-0.5 rounded-full font-bold">60 CAPS</span>
+                {/* Right Floating Card: Centrum Advance */}
+                <Link
+                  to={`/catalog/${pCentrum.id}`}
+                  className="bottle-float-right w-32 sm:w-44 md:w-52 select-none group cursor-pointer block hover:scale-105 transition-all duration-300"
+                >
+                  <div className="bg-white/95 backdrop-blur-md rounded-[2rem] p-3 shadow-2xl border border-white/80 group-hover:border-amber-400/80 transition-all">
+                    <div className="relative h-32 sm:h-40 rounded-2xl bg-gradient-to-b from-amber-50/60 to-white flex items-center justify-center p-2 overflow-hidden">
+                      <span className="absolute top-2 left-2 bg-amber-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full shadow-xs">
+                        LKR {pCentrum.price}
+                      </span>
+                      <img
+                        src={pCentrum.imageUrl}
+                        alt={pCentrum.name}
+                        className="h-28 sm:h-36 w-auto object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="p-2 text-center space-y-0.5">
+                      <p className="font-extrabold text-gray-900 text-xs tracking-tight truncate">{pCentrum.name}</p>
+                      <p className="text-[9px] text-gray-500 font-medium">Adult Vitality Multi</p>
+                      <span className="inline-block bg-amber-100 text-amber-800 text-[8px] px-2 py-0.5 rounded-full font-bold">
+                        Daily Immunity
+                      </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               </div>
             </div>
 
@@ -149,27 +288,33 @@ const HomePage = () => {
           <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Bento 1: Prescription Medicine */}
             <Link
-              to="/catalog?category=Prescription%20Rx"
+              to="/catalog?category=Prescription%20Medicines"
               className="bg-[#E4F0F8] rounded-3xl p-6 flex flex-col justify-between h-96 border border-white/80 shadow-sm relative overflow-hidden group hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 card-gleam"
             >
               <div>
+                <span className="text-[10px] uppercase font-black tracking-widest text-blue-800 bg-blue-100/80 px-2.5 py-1 rounded-full inline-block mb-2">
+                  Prescription Rx
+                </span>
                 <h2 className="text-2xl font-bold tracking-tight text-gray-900 leading-snug">
-                  Prescription<br />medicine
+                  Prescription<br />Medicines
                 </h2>
               </div>
-              {/* Graphic Illustration: Pill Container */}
+              {/* Real Product Image Preview: Amoxil 500mg */}
               <div className="my-auto py-2 flex items-center justify-center">
-                <div className="relative w-40 h-32 flex items-center justify-center">
-                  <div className="w-32 h-20 bg-gradient-to-r from-blue-400 via-teal-400 to-cyan-500 rounded-full flex items-center justify-around px-3 shadow-lg transform -rotate-12 group-hover:rotate-0 group-hover:scale-110 transition-transform duration-500">
-                    <span className="w-6 h-10 bg-white/90 rounded-full border border-blue-200 shadow-sm" />
-                    <span className="w-6 h-10 bg-emerald-300 rounded-full border border-teal-200 shadow-sm" />
-                    <span className="w-6 h-10 bg-cyan-200 rounded-full border border-cyan-300 shadow-sm" />
+                <div className="relative w-44 h-36 bg-white/80 backdrop-blur-xs rounded-2xl p-3 shadow-md border border-white flex items-center justify-center group-hover:scale-105 group-hover:shadow-lg transition-all duration-500">
+                  <img
+                    src={pAmoxil.imageUrl}
+                    alt={pAmoxil.name}
+                    className="h-28 w-auto object-contain drop-shadow"
+                  />
+                  <div className="absolute bottom-2 right-2 bg-black text-white text-[8px] font-bold px-2 py-0.5 rounded-full">
+                    LKR {pAmoxil.price}
                   </div>
                 </div>
               </div>
               <div className="flex items-end justify-between pt-2 border-t border-blue-100/60">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-gray-700 max-w-[170px] leading-tight">
-                  Over 1000+ Prescription Meds At Your Fingertips
+                  Verified Antibiotics &amp; Regulated Therapeutics
                 </p>
                 <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-gray-800 group-hover:bg-black group-hover:text-white group-hover:rotate-45 group-hover:scale-110 transition-all duration-300">
                   <i className="fa-solid fa-arrow-up-right text-xs" />
@@ -177,29 +322,35 @@ const HomePage = () => {
               </div>
             </Link>
 
-            {/* Bento 2: Surgical Product */}
+            {/* Bento 2: Home Health & Medical Care */}
             <Link
-              to="/catalog"
+              to="/catalog?category=Home%20Health%20%26%20medical%20Care"
               className="bg-[#E5F4E9] rounded-3xl p-6 flex flex-col justify-between h-96 border border-white/80 shadow-sm relative overflow-hidden group hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 card-gleam"
             >
               <div>
+                <span className="text-[10px] uppercase font-black tracking-widest text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-full inline-block mb-2">
+                  Clinical Devices
+                </span>
                 <h2 className="text-2xl font-bold tracking-tight text-gray-900 leading-snug">
-                  Surgical<br />product
+                  Home Health &amp;<br />Medical Care
                 </h2>
               </div>
-              {/* Graphic Illustration: Surgical tools */}
+              {/* Real Product Image Preview: Omron M3 */}
               <div className="my-auto py-2 flex items-center justify-center">
-                <div className="relative w-36 h-32 flex items-center justify-center">
-                  <div className="flex items-end space-x-3 group-hover:scale-110 transition-transform duration-500">
-                    <div className="w-2.5 h-24 bg-gradient-to-t from-gray-300 to-gray-100 rounded-full shadow-md transform -rotate-12 group-hover:-rotate-6 transition-transform" />
-                    <div className="w-3 h-28 bg-gradient-to-t from-gray-400 via-zinc-200 to-gray-100 rounded-full shadow-md" />
-                    <div className="w-2.5 h-20 bg-gradient-to-t from-gray-300 to-gray-100 rounded-full shadow-md transform rotate-12 group-hover:rotate-6 transition-transform" />
+                <div className="relative w-44 h-36 bg-white/80 backdrop-blur-xs rounded-2xl p-3 shadow-md border border-white flex items-center justify-center group-hover:scale-105 group-hover:shadow-lg transition-all duration-500">
+                  <img
+                    src={pOmron.imageUrl}
+                    alt={pOmron.name}
+                    className="h-28 w-auto object-contain drop-shadow"
+                  />
+                  <div className="absolute bottom-2 right-2 bg-emerald-700 text-white text-[8px] font-bold px-2 py-0.5 rounded-full">
+                    LKR {pOmron.price}
                   </div>
                 </div>
               </div>
               <div className="flex items-end justify-between pt-2 border-t border-emerald-100/60">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-gray-700 max-w-[170px] leading-tight">
-                  Trusted Surgical Tools At Your Disposal
+                  Clinically Validated Diagnostic Monitors
                 </p>
                 <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-gray-800 group-hover:bg-black group-hover:text-white group-hover:rotate-45 group-hover:scale-110 transition-all duration-300">
                   <i className="fa-solid fa-arrow-up-right text-xs" />
@@ -209,31 +360,33 @@ const HomePage = () => {
 
             {/* Bento 3: Supplements & Vitamins */}
             <Link
-              to="/catalog?category=Dietary%20%26%20Vits"
+              to="/catalog?category=Vitamins%20%26%20Nutritional%20Supplements"
               className="bg-[#FAF3D1] rounded-3xl p-6 flex flex-col justify-between h-96 border border-white/80 shadow-sm relative overflow-hidden group hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 card-gleam"
             >
               <div>
+                <span className="text-[10px] uppercase font-black tracking-widest text-amber-900 bg-amber-200/80 px-2.5 py-1 rounded-full inline-block mb-2">
+                  Daily Vitality
+                </span>
                 <h2 className="text-2xl font-bold tracking-tight text-gray-900 leading-snug">
-                  Supplements<br />&amp; vitamins
+                  Supplements<br />&amp; Vitamins
                 </h2>
               </div>
-              {/* Graphic Illustration: Spilling golden gel pills */}
+              {/* Real Product Image Preview: Centrum Advance */}
               <div className="my-auto py-2 flex items-center justify-center">
-                <div className="relative flex items-center group-hover:scale-110 transition-transform duration-500">
-                  <div className="w-16 h-24 bg-amber-900 rounded-2xl rotate-45 border-2 border-amber-800/40 shadow-xl flex items-end justify-center p-2">
-                    <div className="w-10 h-3 bg-amber-400 rounded-full opacity-60" />
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 w-20 -ml-4 z-10">
-                    <span className="w-5 h-5 bg-amber-400 rounded-full shadow-md ring-2 ring-yellow-300/80 animate-pill-glow" />
-                    <span className="w-4 h-4 bg-amber-300 rounded-full shadow-sm animate-pulse" />
-                    <span className="w-5 h-5 bg-amber-500 rounded-full shadow-md animate-pill-glow" />
-                    <span className="w-4 h-4 bg-yellow-400 rounded-full shadow animate-pulse" />
+                <div className="relative w-44 h-36 bg-white/80 backdrop-blur-xs rounded-2xl p-3 shadow-md border border-white flex items-center justify-center group-hover:scale-105 group-hover:shadow-lg transition-all duration-500">
+                  <img
+                    src={pCentrum.imageUrl}
+                    alt={pCentrum.name}
+                    className="h-28 w-auto object-contain drop-shadow"
+                  />
+                  <div className="absolute bottom-2 right-2 bg-amber-700 text-white text-[8px] font-bold px-2 py-0.5 rounded-full">
+                    LKR {pCentrum.price}
                   </div>
                 </div>
               </div>
               <div className="flex items-end justify-between pt-2 border-t border-amber-200/60">
                 <p className="text-[10px] font-bold tracking-widest uppercase text-gray-700 max-w-[170px] leading-tight">
-                  Essential Nutrients For A Healthier You
+                  Essential Nutrients For Adult Health &amp; Immunity
                 </p>
                 <div className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-gray-800 group-hover:bg-black group-hover:text-white group-hover:rotate-45 group-hover:scale-110 transition-all duration-300">
                   <i className="fa-solid fa-arrow-up-right text-xs" />
@@ -246,92 +399,66 @@ const HomePage = () => {
           {/* SECTION 3: CATEGORY PILLS BAR                             */}
           {/* ========================================================= */}
           <section className="space-y-3">
-            {/* Row 1 Categories */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Category: Diabetes Care */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {/* Category: Prescription Medicines */}
               <Link
-                to="/catalog"
+                to="/catalog?category=Prescription%20Medicines"
                 className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
               >
-                <span className="text-xs font-bold text-gray-800 group-hover:text-black">Diabetes Care</span>
-                <span className="w-7 h-7 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 group-hover:scale-125 group-hover:rotate-6 transition-transform">
-                  <i className="fa-solid fa-droplet text-xs" />
+                <span className="text-xs font-bold text-gray-800 group-hover:text-black">Prescription Meds</span>
+                <span className="w-7 h-7 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                  <i className="fa-solid fa-prescription-bottle text-xs" />
+                </span>
+              </Link>
+
+              {/* Category: Daily Health & Wellness */}
+              <Link
+                to="/catalog?category=Daily%20Health%20%26%20Wellness"
+                className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
+              >
+                <span className="text-xs font-bold text-gray-800 group-hover:text-black">Daily Health</span>
+                <span className="w-7 h-7 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+                  <i className="fa-solid fa-heart-pulse text-xs" />
+                </span>
+              </Link>
+
+              {/* Category: First Aid & Health Care */}
+              <Link
+                to="/catalog?category=First%20Aid%20%26%20Health%20Care"
+                className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
+              >
+                <span className="text-xs font-bold text-gray-800 group-hover:text-black">First Aid Care</span>
+                <span className="w-7 h-7 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 group-hover:scale-110 transition-transform">
+                  <i className="fa-solid fa-kit-medical text-xs" />
                 </span>
               </Link>
 
               {/* Category: Vitamins & Supplements */}
               <Link
-                to="/catalog?category=Dietary%20%26%20Vits"
+                to="/catalog?category=Vitamins%20%26%20Nutritional%20Supplements"
                 className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
               >
                 <span className="text-xs font-bold text-gray-800 group-hover:text-black">Vitamins &amp; Supps</span>
-                <span className="w-7 h-7 rounded-xl bg-amber-50 flex items-center justify-center group-hover:scale-125 group-hover:rotate-6 transition-transform">
-                  <div className="w-4 h-2 rounded-full bg-amber-400 border border-amber-500" />
+                <span className="w-7 h-7 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
+                  <i className="fa-solid fa-capsules text-xs" />
                 </span>
               </Link>
 
-              {/* Category: Pain Relief */}
+              {/* Category: Home Health & Devices */}
               <Link
-                to="/catalog?category=Pain%20Relief"
-                className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
+                to="/catalog?category=Home%20Health%20%26%20medical%20Care"
+                className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group col-span-2 sm:col-span-1"
               >
-                <span className="text-xs font-bold text-gray-800 group-hover:text-black">Pain Relief</span>
-                <span className="w-7 h-7 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:scale-125 group-hover:rotate-6 transition-transform">
-                  <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 rotate-45 border border-emerald-600" />
-                </span>
-              </Link>
-
-              {/* Category: Allergy */}
-              <Link
-                to="/catalog?category=Allergy"
-                className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
-              >
-                <span className="text-xs font-bold text-gray-800 group-hover:text-black">Allergy</span>
-                <span className="w-7 h-7 rounded-xl bg-yellow-50 flex items-center justify-center group-hover:scale-125 group-hover:rotate-6 transition-transform">
-                  <div className="w-4 h-2 rounded-full bg-yellow-400" />
-                </span>
-              </Link>
-            </div>
-
-            {/* Row 2 Categories */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Category: Skin Care Treatments */}
-              <Link
-                to="/catalog"
-                className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
-              >
-                <span className="text-xs font-bold text-gray-800 group-hover:text-black">Skin Care Treatments</span>
-                <span className="w-7 h-7 rounded-xl bg-teal-50 flex items-center justify-center group-hover:scale-125 group-hover:rotate-6 transition-transform">
-                  <div className="w-4 h-3 bg-teal-400 rounded-sm" />
-                </span>
-              </Link>
-
-              {/* Category: Mental Wellness */}
-              <Link
-                to="/catalog"
-                className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
-              >
-                <span className="text-xs font-bold text-gray-800 group-hover:text-black">Mental Wellness</span>
-                <span className="w-7 h-7 rounded-xl bg-indigo-50 flex items-center justify-center group-hover:scale-125 group-hover:rotate-6 transition-transform">
-                  <div className="w-4 h-2 bg-indigo-500 rounded-full" />
-                </span>
-              </Link>
-
-              {/* Category: Bone & Joint Support */}
-              <Link
-                to="/catalog"
-                className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-200/70 hover:border-gray-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
-              >
-                <span className="text-xs font-bold text-gray-800 group-hover:text-black">Bone &amp; Joint Support</span>
-                <span className="w-7 h-7 rounded-xl bg-rose-50 flex items-center justify-center group-hover:scale-125 group-hover:rotate-6 transition-transform">
-                  <div className="w-4 h-2 bg-rose-400 rounded-full" />
+                <span className="text-xs font-bold text-gray-800 group-hover:text-black">Medical Devices</span>
+                <span className="w-7 h-7 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform">
+                  <i className="fa-solid fa-stethoscope text-xs" />
                 </span>
               </Link>
             </div>
           </section>
 
           {/* ========================================================= */}
-          {/* SECTION 4: FEATURED MEDICATIONS (Horizontal Grid)          */}
+          {/* SECTION 4: FEATURED MEDICATIONS (Live Batch 1 Items)       */}
           {/* ========================================================= */}
           <section className="space-y-4">
             <div className="flex items-center justify-between px-1">
@@ -348,105 +475,121 @@ const HomePage = () => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Product: Cloroxomin */}
+              {/* Product 1: Amoxil 500mg */}
               <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
                 <div className="space-y-0.5">
-                  <span className="text-[9px] uppercase font-bold tracking-wider text-gray-400">Antibacterial</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">Cloroxomin</h4>
+                  <span className="text-[9px] uppercase font-bold tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block">
+                    {pAmoxil.category}
+                  </span>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                    {pAmoxil.name}
+                  </h4>
+                  <p className="text-[10px] text-gray-400 font-mono">{pAmoxil.sku}</p>
                 </div>
-                <div className="h-28 flex items-center justify-center py-2">
-                  <div className="w-20 h-16 bg-slate-100 rounded-lg border border-slate-300 grid grid-cols-3 gap-1 p-1.5 shadow-inner group-hover:scale-105 group-hover:rotate-2 transition-transform duration-300">
-                    <div className="bg-blue-400 rounded-full h-3" />
-                    <div className="bg-blue-400 rounded-full h-3" />
-                    <div className="bg-blue-400 rounded-full h-3" />
-                    <div className="bg-blue-400 rounded-full h-3" />
-                    <div className="bg-blue-400 rounded-full h-3" />
-                    <div className="bg-blue-400 rounded-full h-3" />
-                  </div>
+                <div className="h-32 flex items-center justify-center py-2">
+                  <img
+                    src={pAmoxil.imageUrl}
+                    alt={pAmoxil.name}
+                    className="h-24 w-auto object-contain drop-shadow group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
                 <div className="space-y-1 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$34.00</p>
+                  <p className="text-xs font-bold text-black">LKR {pAmoxil.price.toFixed(2)}</p>
                   <Link
-                    to="/catalog"
-                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-black transition-colors"
+                    to={`/catalog/${pAmoxil.id}`}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-500 group-hover:text-black transition-colors"
                   >
-                    <span>Shop Now</span>
+                    <span>View Product</span>
                     <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
               </div>
 
-              {/* Product: The Killer */}
+              {/* Product 2: Panadol Extra */}
               <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
                 <div className="space-y-0.5">
-                  <span className="text-[9px] uppercase font-bold tracking-wider text-gray-400">Pain Killer</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-rose-600 transition-colors">The Killer</h4>
+                  <span className="text-[9px] uppercase font-bold tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block">
+                    {pPanadol.category}
+                  </span>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-emerald-600 transition-colors truncate">
+                    {pPanadol.name}
+                  </h4>
+                  <p className="text-[10px] text-gray-400 font-mono">{pPanadol.sku}</p>
                 </div>
-                <div className="h-28 flex items-center justify-center py-2">
-                  <div className="w-16 h-20 bg-rose-50 rounded-xl border border-rose-200 flex flex-col items-center justify-center p-2 text-center shadow-sm group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-300">
-                    <span className="text-[8px] font-bold text-rose-700 leading-tight">The Killer</span>
-                    <div className="w-6 h-0.5 bg-rose-300 my-1" />
-                    <div className="text-[6px] text-gray-400">10 Caplets</div>
-                  </div>
+                <div className="h-32 flex items-center justify-center py-2">
+                  <img
+                    src={pPanadol.imageUrl}
+                    alt={pPanadol.name}
+                    className="h-24 w-auto object-contain drop-shadow group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
                 <div className="space-y-1 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$29.00</p>
+                  <p className="text-xs font-bold text-black">LKR {pPanadol.price.toFixed(2)}</p>
                   <Link
-                    to="/catalog"
-                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-black transition-colors"
+                    to={`/catalog/${pPanadol.id}`}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-500 group-hover:text-black transition-colors"
                   >
-                    <span>Shop Now</span>
+                    <span>View Product</span>
                     <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
               </div>
 
-              {/* Product: OnychoBath */}
+              {/* Product 3: Dettol Antiseptic */}
               <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
                 <div className="space-y-0.5">
-                  <span className="text-[9px] uppercase font-bold tracking-wider text-gray-400">Fingernails</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-cyan-600 transition-colors">Onychobath</h4>
+                  <span className="text-[9px] uppercase font-bold tracking-wider text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full inline-block">
+                    {pDettol.category}
+                  </span>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-rose-600 transition-colors truncate">
+                    {pDettol.name}
+                  </h4>
+                  <p className="text-[10px] text-gray-400 font-mono">{pDettol.sku}</p>
                 </div>
-                <div className="h-28 flex items-center justify-center py-2">
-                  <div className="w-16 h-18 bg-cyan-50 rounded-xl border border-cyan-200 flex flex-col items-center justify-center p-2 text-center shadow-sm group-hover:scale-105 group-hover:rotate-2 transition-transform duration-300">
-                    <span className="text-[8px] font-bold text-cyan-800">Onychobath</span>
-                    <div className="w-5 h-5 mt-1 rounded-full bg-cyan-400/20 flex items-center justify-center">
-                      <div className="w-2.5 h-2.5 rounded-full bg-cyan-600 animate-pulse" />
-                    </div>
-                  </div>
+                <div className="h-32 flex items-center justify-center py-2">
+                  <img
+                    src={pDettol.imageUrl}
+                    alt={pDettol.name}
+                    className="h-24 w-auto object-contain drop-shadow group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
                 <div className="space-y-1 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$66.00</p>
+                  <p className="text-xs font-bold text-black">LKR {pDettol.price.toFixed(2)}</p>
                   <Link
-                    to="/catalog"
-                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-black transition-colors"
+                    to={`/catalog/${pDettol.id}`}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-500 group-hover:text-black transition-colors"
                   >
-                    <span>Shop Now</span>
+                    <span>View Product</span>
                     <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
               </div>
 
-              {/* Product: Medrelief */}
+              {/* Product 4: Centrum Advance */}
               <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
                 <div className="space-y-0.5">
-                  <span className="text-[9px] uppercase font-bold tracking-wider text-gray-400">Pain Killer</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-teal-700 transition-colors">Medrelief</h4>
+                  <span className="text-[9px] uppercase font-bold tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full inline-block">
+                    {pCentrum.category}
+                  </span>
+                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-amber-600 transition-colors truncate">
+                    {pCentrum.name}
+                  </h4>
+                  <p className="text-[10px] text-gray-400 font-mono">{pCentrum.sku}</p>
                 </div>
-                <div className="h-28 flex items-center justify-center py-2">
-                  <div className="w-14 h-20 bg-teal-50 rounded-xl border border-teal-300 flex flex-col items-center justify-between p-1 shadow-sm group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-300">
-                    <div className="w-8 h-2.5 bg-stone-700 rounded-t-md" />
-                    <span className="text-[7px] font-extrabold text-teal-900 uppercase">MedRelief</span>
-                    <div className="w-6 h-0.5 bg-teal-300" />
-                  </div>
+                <div className="h-32 flex items-center justify-center py-2">
+                  <img
+                    src={pCentrum.imageUrl}
+                    alt={pCentrum.name}
+                    className="h-24 w-auto object-contain drop-shadow group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
                 <div className="space-y-1 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$48.00</p>
+                  <p className="text-xs font-bold text-black">LKR {pCentrum.price.toFixed(2)}</p>
                   <Link
-                    to="/catalog"
-                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-black transition-colors"
+                    to={`/catalog/${pCentrum.id}`}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-500 group-hover:text-black transition-colors"
                   >
-                    <span>Shop Now</span>
+                    <span>View Product</span>
                     <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
@@ -458,319 +601,165 @@ const HomePage = () => {
           {/* SECTION 5: PROMO BANNERS STACK (3 Cards)                  */}
           {/* ========================================================= */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Promo 1: Exclusive Pain Relief Formula */}
+            {/* Promo 1: Panadol Extra */}
             <div className="bg-[#E7F8EC] rounded-3xl p-6 relative overflow-hidden border border-white flex justify-between items-center shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group card-gleam">
               <div className="space-y-3 z-10 max-w-[65%]">
+                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
+                  LKR {pPanadol.price}
+                </span>
                 <h4 className="text-lg font-bold text-gray-900 leading-tight">
-                  Exclusive pain<br />Relief formula
+                  {pPanadol.name}
                 </h4>
-                <p className="text-[10px] text-gray-600 leading-snug">
-                  Fast-acting pain relief for headaches, joint pain, and more
+                <p className="text-[10px] text-gray-600 leading-snug line-clamp-2">
+                  {pPanadol.description}
                 </p>
                 <Link
-                  to="/catalog?category=Pain%20Relief"
+                  to={`/catalog/${pPanadol.id}`}
                   className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full shadow-sm hover:scale-105 active:scale-95 transition-all"
                 >
                   <span>Explore</span>
                   <i className="fa-solid fa-arrow-right text-[8px]" />
                 </Link>
               </div>
-              {/* Small Angled Bottle Image Mockup */}
-              <div className="w-20 transform rotate-12 -mr-2 group-hover:rotate-6 group-hover:scale-110 transition-transform duration-500">
-                <div className="bg-amber-800 rounded-xl p-1 shadow-md border border-white/40">
-                  <div className="bg-white rounded-lg p-1.5 text-center text-[7px] font-bold">MedRelief</div>
-                </div>
+              {/* Product image thumbnail */}
+              <div className="w-24 h-24 bg-white/70 backdrop-blur-xs rounded-2xl p-2 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-500">
+                <img
+                  src={pPanadol.imageUrl}
+                  alt={pPanadol.name}
+                  className="h-20 w-auto object-contain drop-shadow"
+                />
               </div>
             </div>
 
-            {/* Promo 2: Soothing Skin Repair Cream */}
-            <div className="bg-[#DCEBFA] rounded-3xl p-6 relative overflow-hidden border border-white flex flex-col justify-between min-h-[220px] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group card-gleam">
-              <div className="space-y-2 z-10">
+            {/* Promo 2: Dettol Antiseptic */}
+            <div className="bg-[#DCEBFA] rounded-3xl p-6 relative overflow-hidden border border-white flex justify-between items-center shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group card-gleam">
+              <div className="space-y-3 z-10 max-w-[65%]">
+                <span className="text-[9px] font-black uppercase tracking-widest text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-full inline-block">
+                  LKR {pDettol.price}
+                </span>
                 <h4 className="text-lg font-bold text-gray-900 leading-tight">
-                  Soothing skin<br />repair cream
+                  {pDettol.name}
                 </h4>
-                <p className="text-[10px] text-gray-600 leading-snug max-w-[200px]">
-                  Deeply hydrates, heals, and restores dry, irritated skin for a radiant glow.
+                <p className="text-[10px] text-gray-600 leading-snug line-clamp-2">
+                  {pDettol.description}
                 </p>
-                <div className="pt-2">
-                  <Link
-                    to="/catalog"
-                    className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full shadow-sm hover:scale-105 active:scale-95 transition-all"
-                  >
-                    <span>Explore</span>
-                    <i className="fa-solid fa-arrow-right text-[8px]" />
-                  </Link>
-                </div>
+                <Link
+                  to={`/catalog/${pDettol.id}`}
+                  className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full shadow-sm hover:scale-105 active:scale-95 transition-all"
+                >
+                  <span>Explore</span>
+                  <i className="fa-solid fa-arrow-right text-[8px]" />
+                </Link>
               </div>
-              {/* Visual representation */}
-              <div className="absolute right-0 bottom-0 w-44 h-36 opacity-90 pointer-events-none flex items-end justify-end group-hover:scale-105 transition-transform duration-500">
-                <div className="relative w-36 h-28 bg-gradient-to-tl from-orange-100 to-amber-50 rounded-tl-full border-t-2 border-l-2 border-white/60 shadow-lg flex items-center justify-center">
-                  <span className="w-8 h-8 rounded-full bg-white/95 shadow-md flex items-center justify-center animate-pulse">
-                    <span className="w-4 h-4 rounded-full bg-blue-100" />
-                  </span>
-                </div>
+              {/* Product image thumbnail */}
+              <div className="w-24 h-24 bg-white/70 backdrop-blur-xs rounded-2xl p-2 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-500">
+                <img
+                  src={pDettol.imageUrl}
+                  alt={pDettol.name}
+                  className="h-20 w-auto object-contain drop-shadow"
+                />
               </div>
             </div>
 
-            {/* Promo 3: RestEase Sleep Support */}
+            {/* Promo 3: Omron M3 Blood Pressure */}
             <div className="bg-[#F8F2E6] rounded-3xl p-6 relative overflow-hidden border border-white flex justify-between items-center shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group card-gleam">
               <div className="space-y-3 z-10 max-w-[65%]">
+                <span className="text-[9px] font-black uppercase tracking-widest text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full inline-block">
+                  LKR {pOmron.price}
+                </span>
                 <h4 className="text-lg font-bold text-gray-900 leading-tight">
-                  RestEase<br />Sleep Support
+                  {pOmron.name}
                 </h4>
-                <p className="text-[10px] text-gray-600 leading-snug">
-                  Restful sleep, helping you fall asleep faster and wake up refreshed.
+                <p className="text-[10px] text-gray-600 leading-snug line-clamp-2">
+                  {pOmron.description}
                 </p>
                 <Link
-                  to="/catalog?category=Dietary%20%26%20Vits"
+                  to={`/catalog/${pOmron.id}`}
                   className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full shadow-sm hover:scale-105 active:scale-95 transition-all"
                 >
                   <span>Explore</span>
                   <i className="fa-solid fa-arrow-right text-[8px]" />
                 </Link>
               </div>
-              {/* Sleep supplement bottle mockup */}
-              <div className="relative w-20 flex flex-col items-center group-hover:scale-110 transition-transform duration-500">
-                <span className="absolute -top-2 -right-2 bg-emerald-700 text-white text-[7px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm animate-pulse">
-                  best seller
-                </span>
-                <div className="w-14 h-22 bg-stone-900 rounded-xl p-1 text-center text-white border border-stone-700 shadow-md">
-                  <div className="w-8 h-2 bg-stone-600 rounded mx-auto mb-1" />
-                  <span className="text-[7px] font-bold text-amber-200">Sleep Support</span>
-                </div>
+              {/* Product image thumbnail */}
+              <div className="w-24 h-24 bg-white/70 backdrop-blur-xs rounded-2xl p-2 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-500">
+                <img
+                  src={pOmron.imageUrl}
+                  alt={pOmron.name}
+                  className="h-20 w-auto object-contain drop-shadow"
+                />
               </div>
             </div>
           </section>
 
           {/* ========================================================= */}
-          {/* SECTION 6: DAILY ESSENTIALS & VITAMINS (2 Full Rows / 8 Items) */}
+          {/* SECTION 6: DAILY ESSENTIALS & VITAMINS (The 8 Products)   */}
           {/* ========================================================= */}
           <section className="space-y-4">
             <div className="flex items-center justify-between px-1">
               <div>
                 <h3 className="text-xl font-extrabold uppercase tracking-tight text-gray-900">
-                  Daily Essentials &amp; Vitamins
+                  Daily Essentials &amp; Catalog Showcase
                 </h3>
                 <p className="text-xs text-neutral-500 mt-0.5">
-                  Clinical-grade daily formulations verified for cellular vitality and systemic health
+                  Clinical-grade pharmaceutical formulations and health devices verified for quality
                 </p>
               </div>
               <Link
-                to="/catalog?category=Dietary%20%26%20Vits"
+                to="/catalog"
                 className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-black transition-colors flex items-center gap-1 group"
               >
-                <span>Browse All</span>
+                <span>Browse Full Catalog</span>
                 <span className="group-hover:translate-x-1 transition-transform">→</span>
               </Link>
             </div>
 
             {/* 8 Product Grid: 2 Rows x 4 Columns */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              
-              {/* ==================== ROW 1 ==================== */}
-
-              {/* Item 1: Biotin Supplement */}
-              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-gray-400">Vitamins</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">Biotin Supplement</h4>
-                </div>
-                <div className="h-36 flex items-center justify-center py-2">
-                  <div className="w-16 h-28 bg-emerald-50 rounded-2xl border-2 border-emerald-200/60 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:rotate-2 transition-transform duration-300">
-                    <div className="w-10 h-3 bg-white rounded border border-emerald-200" />
-                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-emerald-900 uppercase">Biotin</div>
-                    <div className="w-6 h-1 bg-emerald-200 rounded-full" />
+              {dbProducts.map((p) => (
+                <div
+                  key={p.sku || p.id}
+                  className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[9px] uppercase font-bold tracking-widest text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full truncate">
+                        {p.category}
+                      </span>
+                      {p.requiresPrescription && (
+                        <span className="text-[8px] font-black uppercase text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md shrink-0">
+                          Rx
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                      {p.name}
+                    </h4>
+                    <p className="text-[10px] text-gray-400 truncate">{p.genericName}</p>
+                  </div>
+                  <div className="h-36 flex items-center justify-center py-2 my-2 bg-gradient-to-b from-[#fbf8f5] to-white rounded-2xl p-2">
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1584308666744-24d5e4708709?auto=format&fit=crop&q=80&w=400';
+                      }}
+                      className="h-28 w-auto object-contain drop-shadow group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
+                    <p className="text-xs font-black text-black">LKR {Number(p.price).toFixed(2)}</p>
+                    <Link
+                      to={`/catalog/${p.id}`}
+                      className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
+                    >
+                      <span>Shop Now</span>
+                      <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
+                    </Link>
                   </div>
                 </div>
-                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$56.00</p>
-                  <Link
-                    to={getProductLink('biotin', 'Biotin')}
-                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
-                  >
-                    <span>Shop Now</span>
-                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Item 2: Goji Berry */}
-              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-gray-400">Vitamins</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-rose-700 transition-colors">Goji Berry</h4>
-                </div>
-                <div className="h-36 flex items-center justify-center py-2">
-                  <div className="w-16 h-28 bg-rose-50 rounded-2xl border-2 border-rose-200/60 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-300">
-                    <div className="w-10 h-3 bg-white rounded border border-rose-200" />
-                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-rose-900 uppercase">Goji Berry</div>
-                    <div className="w-6 h-1 bg-rose-200 rounded-full" />
-                  </div>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$65.00</p>
-                  <Link
-                    to={getProductLink('goji', 'Goji')}
-                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
-                  >
-                    <span>Shop Now</span>
-                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Item 3: Turmeric */}
-              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-gray-400">Vitamins</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-amber-700 transition-colors">Turmeric</h4>
-                </div>
-                <div className="h-36 flex items-center justify-center py-2">
-                  <div className="w-16 h-28 bg-amber-50 rounded-2xl border-2 border-amber-200/60 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:rotate-2 transition-transform duration-300">
-                    <div className="w-10 h-3 bg-white rounded border border-amber-200" />
-                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-amber-900 uppercase">Turmeric</div>
-                    <div className="w-6 h-1 bg-amber-200 rounded-full" />
-                  </div>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$84.00</p>
-                  <Link
-                    to={getProductLink('turmeric', 'Turmeric')}
-                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
-                  >
-                    <span>Shop Now</span>
-                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Item 4: Cellular Nutrition */}
-              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-gray-400">Vitamins</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-red-500 transition-colors">Cellular Nutrition</h4>
-                </div>
-                <div className="h-36 flex items-center justify-center py-2">
-                  <div className="w-16 h-28 bg-stone-900 rounded-2xl border border-stone-800 flex flex-col items-center justify-between p-1.5 shadow-sm text-white group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-300">
-                    <div className="w-10 h-3 bg-stone-700 rounded" />
-                    <div className="bg-stone-800 w-full rounded-lg py-1 text-center text-[7px] font-bold text-red-400 uppercase">Cellular</div>
-                    <div className="w-6 h-1 bg-stone-700 rounded-full" />
-                  </div>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$90.00</p>
-                  <Link
-                    to={getProductLink('cellular', 'Cellular')}
-                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
-                  >
-                    <span>Shop Now</span>
-                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-
-              {/* ==================== ROW 2 (NEW 2ND ROW) ==================== */}
-
-              {/* Item 5: Vitamin D3 + K2 (MK-7) */}
-              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full inline-block">Immune &amp; Bone</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-amber-600 transition-colors">Vitamin D3 + K2</h4>
-                </div>
-                <div className="h-36 flex items-center justify-center py-2">
-                  <div className="w-16 h-28 bg-amber-50 rounded-2xl border-2 border-amber-300/70 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:rotate-2 transition-transform duration-300">
-                    <div className="w-10 h-3 bg-amber-200 rounded border border-amber-400" />
-                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-amber-800 uppercase shadow-xs">D3 + K2</div>
-                    <div className="w-6 h-1 bg-amber-400 rounded-full animate-pulse" />
-                  </div>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$38.00</p>
-                  <Link
-                    to={getProductLink('d3', 'Vitamin D3')}
-                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
-                  >
-                    <span>Shop Now</span>
-                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Item 6: Triple Strength Omega-3 */}
-              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block">Heart &amp; Brain</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-blue-700 transition-colors">Omega-3 Fish Oil</h4>
-                </div>
-                <div className="h-36 flex items-center justify-center py-2">
-                  <div className="w-16 h-28 bg-blue-50 rounded-2xl border-2 border-blue-200/80 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-300">
-                    <div className="w-10 h-3 bg-blue-200 rounded border border-blue-300" />
-                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-blue-900 uppercase shadow-xs">Omega-3</div>
-                    <div className="w-6 h-1 bg-blue-400 rounded-full" />
-                  </div>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$48.00</p>
-                  <Link
-                    to={getProductLink('omega', 'Omega-3')}
-                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
-                  >
-                    <span>Shop Now</span>
-                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Item 7: Magnesium Glycinate */}
-              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full inline-block">Sleep &amp; Muscle</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">Magnesium Chelate</h4>
-                </div>
-                <div className="h-36 flex items-center justify-center py-2">
-                  <div className="w-16 h-28 bg-purple-50 rounded-2xl border-2 border-purple-200/80 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:rotate-2 transition-transform duration-300">
-                    <div className="w-10 h-3 bg-purple-200 rounded border border-purple-300" />
-                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-purple-900 uppercase shadow-xs">Magnesium</div>
-                    <div className="w-6 h-1 bg-purple-400 rounded-full" />
-                  </div>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$34.00</p>
-                  <Link
-                    to={getProductLink('magnesium', 'Magnesium')}
-                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
-                  >
-                    <span>Shop Now</span>
-                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Item 8: Zinc Picolinate */}
-              <div className="bg-white rounded-3xl p-5 flex flex-col justify-between border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group card-gleam">
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full inline-block">Immune Shield</span>
-                  <h4 className="text-sm font-bold text-gray-900 group-hover:text-teal-700 transition-colors">Zinc Picolinate</h4>
-                </div>
-                <div className="h-36 flex items-center justify-center py-2">
-                  <div className="w-16 h-28 bg-teal-50 rounded-2xl border-2 border-teal-200/80 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-300">
-                    <div className="w-10 h-3 bg-teal-200 rounded border border-teal-300" />
-                    <div className="bg-white w-full rounded-lg py-1 text-center text-[7px] font-bold text-teal-900 uppercase shadow-xs">Zinc 50mg</div>
-                    <div className="w-6 h-1 bg-teal-400 rounded-full" />
-                  </div>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-bold text-black">$26.00</p>
-                  <Link
-                    to={getProductLink('zinc', 'Zinc')}
-                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors"
-                  >
-                    <span>Shop Now</span>
-                    <i className="fa-solid fa-arrow-right text-[9px] group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-
+              ))}
             </div>
           </section>
 
@@ -874,16 +863,12 @@ const HomePage = () => {
                     <span>Provider Portal</span>
                     <span className="ml-1.5 group-hover:translate-x-1 transition-transform">→</span>
                   </Link>
-                  <div className="w-16 shrink-0 hidden sm:block">
-                    <div className="bg-gradient-to-b from-amber-700 to-amber-900 rounded-2xl p-1 shadow-lg border border-amber-500/50">
-                      <div className="bg-white rounded-xl p-2 text-center text-[7px] font-bold space-y-1">
-                        <span className="block text-gray-900 font-extrabold uppercase">MedRelief</span>
-                        <div className="w-8 h-0.5 bg-blue-500 mx-auto" />
-                        <div className="h-3.5 bg-gray-100 flex items-center justify-center rounded">
-                          <span className="font-mono text-[7px] text-gray-500">||| ||</span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="w-16 h-16 bg-white/90 rounded-2xl p-1.5 shadow-md border border-yellow-300/50 hidden sm:flex items-center justify-center shrink-0">
+                    <img
+                      src={pAmoxil.imageUrl}
+                      alt="Verified Rx"
+                      className="h-12 w-auto object-contain drop-shadow"
+                    />
                   </div>
                 </div>
               </div>

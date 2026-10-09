@@ -21,6 +21,9 @@ public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, 
     List<InventoryBatch> findByMedicineIdAndStatusOrderByExpiryDateAsc(Long medicineId, BatchStatus status);
     List<InventoryBatch> findByStatusOrderByExpiryDateAsc(BatchStatus status);
 
+    @Query("SELECT DISTINCT b.medicine.id FROM InventoryBatch b WHERE b.status = com.mediorder.it25102867_batchandstock_management.model.BatchStatus.LIVE")
+    List<Long> findMedicineIdsWithLiveBatches();
+
     @Query("SELECT b FROM InventoryBatch b WHERE b.medicine.id = :medicineId AND (b.status = 'LIVE' OR b.status = 'ACTIVE') AND b.expiryDate > :today AND b.stockQuantity > b.qtyReserved ORDER BY b.expiryDate ASC")
     List<InventoryBatch> findFefoCandidateBatches(@Param("medicineId") Long medicineId, @Param("today") LocalDate today);
 

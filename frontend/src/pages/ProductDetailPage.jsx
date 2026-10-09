@@ -118,22 +118,21 @@ const ProductDetailPage = () => {
         });
         setActiveImage(fallback);
       } else {
-        const fallback = CLINICAL_FALLBACK_IMAGES['Dietary & Vits'];
+        const fallback = 'https://images.unsplash.com/photo-1584308666744-24d5e4708709?auto=format&fit=crop&q=80&w=400';
         setProduct({
           id: id || 1,
-          name: 'Vitamin C 1000mg Bioflavonoid Complex',
-          genericName: 'Ascorbic Acid & Standardized Citrus Bioflavonoid Complex',
-          sku: 'NDC 72910-401-12',
-          price: 30.5,
-          msrp: 36.0,
-          stockQuantity: 18,
-          category: 'Vitamins & Nutritional Supplements',
-          rating: 4.8,
+          name: 'Amoxil 500mg',
+          genericName: 'Amoxicillin',
+          sku: 'RX-AMX-500',
+          price: 850.00,
+          msrp: 950.00,
+          stockQuantity: 150,
+          category: 'Prescription Medicines',
+          rating: 4.9,
           reviewsCount: 142,
           imageUrl: fallback,
-          description:
-            'Ascorbic acid alone quickly degrades in systemic circulation. Our bio-complex binds pure pharmaceutical-grade vitamin C with standardized citrus hesperidin and rutin bioflavonoids, mimicking nature’s cellular delivery matrix for prolonged bioavailability and cellular defense.',
-          requiresPrescription: false,
+          description: 'Broad-spectrum antibiotic used to treat various bacterial infections.',
+          requiresPrescription: true,
           isTemperatureSensitive: false,
         });
         setActiveImage(fallback);

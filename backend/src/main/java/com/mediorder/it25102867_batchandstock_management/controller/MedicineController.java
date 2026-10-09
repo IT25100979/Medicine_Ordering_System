@@ -24,8 +24,21 @@ public class MedicineController {
     public ResponseEntity<List<Medicine>> getAllMedicines(
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "category", required = false) String category,
-            @RequestParam(value = "requiresPrescription", required = false) Boolean requiresPrescription) {
-        return ResponseEntity.ok(medicineService.getAllMedicines(search, category, requiresPrescription));
+            @RequestParam(value = "requiresPrescription", required = false) Boolean requiresPrescription,
+            @RequestParam(value = "onlyLive", required = false) Boolean onlyLive,
+            @RequestParam(value = "all", required = false) Boolean all,
+            org.springframework.security.core.Authentication auth) {
+
+        boolean isStaff = auth != null && auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_OPERATIONS_MANAGER") ||
+                a.getAuthority().equals("ROLE_ADMIN") ||
+                a.getAuthority().equals("ROLE_SYSTEM_ADMIN") ||
+                a.getAuthority().equals("ROLE_CHIEF_PHARMACIST") ||
+                a.getAuthority().equals("ROLE_PHARMACIST")
+        );
+
+        boolean filterLive = Boolean.TRUE.equals(onlyLive) || (!isStaff && !Boolean.TRUE.equals(all));
+        return ResponseEntity.ok(medicineService.getAllMedicines(search, category, requiresPrescription, filterLive));
     }
 
     @GetMapping("/stats")
