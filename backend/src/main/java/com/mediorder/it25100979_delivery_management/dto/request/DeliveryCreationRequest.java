@@ -1,85 +1,50 @@
-package com.mediorder.it25100979_delivery_management.dto;
+package com.mediorder.it25100979_delivery_management.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.mediorder.it25100979_delivery_management.validation.ValidCourier;
+import com.mediorder.it25100979_delivery_management.validation.ValidationPatterns;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+/** Used by staff to record a delivery manually from the Delivery Management console. */
+@Data
+@NoArgsConstructor
 public class DeliveryCreationRequest {
-    @JsonProperty("customerName")
+
+    @NotBlank(message = "Customer name is required")
+    @Size(max = 150, message = "Customer name must be at most 150 characters")
     private String customerName;
 
-    @JsonProperty("orderAddress")
+    @NotBlank(message = "Delivery address is required")
+    @Size(min = 5, max = 500, message = "Delivery address must be between 5 and 500 characters")
     private String orderAddress;
 
-    @JsonProperty("customerPhone")
+    @NotBlank(message = "Customer phone is required")
+    @Pattern(regexp = ValidationPatterns.PHONE, message = "Phone number must be 7-15 digits (spaces, + and - allowed)")
     private String customerPhone;
 
-    @JsonProperty("customerEmail")
+    @Email(message = "Customer email is not valid")
+    @Size(max = 150)
     private String customerEmail;
 
-    @JsonProperty("specialInstructions")
+    @Size(max = 1000, message = "Special instructions must be at most 1000 characters")
     private String specialInstructions;
 
-    @JsonProperty("validatingPharmacist")
+    @Size(max = 150)
     private String validatingPharmacist;
 
-    @JsonProperty("arrangingStaff")
+    @Size(max = 150)
     private String arrangingStaff;
 
-    @JsonProperty("batchId")
-    private String batchId;
-
-    @JsonProperty("assignedRoute")
-    private String assignedRoute;
-
-    @JsonProperty("assignedCourier")
+    /** Courier partner requested for this delivery (becomes the preferred courier). */
+    @ValidCourier
     private String assignedCourier;
 
-    @JsonProperty("userId")
-    private Long userId;
+    @Size(max = 100)
+    private String assignedRoute;
 
-    @JsonProperty("deliveryAddress")
-    private String deliveryAddress;
-
-    @JsonProperty("coldChainTag")
     private Boolean coldChainTag;
-
-    public DeliveryCreationRequest() {}
-
-    public String getCustomerName() { return customerName; }
-    public void setCustomerName(String customerName) { this.customerName = customerName; }
-
-    public String getOrderAddress() { return orderAddress; }
-    public void setOrderAddress(String orderAddress) { this.orderAddress = orderAddress; }
-
-    public String getCustomerPhone() { return customerPhone; }
-    public void setCustomerPhone(String customerPhone) { this.customerPhone = customerPhone; }
-
-    public String getCustomerEmail() { return customerEmail; }
-    public void setCustomerEmail(String customerEmail) { this.customerEmail = customerEmail; }
-
-    public String getSpecialInstructions() { return specialInstructions; }
-    public void setSpecialInstructions(String specialInstructions) { this.specialInstructions = specialInstructions; }
-
-    public String getValidatingPharmacist() { return validatingPharmacist; }
-    public void setValidatingPharmacist(String validatingPharmacist) { this.validatingPharmacist = validatingPharmacist; }
-
-    public String getArrangingStaff() { return arrangingStaff; }
-    public void setArrangingStaff(String arrangingStaff) { this.arrangingStaff = arrangingStaff; }
-
-    public String getBatchId() { return batchId; }
-    public void setBatchId(String batchId) { this.batchId = batchId; }
-
-    public String getAssignedRoute() { return assignedRoute; }
-    public void setAssignedRoute(String assignedRoute) { this.assignedRoute = assignedRoute; }
-
-    public String getAssignedCourier() { return assignedCourier; }
-    public void setAssignedCourier(String assignedCourier) { this.assignedCourier = assignedCourier; }
-
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-
-    public String getDeliveryAddress() { return deliveryAddress; }
-    public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
-
-    public Boolean getColdChainTag() { return coldChainTag; }
-    public void setColdChainTag(Boolean coldChainTag) { this.coldChainTag = coldChainTag; }
 }

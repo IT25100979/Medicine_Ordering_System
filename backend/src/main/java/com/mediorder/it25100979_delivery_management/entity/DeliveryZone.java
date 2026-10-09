@@ -1,4 +1,4 @@
-package com.mediorder.it25100979_delivery_management.model;
+package com.mediorder.it25100979_delivery_management.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;

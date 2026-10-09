@@ -1,15 +1,20 @@
 package com.mediorder.it25100979_delivery_management.service;
 
-import com.mediorder.it25100979_delivery_management.model.DeliveryZone;
+import com.mediorder.it25100979_delivery_management.dto.request.DeliveryZoneRequest;
+import com.mediorder.it25100979_delivery_management.entity.DeliveryZone;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryZoneRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class DeliveryZoneService {
 
     @Autowired
@@ -56,55 +61,41 @@ public class DeliveryZoneService {
         return Optional.empty();
     }
 
-    public DeliveryZone saveDeliveryZone(DeliveryZone zone) {
-        if (zone.getCreatedAt() == null) {
-            zone.setCreatedAt(LocalDate.now());
-        }
-        if (zone.getIsActive() == null) {
-            zone.setIsActive(1);
-        }
-        if (zone.getDeliveryFee() == null) {
-            zone.setDeliveryFee(500.0);
-        }
-        if (zone.getEstimatedDeliveryTime() != null && zone.getEsitmatedDeliveryTime() == null) {
-            zone.setEsitmatedDeliveryTime(zone.getEstimatedDeliveryTime());
-        } else if (zone.getEsitmatedDeliveryTime() != null && zone.getEstimatedDeliveryTime() == null) {
-            zone.setEstimatedDeliveryTime(zone.getEsitmatedDeliveryTime());
-        }
+    public DeliveryZone createDeliveryZone(DeliveryZoneRequest request) {
+        DeliveryZone zone = new DeliveryZone();
+        apply(zone, request);
+        zone.setCreatedAt(LocalDate.now());
         return deliveryZoneRepository.save(zone);
     }
 
-    public DeliveryZone updateDeliveryZone(Long id, DeliveryZone updated) {
-        DeliveryZone zone = deliveryZoneRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Delivery zone not found with id: " + id));
+    public DeliveryZone updateDeliveryZone(Long id, DeliveryZoneRequest request) {
+        DeliveryZone zone = requireZone(id);
+        apply(zone, request);
+        return deliveryZoneRepository.save(zone);
+    }
 
-        if (updated.getCity() != null && !updated.getCity().trim().isEmpty()) {
-            zone.setCity(updated.getCity().trim());
-        }
-        if (updated.getPostalCode() != null && !updated.getPostalCode().trim().isEmpty()) {
-            zone.setPostalCode(updated.getPostalCode().trim());
-        }
-        if (updated.getIsActive() != null) {
-            zone.setIsActive(updated.getIsActive());
-        }
-        if (updated.getDeliveryFee() != null) {
-            zone.setDeliveryFee(updated.getDeliveryFee());
-        }
-        if (updated.getEstimatedDeliveryTime() != null) {
-            zone.setEstimatedDeliveryTime(updated.getEstimatedDeliveryTime());
-            zone.setEsitmatedDeliveryTime(updated.getEstimatedDeliveryTime());
-        } else if (updated.getEsitmatedDeliveryTime() != null) {
-            zone.setEstimatedDeliveryTime(updated.getEsitmatedDeliveryTime());
-            zone.setEsitmatedDeliveryTime(updated.getEsitmatedDeliveryTime());
-        }
-        if (updated.getCreatedAt() != null) {
-            zone.setCreatedAt(updated.getCreatedAt());
-        }
-
+    public DeliveryZone toggleZoneStatus(Long id) {
+        DeliveryZone zone = requireZone(id);
+        zone.setIsActive(zone.getIsActive() != null && zone.getIsActive() == 1 ? 0 : 1);
         return deliveryZoneRepository.save(zone);
     }
 
     public void deleteDeliveryZone(Long id) {
-        deliveryZoneRepository.deleteById(id);
+        deliveryZoneRepository.delete(requireZone(id));
+    }
+
+    private DeliveryZone requireZone(Long id) {
+        return deliveryZoneRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Delivery zone not found with id: " + id));
+    }
+
+    private void apply(DeliveryZone zone, DeliveryZoneRequest request) {
+        zone.setCity(request.getCity().trim());
+        zone.setPostalCode(request.getPostalCode().trim());
+        zone.setIsActive(request.getIsActive() != null ? request.getIsActive() : 1);
+        zone.setDeliveryFee(request.getDeliveryFee());
+        Integer minutes = request.getEstimatedDeliveryTime() != null ? request.getEstimatedDeliveryTime() : 60;
+        zone.setEstimatedDeliveryTime(minutes);
+        zone.setEsitmatedDeliveryTime(minutes);
     }
 }

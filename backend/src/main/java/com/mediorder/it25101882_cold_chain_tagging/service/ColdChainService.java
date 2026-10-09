@@ -4,7 +4,7 @@ import com.mediorder.it25101882_cold_chain_tagging.dto.ColdChainTelemetryRequest
 import com.mediorder.it25101882_cold_chain_tagging.model.*;
 import com.mediorder.it25101882_cold_chain_tagging.repository.ColdChainTagRepository;
 import com.mediorder.it25101882_cold_chain_tagging.repository.ColdChainTelemetryRepository;
-import com.mediorder.it25100979_delivery_management.model.Delivery;
+import com.mediorder.it25100979_delivery_management.entity.Delivery;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryRepository;
 import com.mediorder.it25102867_batchandstock_management.model.Medicine;
 import com.mediorder.it25102867_batchandstock_management.repository.MedicineRepository;

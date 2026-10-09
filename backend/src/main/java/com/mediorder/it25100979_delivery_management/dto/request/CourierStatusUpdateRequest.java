@@ -1,31 +1,25 @@
-package com.mediorder.it25100979_delivery_management.dto;
+package com.mediorder.it25100979_delivery_management.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.mediorder.it25100979_delivery_management.validation.ValidationPatterns;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class CourierStatusUpdateRequest {
-    @JsonProperty("status")
+
+    @NotBlank(message = "Status is required (IN_TRANSIT, FAILED, DELIVERED)")
+    @Pattern(regexp = "(?i)IN_TRANSIT|FAILED|DELIVERED", message = "Courier status must be IN_TRANSIT, FAILED or DELIVERED")
     private String status;
 
-    @JsonProperty("otp")
+    @Pattern(regexp = ValidationPatterns.OTP, message = "OTP must be exactly 6 digits")
     private String otp;
 
-    @JsonProperty("failureReason")
+    @Size(max = 500, message = "Failure reason must be at most 500 characters")
     private String failureReason;
-
-    public CourierStatusUpdateRequest() {}
-
-    public CourierStatusUpdateRequest(String status, String otp, String failureReason) {
-        this.status = status;
-        this.otp = otp;
-        this.failureReason = failureReason;
-    }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    public String getOtp() { return otp; }
-    public void setOtp(String otp) { this.otp = otp; }
-
-    public String getFailureReason() { return failureReason; }
-    public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
 }

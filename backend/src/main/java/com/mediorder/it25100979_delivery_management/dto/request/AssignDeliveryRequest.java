@@ -1,50 +1,53 @@
-package com.mediorder.it25100979_delivery_management.dto;
+package com.mediorder.it25100979_delivery_management.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.mediorder.it25100979_delivery_management.validation.ValidCourier;
+import com.mediorder.it25100979_delivery_management.validation.ValidationPatterns;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
+/**
+ * Assign a courier (and optionally a route / batch code) to one or more APPROVED deliveries.
+ * When {@code courier} is left empty each delivery keeps the partner the customer chose.
+ */
+@Data
+@NoArgsConstructor
 public class AssignDeliveryRequest {
-    @JsonProperty("deliveryIds")
+
+    @Size(max = 100, message = "You can assign at most 100 deliveries at once")
     private List<Long> deliveryIds;
 
-    @JsonProperty("deliveryId")
     private Long deliveryId;
 
-    @JsonProperty("batchId")
+    @Pattern(regexp = ValidationPatterns.BATCH_CODE, message = "Batch code may contain letters, digits, '-' and '_' only (max 40)")
     private String batchId;
 
-    @JsonProperty("route")
+    @Size(max = 100)
     private String route;
 
-    @JsonProperty("courier")
+    @ValidCourier
     private String courier;
 
-    public AssignDeliveryRequest() {}
+    @AssertTrue(message = "At least one deliveryId must be provided for assignment")
+    public boolean isAnyDeliverySelected() {
+        return !resolveDeliveryIds().isEmpty();
+    }
 
-    public List<Long> getDeliveryIds() { return deliveryIds; }
-    public void setDeliveryIds(List<Long> deliveryIds) { this.deliveryIds = deliveryIds; }
-
-    public Long getDeliveryId() { return deliveryId; }
-    public void setDeliveryId(Long deliveryId) { this.deliveryId = deliveryId; }
-
-    public String getBatchId() { return batchId; }
-    public void setBatchId(String batchId) { this.batchId = batchId; }
-
-    public String getRoute() { return route; }
-    public void setRoute(String route) { this.route = route; }
-
-    public String getCourier() { return courier; }
-    public void setCourier(String courier) { this.courier = courier; }
-
+    /** Combines {@code deliveryIds} and {@code deliveryId}, removing duplicates and nulls. */
     public List<Long> resolveDeliveryIds() {
-        List<Long> ids = new ArrayList<>();
-        if (deliveryIds != null && !deliveryIds.isEmpty()) {
-            ids.addAll(deliveryIds);
-        } else if (deliveryId != null) {
+        LinkedHashSet<Long> ids = new LinkedHashSet<>();
+        if (deliveryIds != null) {
+            deliveryIds.stream().filter(id -> id != null).forEach(ids::add);
+        }
+        if (deliveryId != null) {
             ids.add(deliveryId);
         }
-        return ids;
+        return new ArrayList<>(ids);
     }
 }

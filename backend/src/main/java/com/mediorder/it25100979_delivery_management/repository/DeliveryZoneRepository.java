@@ -1,6 +1,6 @@
 package com.mediorder.it25100979_delivery_management.repository;
 
-import com.mediorder.it25100979_delivery_management.model.DeliveryZone;
+import com.mediorder.it25100979_delivery_management.entity.DeliveryZone;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

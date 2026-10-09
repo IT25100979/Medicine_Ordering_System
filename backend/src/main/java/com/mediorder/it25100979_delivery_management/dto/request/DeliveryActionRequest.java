@@ -1,24 +1,21 @@
-package com.mediorder.it25100979_delivery_management.dto;
+package com.mediorder.it25100979_delivery_management.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class DeliveryActionRequest {
-    @JsonProperty("action")
+
+    @NotBlank(message = "Action must be provided (HOLD, POSTPONE, TERMINATE, RESUME)")
+    @Pattern(regexp = "(?i)HOLD|POSTPONE|TERMINATE|RESUME", message = "Action must be HOLD, POSTPONE, TERMINATE or RESUME")
     private String action;
 
-    @JsonProperty("reason")
+    @Size(max = 500, message = "Reason must be at most 500 characters")
     private String reason;
-
-    public DeliveryActionRequest() {}
-
-    public DeliveryActionRequest(String action, String reason) {
-        this.action = action;
-        this.reason = reason;
-    }
-
-    public String getAction() { return action; }
-    public void setAction(String action) { this.action = action; }
-
-    public String getReason() { return reason; }
-    public void setReason(String reason) { this.reason = reason; }
 }
