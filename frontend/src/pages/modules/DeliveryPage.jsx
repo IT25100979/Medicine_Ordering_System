@@ -42,6 +42,7 @@ import { useAuth } from '../../context/AuthContext';
 import useRealtimeChannel, { DELIVERY_EVENT_TYPES } from '../../hooks/useRealtimeChannel';
 import useFeatureStatus from '../../hooks/useFeatureStatus';
 import FeaturePausedBanner from '../../components/FeaturePausedBanner';
+import NotificationBell from '../../components/NotificationBell';
 
 const COURIER_OPTIONS = [
   'DHL',
@@ -601,6 +602,7 @@ const DeliveryPage = () => {
                 {user.fullName} ({user.role})
               </span>
             )}
+            <NotificationBell />
             <button
               type="button"
               onClick={() => {

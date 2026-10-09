@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import client from '../api/client';
+import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
 
 // Helper: Format Date as DD/MM/YYYY
@@ -896,8 +897,9 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
             </div>
           </div>
 
-          {/* Top Right: Logout Button */}
+          {/* Top Right: Notifications + Logout Button */}
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <button
               type="button"
               onClick={() => {

@@ -4,6 +4,7 @@ import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import useFeatureStatus from '../hooks/useFeatureStatus';
 import FeaturePausedBanner from '../components/FeaturePausedBanner';
+import NotificationBell from '../components/NotificationBell';
 import { formatDateDDMMYYYY, getShelfLifeStatus } from './OperationsCatalogDashboard';
 
 const REJECTION_TAGS = [
@@ -910,6 +911,8 @@ const PharmacistPrescriptionDashboard = () => {
                 <span>Condition Tagging</span>
               </button>
             </div>
+
+            <NotificationBell />
 
             <button
               type="button"

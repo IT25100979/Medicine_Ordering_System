@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import NotificationBell from './NotificationBell';
 import { isStaffRole, getAdminDashboardRoute, ADMIN_ROLE_LABELS, ADMIN_WORKSPACE_NAMES } from '../utils/roleRoutes';
 import client from '../api/client';
 
@@ -242,6 +243,8 @@ const Navbar = () => {
               <span className="hidden sm:inline">My Dashboard</span>
             </Link>
 
+            <NotificationBell variant="dark" />
+
             <div className="flex items-center gap-2 pl-2 border-l border-zinc-800">
               <div className="inline-flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full text-xs font-semibold text-zinc-200">
                 <span className="max-w-[120px] truncate">{user?.fullName || 'Admin'}</span>
@@ -437,6 +440,8 @@ const Navbar = () => {
               </div>
               <span className="hidden sm:inline font-extrabold text-neutral-900">Cart</span>
             </Link>
+
+            {isAuthenticated && <NotificationBell />}
 
             {/* Account: Symbol ONLY, NO circle background, NO text title */}
             {isAuthenticated ? (
