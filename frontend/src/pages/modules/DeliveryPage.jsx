@@ -31,10 +31,15 @@ import {
   ExternalLink,
   Lock,
   ChevronRight,
-  Package
+  Package,
+  PlayCircle,
+  ListOrdered,
+  Bell
 } from 'lucide-react';
-import client from '../../api/client';
+import { errorMessage } from '../../api/client';
+import { deliveryApi } from '../../api/deliveryApi';
 import { useAuth } from '../../context/AuthContext';
+import useRealtimeChannel, { DELIVERY_EVENT_TYPES } from '../../hooks/useRealtimeChannel';
 
 const COURIER_OPTIONS = [
   'DHL',
@@ -74,9 +79,9 @@ const DeliveryPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDeliveryIds, setSelectedDeliveryIds] = useState([]);
 
-  // Batch Assignment State
+  // Batch Assignment State ('' = keep each customer's chosen courier partner)
   const [batchRoute, setBatchRoute] = useState('Colombo 1 - 5');
-  const [batchCourier, setBatchCourier] = useState('DHL');
+  const [batchCourier, setBatchCourier] = useState('');
   const [batchIdInput, setBatchIdInput] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
 
@@ -98,6 +103,14 @@ const DeliveryPage = () => {
   // Courier Failure Modal State
   const [isFailureModalOpen, setIsFailureModalOpen] = useState(false);
   const [failureReason, setFailureReason] = useState('');
+
+  // Approval workflow (Reject needs a reason) + timeline viewer
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
+  const [busyId, setBusyId] = useState(null);
+  const [timelineTarget, setTimelineTarget] = useState(null);
+  const [timelineEntries, setTimelineEntries] = useState([]);
 
   // Zone Coverage Test in Routes Tab
   const [testCityQuery, setTestCityQuery] = useState('');
@@ -124,20 +137,12 @@ const DeliveryPage = () => {
   const fetchDeliveries = async () => {
     setDeliveriesLoading(true);
     try {
-      const response = await client.get('/api/deliveries');
-      const data = response.data;
-      if (Array.isArray(data)) {
-        setDeliveries(data);
-      } else if (data && Array.isArray(data.data)) {
-        setDeliveries(data.data);
-      } else {
-        setDeliveries([]);
-      }
+      const data = await deliveryApi.list();
+      setDeliveries(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Error fetching deliveries:', error);
       setDeliveryFeedback({
         type: 'error',
-        message: error.response?.data?.message || 'Could not load deliveries from server.'
+        message: errorMessage(error, 'Could not load deliveries from server.')
       });
     } finally {
       setDeliveriesLoading(false);
@@ -148,16 +153,8 @@ const DeliveryPage = () => {
   const fetchCourierDeliveries = async () => {
     setCourierLoading(true);
     try {
-      const params = selectedCourierFilter !== 'ALL' ? { courier: selectedCourierFilter } : {};
-      const response = await client.get('/api/courier/deliveries', { params });
-      const data = response.data;
-      if (Array.isArray(data)) {
-        setCourierDeliveries(data);
-      } else if (data && Array.isArray(data.data)) {
-        setCourierDeliveries(data.data);
-      } else {
-        setCourierDeliveries([]);
-      }
+      const data = await deliveryApi.courierQueue(selectedCourierFilter);
+      setCourierDeliveries(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching courier deliveries:', error);
     } finally {
@@ -169,15 +166,8 @@ const DeliveryPage = () => {
   const fetchDeliveryZones = async () => {
     setZonesLoading(true);
     try {
-      const response = await client.get('/api/v1/delivery-zones');
-      const data = response.data;
-      if (Array.isArray(data)) {
-        setDeliveryZones(data);
-      } else if (data && Array.isArray(data.data)) {
-        setDeliveryZones(data.data);
-      } else {
-        setDeliveryZones([]);
-      }
+      const data = await deliveryApi.zones();
+      setDeliveryZones(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching delivery zones:', error);
     } finally {
@@ -196,6 +186,17 @@ const DeliveryPage = () => {
       fetchCourierDeliveries();
     }
   }, [activeTab, selectedCourierFilter]);
+
+  // Live updates: the backend's DeliveryRealtimeObserver publishes every delivery event on the
+  // "deliveries" channel, so a customer's confirmed order shows up here without refreshing.
+  const [liveNotice, setLiveNotice] = useState(null);
+  useRealtimeChannel('deliveries', DELIVERY_EVENT_TYPES, (type, payload) => {
+    if (type === 'DELIVERY_REQUESTED') {
+      setLiveNotice({ id: payload?.deliveryId, message: payload?.message });
+    }
+    fetchDeliveries();
+    if (activeTab === 'courier') fetchCourierDeliveries();
+  });
 
   // Handle New Delivery Input
   const handleNewDeliveryChange = (e) => {
@@ -220,10 +221,10 @@ const DeliveryPage = () => {
           : newDeliveryForm.specialInstructions
       };
 
-      const res = await client.post('/api/deliveries', payload);
+      const created = await deliveryApi.record(payload);
       setDeliveryFeedback({
         type: 'success',
-        message: `Delivery #${res.data?.id || ''} created successfully with Status PENDING and OTP generated.`
+        message: `Delivery #DEL-${created?.id || ''} recorded and added to the approval queue.`
       });
 
       // Reset form
@@ -246,7 +247,7 @@ const DeliveryPage = () => {
     } catch (error) {
       setDeliveryFeedback({
         type: 'error',
-        message: error.response?.data?.message || 'Failed to create delivery.'
+        message: errorMessage(error, 'Failed to create delivery.')
       });
     } finally {
       setCreatingDelivery(false);
@@ -254,11 +255,15 @@ const DeliveryPage = () => {
   };
 
   // Checkbox Selection
+  // Only APPROVED (or FAILED / already dispatched for re-assignment) deliveries can get a courier.
+  const canAssign = (d) => (d.nextStatuses || []).includes('DISPATCHED');
+
   const toggleSelectAll = () => {
-    if (selectedDeliveryIds.length === filteredDeliveries.length) {
+    const assignable = filteredDeliveries.filter(canAssign);
+    if (assignable.length > 0 && selectedDeliveryIds.length === assignable.length) {
       setSelectedDeliveryIds([]);
     } else {
-      setSelectedDeliveryIds(filteredDeliveries.map((d) => d.id || d.deliveryId));
+      setSelectedDeliveryIds(assignable.map((d) => d.id));
     }
   };
 
@@ -275,18 +280,17 @@ const DeliveryPage = () => {
     setDeliveryFeedback({ type: '', message: '' });
 
     try {
-      const autoBatchId = batchIdInput.trim() || `BATCH-${Date.now().toString().slice(-6)}`;
       const payload = {
         deliveryIds: selectedDeliveryIds,
-        batchId: autoBatchId,
+        batchId: batchIdInput.trim() || undefined,
         route: batchRoute,
-        courier: batchCourier
+        courier: batchCourier || undefined
       };
 
-      await client.put('/api/deliveries/assign', payload);
+      await deliveryApi.assign(payload);
       setDeliveryFeedback({
         type: 'success',
-        message: `Successfully assigned route (${batchRoute}) and courier (${batchCourier}) to ${selectedDeliveryIds.length} deliveries. Status updated to DISPATCHED.`
+        message: `Assigned ${selectedDeliveryIds.length} delivery(ies) to ${batchCourier || "each customer's chosen partner"} on route ${batchRoute}. Customers received their handover OTP.`
       });
       setSelectedDeliveryIds([]);
       setBatchIdInput('');
@@ -295,7 +299,7 @@ const DeliveryPage = () => {
     } catch (error) {
       setDeliveryFeedback({
         type: 'error',
-        message: error.response?.data?.message || 'Failed to assign deliveries.'
+        message: errorMessage(error, 'Failed to assign deliveries.')
       });
     } finally {
       setIsAssigning(false);
@@ -310,10 +314,7 @@ const DeliveryPage = () => {
 
     try {
       const id = targetActionDelivery.id || targetActionDelivery.deliveryId;
-      await client.put(`/api/deliveries/${id}/action`, {
-        action: actionType,
-        reason: actionReason
-      });
+      await deliveryApi.action(id, actionType, actionReason);
       setDeliveryFeedback({
         type: 'success',
         message: `Action ${actionType} executed successfully on Delivery #${id}.`
@@ -326,7 +327,7 @@ const DeliveryPage = () => {
     } catch (error) {
       setDeliveryFeedback({
         type: 'error',
-        message: error.response?.data?.message || `Failed to execute action ${actionType}.`
+        message: errorMessage(error, `Failed to execute action ${actionType}.`)
       });
     } finally {
       setActionSubmitting(false);
@@ -336,13 +337,11 @@ const DeliveryPage = () => {
   // Courier Status Update: Direct IN_TRANSIT
   const handleCourierMarkTransit = async (deliveryId) => {
     try {
-      await client.put(`/api/courier/deliveries/${deliveryId}/status`, {
-        status: 'IN_TRANSIT'
-      });
+      await deliveryApi.courierUpdate(deliveryId, { status: 'IN_TRANSIT' });
       fetchCourierDeliveries();
       fetchDeliveries();
     } catch (error) {
-      alert(error.response?.data?.message || 'Could not update status to IN_TRANSIT');
+      setDeliveryFeedback({ type: 'error', message: errorMessage(error, 'Could not update status to IN_TRANSIT') });
     }
   };
 
@@ -351,7 +350,7 @@ const DeliveryPage = () => {
     if (!targetCourierDelivery) return;
     const id = targetCourierDelivery.deliveryId || targetCourierDelivery.id;
     try {
-      await client.put(`/api/courier/deliveries/${id}/status`, {
+      await deliveryApi.courierUpdate(id, {
         status: 'FAILED',
         failureReason: failureReason || 'Customer unreachable / delivery issue'
       });
@@ -361,7 +360,8 @@ const DeliveryPage = () => {
       fetchCourierDeliveries();
       fetchDeliveries();
     } catch (error) {
-      alert(error.response?.data?.message || 'Could not mark delivery as FAILED');
+      setDeliveryFeedback({ type: 'error', message: errorMessage(error, 'Could not mark delivery as FAILED') });
+      setIsFailureModalOpen(false);
     }
   };
 
@@ -374,7 +374,7 @@ const DeliveryPage = () => {
 
     const id = targetCourierDelivery.deliveryId || targetCourierDelivery.id;
     try {
-      await client.put(`/api/courier/deliveries/${id}/status`, {
+      await deliveryApi.courierUpdate(id, {
         status: 'DELIVERED',
         otp: enteredOtp.trim()
       });
@@ -384,9 +384,85 @@ const DeliveryPage = () => {
       fetchCourierDeliveries();
       fetchDeliveries();
     } catch (error) {
-      setOtpError(error.response?.data?.message || 'Invalid OTP. Handover verification failed.');
+      setOtpError(errorMessage(error, 'Invalid OTP. Handover verification failed.'));
+      fetchCourierDeliveries();
     } finally {
       setOtpSubmitting(false);
+    }
+  };
+
+  // Approval workflow: PENDING -> APPROVED (then assign courier) or PENDING -> REJECTED
+  const handleApprove = async (delivery) => {
+    setBusyId(delivery.id);
+    setDeliveryFeedback({ type: '', message: '' });
+    try {
+      await deliveryApi.approve(delivery.id);
+      setDeliveryFeedback({
+        type: 'success',
+        message: `Delivery #DEL-${delivery.id} approved. Select it and use "Assign & Dispatch" to hand it to ${delivery.preferredCourier || 'a courier'}.`
+      });
+      setStatusFilter('APPROVED');
+      fetchDeliveries();
+    } catch (error) {
+      setDeliveryFeedback({ type: 'error', message: errorMessage(error, 'Could not approve delivery.') });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectTarget) return;
+    if (rejectReason.trim().length < 5) {
+      setRejectError('Please give the customer a reason (at least 5 characters).');
+      return;
+    }
+    setBusyId(rejectTarget.id);
+    try {
+      await deliveryApi.reject(rejectTarget.id, rejectReason.trim());
+      setDeliveryFeedback({ type: 'success', message: `Delivery #DEL-${rejectTarget.id} rejected. The customer has been notified.` });
+      setRejectTarget(null);
+      setRejectReason('');
+      setRejectError('');
+      fetchDeliveries();
+    } catch (error) {
+      setRejectError(errorMessage(error, 'Could not reject delivery.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleResume = async (delivery) => {
+    setBusyId(delivery.id);
+    try {
+      await deliveryApi.action(delivery.id, 'RESUME', '');
+      fetchDeliveries();
+    } catch (error) {
+      setDeliveryFeedback({ type: 'error', message: errorMessage(error, 'Could not resume delivery.') });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleRegenerateOtp = async (delivery) => {
+    setBusyId(delivery.id);
+    try {
+      await deliveryApi.regenerateOtp(delivery.id);
+      setDeliveryFeedback({ type: 'success', message: `A new handover OTP was issued to the customer of #DEL-${delivery.id}.` });
+      fetchDeliveries();
+    } catch (error) {
+      setDeliveryFeedback({ type: 'error', message: errorMessage(error, 'Could not regenerate OTP.') });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const openTimeline = async (delivery) => {
+    setTimelineTarget(delivery);
+    setTimelineEntries([]);
+    try {
+      setTimelineEntries(await deliveryApi.timeline(delivery.id));
+    } catch (error) {
+      setTimelineEntries([{ description: errorMessage(error, 'Could not load timeline.') }]);
     }
   };
 
@@ -398,10 +474,7 @@ const DeliveryPage = () => {
     setTestResult(null);
 
     try {
-      const res = await client.get('/api/v1/delivery-zones/check', {
-        params: { city: testCityQuery }
-      });
-      setTestResult(res.data);
+      setTestResult(await deliveryApi.checkZone(testCityQuery));
     } catch (err) {
       setTestResult({ available: false, message: 'Check failed' });
     } finally {
@@ -412,10 +485,10 @@ const DeliveryPage = () => {
   // Toggle Route Status
   const handleToggleZone = async (zoneId) => {
     try {
-      await client.patch(`/api/v1/delivery-zones/${zoneId}/toggle-status`);
+      await deliveryApi.toggleZone(zoneId);
       fetchDeliveryZones();
     } catch (err) {
-      console.error(err);
+      setZoneFeedback({ type: 'error', message: errorMessage(err, 'Could not toggle the zone.') });
     }
   };
 
@@ -427,6 +500,8 @@ const DeliveryPage = () => {
           ? true
           : statusFilter === 'ACTIONS'
           ? ['ON_HOLD', 'TERMINATED', 'POSTPONED'].includes(d.status)
+          : statusFilter === 'FAILED'
+          ? ['FAILED', 'REJECTED'].includes(d.status)
           : d.status === statusFilter;
 
       const q = searchQuery.toLowerCase().trim();
@@ -437,7 +512,8 @@ const DeliveryPage = () => {
         (d.customerName && d.customerName.toLowerCase().includes(q)) ||
         (d.customerPhone && d.customerPhone.includes(q)) ||
         (d.orderAddress && d.orderAddress.toLowerCase().includes(q)) ||
-        (d.assignedCourier && d.assignedCourier.toLowerCase().includes(q));
+        (d.assignedCourier && d.assignedCourier.toLowerCase().includes(q)) ||
+        (d.preferredCourier && d.preferredCourier.toLowerCase().includes(q));
 
       return matchesStatus && matchesSearch;
     });
@@ -448,6 +524,7 @@ const DeliveryPage = () => {
     const res = {
       ALL: deliveries.length,
       PENDING: 0,
+      APPROVED: 0,
       DISPATCHED: 0,
       IN_TRANSIT: 0,
       DELIVERED: 0,
@@ -456,6 +533,7 @@ const DeliveryPage = () => {
     };
     deliveries.forEach((d) => {
       if (res[d.status] !== undefined) res[d.status]++;
+      if (d.status === 'REJECTED') res.FAILED++;
       if (['ON_HOLD', 'TERMINATED', 'POSTPONED'].includes(d.status)) res.ACTIONS++;
     });
     return res;
@@ -465,9 +543,13 @@ const DeliveryPage = () => {
   const renderStatusBadge = (status) => {
     switch (status) {
       case 'PENDING':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-50 text-amber-700 border border-amber-200">PENDING</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-50 text-amber-700 border border-amber-200">PENDING APPROVAL</span>;
+      case 'APPROVED':
+        return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-teal-50 text-teal-700 border border-teal-200">APPROVED</span>;
+      case 'REJECTED':
+        return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-300">REJECTED</span>;
       case 'DISPATCHED':
-        return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">DISPATCHED</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">COURIER ASSIGNED</span>;
       case 'IN_TRANSIT':
         return <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200 animate-pulse">IN TRANSIT</span>;
       case 'DELIVERED':
@@ -592,6 +674,30 @@ const DeliveryPage = () => {
           </div>
         )}
 
+        {/* Live notice: a customer just confirmed an order */}
+        {liveNotice && (
+          <div className="p-4 rounded-xl mb-6 flex items-start gap-3 bg-amber-50 text-amber-900 border border-amber-200" role="status">
+            <Bell className="w-5 h-5 text-amber-600 shrink-0 mt-0.5 animate-bounce" />
+            <div className="flex-1 text-sm font-medium">
+              <strong>New delivery request #DEL-{liveNotice.id}</strong> — {liveNotice.message}.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('management');
+                setStatusFilter('PENDING');
+                setLiveNotice(null);
+              }}
+              className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shrink-0"
+            >
+              Review
+            </button>
+            <button onClick={() => setLiveNotice(null)} className="text-amber-500 hover:text-amber-700" aria-label="Dismiss">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* ========================================================================= */}
         {/* TAB NAVIGATION: Strictly isolated tabs (NO vertical stacking!)            */}
         {/* ========================================================================= */}
@@ -656,11 +762,12 @@ const DeliveryPage = () => {
               <div className="flex flex-wrap items-center gap-1.5">
                 {[
                   { id: 'ALL', label: 'All', count: counts.ALL },
-                  { id: 'PENDING', label: 'Pending', count: counts.PENDING, color: 'text-amber-700 bg-amber-50' },
-                  { id: 'DISPATCHED', label: 'Dispatched', count: counts.DISPATCHED, color: 'text-indigo-700 bg-indigo-50' },
+                  { id: 'PENDING', label: 'Pending Approval', count: counts.PENDING, color: 'text-amber-700 bg-amber-50' },
+                  { id: 'APPROVED', label: 'Approved', count: counts.APPROVED, color: 'text-teal-700 bg-teal-50' },
+                  { id: 'DISPATCHED', label: 'With Courier', count: counts.DISPATCHED, color: 'text-indigo-700 bg-indigo-50' },
                   { id: 'IN_TRANSIT', label: 'In Transit', count: counts.IN_TRANSIT, color: 'text-blue-700 bg-blue-50' },
                   { id: 'DELIVERED', label: 'Delivered', count: counts.DELIVERED, color: 'text-emerald-700 bg-emerald-50' },
-                  { id: 'FAILED', label: 'Failed', count: counts.FAILED, color: 'text-rose-700 bg-rose-50' },
+                  { id: 'FAILED', label: 'Failed / Rejected', count: counts.FAILED, color: 'text-rose-700 bg-rose-50' },
                   { id: 'ACTIONS', label: 'On Hold / Postponed', count: counts.ACTIONS, color: 'text-purple-700 bg-purple-50' }
                 ].map((pill) => (
                   <button
@@ -712,7 +819,7 @@ const DeliveryPage = () => {
                   <div>
                     <h3 className="text-sm font-bold tracking-tight">Batch Assignment & Dispatch</h3>
                     <p className="text-xs text-neutral-400">
-                      Assign selected orders to a geofenced route and courier partner.
+                      Assign the selected approved orders to a route and courier partner.
                     </p>
                   </div>
                 </div>
@@ -740,6 +847,7 @@ const DeliveryPage = () => {
                       onChange={(e) => setBatchCourier(e.target.value)}
                       className="px-3 py-1.5 text-xs rounded-lg bg-neutral-800 border border-neutral-700 text-white focus:outline-none focus:border-emerald-500"
                     >
+                      <option value="">Customer's choice</option>
                       {COURIER_OPTIONS.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
@@ -752,6 +860,7 @@ const DeliveryPage = () => {
                     <input
                       type="text"
                       placeholder="e.g. BATCH-01"
+                      maxLength={40}
                       value={batchIdInput}
                       onChange={(e) => setBatchIdInput(e.target.value)}
                       className="px-3 py-1.5 text-xs rounded-lg bg-neutral-800 border border-neutral-700 text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500 w-32"
@@ -790,8 +899,12 @@ const DeliveryPage = () => {
                       <th className="p-4 w-12 text-center">
                         <input
                           type="checkbox"
-                          checked={filteredDeliveries.length > 0 && selectedDeliveryIds.length === filteredDeliveries.length}
+                          checked={
+                            filteredDeliveries.some(canAssign) &&
+                            selectedDeliveryIds.length === filteredDeliveries.filter(canAssign).length
+                          }
                           onChange={toggleSelectAll}
+                          title="Select all approved deliveries"
                           className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                         />
                       </th>
@@ -800,8 +913,8 @@ const DeliveryPage = () => {
                       <th className="p-4">Order Address</th>
                       <th className="p-4">Instructions / Cold Chain</th>
                       <th className="p-4">Validating Pharmacist & Staff</th>
-                      <th className="p-4">Route & Courier</th>
-                      <th className="p-4">Status & OTP</th>
+                      <th className="p-4">Courier (chosen / assigned)</th>
+                      <th className="p-4">Status</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -818,7 +931,7 @@ const DeliveryPage = () => {
                         <td colSpan="9" className="p-12 text-center text-neutral-500">
                           <Package className="w-8 h-8 mx-auto mb-2 text-neutral-300" />
                           <p className="font-semibold text-neutral-700">No deliveries found matching filters.</p>
-                          <p className="text-xs text-neutral-400 mt-1">Use "Record New Delivery" to create one.</p>
+                          <p className="text-xs text-neutral-400 mt-1">Customer orders appear here automatically when they confirm checkout.</p>
                         </td>
                       </tr>
                     ) : (
@@ -838,8 +951,10 @@ const DeliveryPage = () => {
                               <input
                                 type="checkbox"
                                 checked={isSelected}
+                                disabled={!canAssign(delivery)}
                                 onChange={() => toggleSelectOne(id)}
-                                className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                title={canAssign(delivery) ? 'Select for courier assignment' : 'Approve this delivery before assigning a courier'}
+                                className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                               />
                             </td>
 
@@ -854,6 +969,14 @@ const DeliveryPage = () => {
                                 </span>
                               ) : (
                                 <span className="text-[10px] text-neutral-400 italic">Individual</span>
+                              )}
+                              {delivery.orderId && (
+                                <div className="text-[10px] text-neutral-500 mt-1 font-sans">Order #{delivery.orderId}</div>
+                              )}
+                              {delivery.orderTotal != null && (
+                                <div className="text-[10px] font-bold text-emerald-800 font-sans">
+                                  LKR {Number(delivery.orderTotal).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+                                </div>
                               )}
                             </td>
 
@@ -893,6 +1016,9 @@ const DeliveryPage = () => {
                                   Cold Chain (2-8°C)
                                 </span>
                               )}
+                              {delivery.itemsSummary && (
+                                <p className="text-neutral-800 text-[11px] font-semibold line-clamp-2">{delivery.itemsSummary}</p>
+                              )}
                               <p className="text-neutral-600 text-[11px] line-clamp-2">
                                 {delivery.specialInstructions || 'Standard Handling'}
                               </p>
@@ -910,8 +1036,11 @@ const DeliveryPage = () => {
 
                             {/* Route & Courier */}
                             <td className="p-4">
-                              <div className="font-bold text-neutral-800">
-                                {delivery.assignedCourier || <span className="text-neutral-400 font-normal">Unassigned</span>}
+                              <div className="text-[10px] text-neutral-500">
+                                Customer chose: <strong className="text-neutral-800">{delivery.preferredCourier || '—'}</strong>
+                              </div>
+                              <div className="font-bold text-neutral-800 mt-0.5">
+                                {delivery.assignedCourier || <span className="text-neutral-400 font-normal">Not assigned yet</span>}
                               </div>
                               <div className="text-[10px] text-neutral-500">
                                 {delivery.assignedRoute || 'No Route'}
@@ -921,10 +1050,10 @@ const DeliveryPage = () => {
                             {/* Status & Customer OTP */}
                             <td className="p-4">
                               <div>{renderStatusBadge(delivery.status)}</div>
-                              {delivery.deliveryOtp && (
-                                <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[10px] font-mono font-bold text-zinc-800">
+                              {delivery.otpIssued && (
+                                <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[10px] font-bold text-zinc-700" title="The code is only visible to the customer">
                                   <KeyRound className="w-2.5 h-2.5 text-amber-600" />
-                                  <span>OTP: {delivery.deliveryOtp}</span>
+                                  <span>OTP sent to customer{delivery.otpAttempts > 0 ? ` · ${delivery.otpAttempts} wrong` : ''}</span>
                                 </div>
                               )}
                               {delivery.actionReason && (
@@ -934,44 +1063,101 @@ const DeliveryPage = () => {
                               )}
                             </td>
 
-                            {/* Actions Dropdown / Quick Buttons */}
+                            {/* Row actions: only those allowed by the delivery's current status */}
                             <td className="p-4 text-right">
-                              <div className="flex items-center justify-end gap-1">
+                              <div className="flex items-center justify-end gap-1 flex-wrap">
+                                {delivery.status === 'PENDING' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={busyId === id}
+                                      onClick={() => handleApprove(delivery)}
+                                      title="Approve delivery request"
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold disabled:opacity-50"
+                                    >
+                                      <Check className="w-3.5 h-3.5" /> Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setRejectTarget(delivery);
+                                        setRejectReason('');
+                                        setRejectError('');
+                                      }}
+                                      title="Reject delivery request"
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-[11px] font-bold"
+                                    >
+                                      <X className="w-3.5 h-3.5" /> Reject
+                                    </button>
+                                  </>
+                                )}
+                                {canAssign(delivery) && !isSelected && delivery.status === 'APPROVED' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleSelectOne(id)}
+                                    title="Select for courier assignment"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold"
+                                  >
+                                    <Send className="w-3.5 h-3.5" /> Assign
+                                  </button>
+                                )}
+                                {['ON_HOLD', 'POSTPONED'].includes(delivery.status) && (
+                                  <button
+                                    type="button"
+                                    disabled={busyId === id}
+                                    onClick={() => handleResume(delivery)}
+                                    title="Resume delivery"
+                                    className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
+                                  >
+                                    <PlayCircle className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {['DISPATCHED', 'IN_TRANSIT'].includes(delivery.status) && (
+                                  <button
+                                    type="button"
+                                    disabled={busyId === id}
+                                    onClick={() => handleRegenerateOtp(delivery)}
+                                    title="Send the customer a new OTP"
+                                    className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition-colors"
+                                  >
+                                    <KeyRound className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {(delivery.nextStatuses || []).includes('ON_HOLD') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setTargetActionDelivery(delivery);
+                                      setActionType('HOLD');
+                                      setIsActionModalOpen(true);
+                                    }}
+                                    title="Hold / postpone / terminate"
+                                    className="p-1.5 rounded-lg hover:bg-purple-50 text-purple-600 transition-colors"
+                                  >
+                                    <PauseCircle className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {(delivery.nextStatuses || []).includes('TERMINATED') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setTargetActionDelivery(delivery);
+                                      setActionType('TERMINATE');
+                                      setIsActionModalOpen(true);
+                                    }}
+                                    title="Terminate Delivery"
+                                    className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                                  >
+                                    <XCircle className="w-4 h-4" />
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setTargetActionDelivery(delivery);
-                                    setActionType('HOLD');
-                                    setIsActionModalOpen(true);
-                                  }}
-                                  title="Hold Delivery"
-                                  className="p-1.5 rounded-lg hover:bg-purple-50 text-purple-600 transition-colors"
+                                  onClick={() => openTimeline(delivery)}
+                                  title="View delivery timeline"
+                                  className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-600 transition-colors"
                                 >
-                                  <PauseCircle className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setTargetActionDelivery(delivery);
-                                    setActionType('POSTPONE');
-                                    setIsActionModalOpen(true);
-                                  }}
-                                  title="Postpone Delivery"
-                                  className="p-1.5 rounded-lg hover:bg-orange-50 text-orange-600 transition-colors"
-                                >
-                                  <Hourglass className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setTargetActionDelivery(delivery);
-                                    setActionType('TERMINATE');
-                                    setIsActionModalOpen(true);
-                                  }}
-                                  title="Terminate Delivery"
-                                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                                >
-                                  <XCircle className="w-4 h-4" />
+                                  <ListOrdered className="w-4 h-4" />
                                 </button>
                               </div>
                             </td>
@@ -1030,9 +1216,9 @@ const DeliveryPage = () => {
               ) : courierDeliveries.length === 0 ? (
                 <div className="col-span-full p-12 text-center text-neutral-500 bg-white rounded-2xl border border-neutral-200/80">
                   <Package className="w-10 h-10 mx-auto mb-2 text-neutral-300" />
-                  <p className="font-bold text-neutral-800">No pending dispatches found for couriers.</p>
+                  <p className="font-bold text-neutral-800">No parcels assigned to couriers yet.</p>
                   <p className="text-xs text-neutral-400 mt-1">
-                    Assign pending orders from the Delivery Management console to dispatch them.
+                    Approve orders in Delivery Management, then use "Assign &amp; Dispatch".
                   </p>
                 </div>
               ) : (
@@ -1109,7 +1295,7 @@ const DeliveryPage = () => {
                               <button
                                 type="button"
                                 onClick={() => handleCourierMarkTransit(id)}
-                                disabled={item.status === 'IN_TRANSIT'}
+                                disabled={item.status !== 'DISPATCHED'}
                                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
                                   item.status === 'IN_TRANSIT'
                                     ? 'bg-blue-100 text-blue-800 border border-blue-200 cursor-default'
@@ -1117,7 +1303,7 @@ const DeliveryPage = () => {
                                 }`}
                               >
                                 <Truck className="w-3.5 h-3.5" />
-                                <span>{item.status === 'IN_TRANSIT' ? 'In Transit' : 'Mark In Transit'}</span>
+                                <span>{item.status === 'IN_TRANSIT' ? 'In Transit' : 'Picked Up'}</span>
                               </button>
 
                               <button
@@ -1135,13 +1321,15 @@ const DeliveryPage = () => {
 
                             <button
                               type="button"
+                              disabled={item.status !== 'IN_TRANSIT'}
+                              title={item.status !== 'IN_TRANSIT' ? 'Mark the parcel as picked up first' : undefined}
                               onClick={() => {
                                 setTargetCourierDelivery(item);
                                 setEnteredOtp('');
                                 setOtpError('');
                                 setIsOtpModalOpen(true);
                               }}
-                              className="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                              className="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <KeyRound className="w-3.5 h-3.5" />
                               <span>Handover Parcel (Verify Customer OTP)</span>
@@ -1493,10 +1681,13 @@ const DeliveryPage = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-neutral-700 mb-1">Reason / Notes</label>
+                <label className="block font-bold text-neutral-700 mb-1">
+                  Reason / Notes {actionType === 'TERMINATE' && <span className="text-red-600">*</span>}
+                </label>
                 <textarea
                   rows="3"
                   placeholder="Enter reason for this action..."
+                  maxLength={500}
                   value={actionReason}
                   onChange={(e) => setActionReason(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200"
@@ -1515,7 +1706,7 @@ const DeliveryPage = () => {
               <button
                 type="button"
                 onClick={handlePerformAction}
-                disabled={actionSubmitting}
+                disabled={actionSubmitting || (actionType === 'TERMINATE' && !actionReason.trim())}
                 className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider disabled:opacity-50"
               >
                 {actionSubmitting ? 'Applying...' : 'Apply Action'}
@@ -1551,7 +1742,9 @@ const DeliveryPage = () => {
                   autoFocus
                   placeholder="• • • • • •"
                   value={enteredOtp}
-                  onChange={(e) => setEnteredOtp(e.target.value)}
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  onChange={(e) => setEnteredOtp(e.target.value.replace(/[^0-9]/g, ''))}
                   className="w-48 mx-auto text-center font-mono font-black text-2xl tracking-widest px-4 py-3 rounded-2xl bg-neutral-50 border-2 border-emerald-500/50 focus:border-emerald-600 focus:outline-none"
                 />
               </div>
@@ -1604,6 +1797,7 @@ const DeliveryPage = () => {
                   rows="3"
                   required
                   placeholder="e.g. Customer unreachable after 3 attempts, incorrect address..."
+                  maxLength={500}
                   value={failureReason}
                   onChange={(e) => setFailureReason(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200"
@@ -1627,6 +1821,81 @@ const DeliveryPage = () => {
                 Confirm Failure
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ========================================================================= */}
+      {/* MODAL 5: REJECT DELIVERY REQUEST (reason is shown to the customer)        */}
+      {/* ========================================================================= */}
+      {rejectTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-base font-black uppercase text-red-800 mb-1">Reject Delivery Request</h3>
+            <p className="text-xs text-neutral-500 mb-4">
+              #DEL-{rejectTarget.id} from {rejectTarget.customerName} ({rejectTarget.preferredCourier}). The customer will see this reason.
+            </p>
+            <textarea
+              rows="3"
+              maxLength={500}
+              autoFocus
+              placeholder="e.g. Address outside our delivery zones"
+              value={rejectReason}
+              onChange={(e) => {
+                setRejectReason(e.target.value);
+                setRejectError('');
+              }}
+              className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs"
+            ></textarea>
+            {rejectError && <p className="text-xs text-red-600 font-semibold mt-1">{rejectError}</p>}
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => setRejectTarget(null)}
+                className="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleReject}
+                disabled={busyId === rejectTarget.id}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider disabled:opacity-50"
+              >
+                Reject Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 6: DELIVERY TIMELINE (written by the backend's timeline observer)   */}
+      {/* ========================================================================= */}
+      {timelineTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-black uppercase text-neutral-900">Timeline · #DEL-{timelineTarget.id}</h3>
+              <button type="button" onClick={() => setTimelineTarget(null)} className="text-neutral-400 hover:text-neutral-600" aria-label="Close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {timelineEntries.length === 0 ? (
+              <p className="text-xs text-neutral-500">Loading...</p>
+            ) : (
+              <ol className="border-l-2 border-emerald-200 pl-4 space-y-3">
+                {timelineEntries.map((e, i) => (
+                  <li key={i} className="text-xs">
+                    <div className="font-bold text-neutral-900">{e.description}</div>
+                    <div className="text-[10px] text-neutral-500">
+                      {e.eventType}
+                      {e.createdAt ? ` · ${new Date(e.createdAt).toLocaleString()}` : ''}
+                      {e.actorName ? ` · ${e.actorName} (${e.actorRole})` : ''}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
         </div>
       )}

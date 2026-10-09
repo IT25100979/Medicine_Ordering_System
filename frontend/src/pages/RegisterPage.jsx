@@ -27,7 +27,14 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      await register(fullName, email, password, role, phoneNumber);
+      const result = await register(fullName, email, password, role, phoneNumber);
+      if (result?.pendingApproval) {
+        // Staff accounts must be approved by a System Admin before they can sign in.
+        navigate('/login/admin', {
+          state: { notice: result.message || 'Registration received. Your account is pending System Admin approval.' },
+        });
+        return;
+      }
       navigate('/');
     } catch (err) {
       console.error('Registration error', err);
@@ -178,7 +185,6 @@ const RegisterPage = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
                     { id: 'CUSTOMER', label: 'Customer' },
-                    { id: 'SYSTEM_ADMIN', label: 'System Admin' },
                     { id: 'PHARMACIST', label: 'Pharmacist' },
                     { id: 'OPERATIONS_MANAGER', label: 'Operations Manager' },
                     { id: 'DELIVERY_COORDINATOR', label: 'Delivery Coordinator' },

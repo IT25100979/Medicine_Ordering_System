@@ -411,6 +411,18 @@ const Navbar = () => {
               <span className="hidden sm:inline font-extrabold text-neutral-900">Offers</span>
             </Link>
 
+            {/* Delivery tracking for logged-in customers */}
+            {isAuthenticated && user?.role === 'CUSTOMER' && (
+              <Link
+                to="/my-deliveries"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full hover:bg-neutral-200/80 transition-colors font-bold text-xs uppercase tracking-wider text-neutral-800 group shrink-0"
+                title="Track My Deliveries"
+              >
+                <i className="fa-solid fa-truck-fast text-emerald-700 text-sm group-hover:scale-110 transition-transform" />
+                <span className="hidden md:inline font-extrabold text-neutral-900">Deliveries</span>
+              </Link>
+            )}
+
             {/* Cart Link with Reactive Count Badge */}
             <Link
               to="/cart"

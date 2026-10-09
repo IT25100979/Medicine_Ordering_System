@@ -1,41 +1,38 @@
 package com.mediorder.it25100979_delivery_management.controller;
 
-import com.mediorder.it25100979_delivery_management.dto.CourierDeliveryResponse;
-import com.mediorder.it25100979_delivery_management.dto.CourierStatusUpdateRequest;
+import com.mediorder.it25100979_delivery_management.dto.request.CourierStatusUpdateRequest;
+import com.mediorder.it25100979_delivery_management.dto.response.CourierDeliveryResponse;
 import com.mediorder.it25100979_delivery_management.service.DeliveryService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mediorder.system_build_functions.dto.ApiResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/** Courier work queue: only parcels already assigned to a courier; no OTP or totals exposed. */
 @RestController
 @RequestMapping({"/api/courier", "/api/v1/courier"})
-@CrossOrigin(origins = "*")
+@PreAuthorize("hasAnyRole('DELIVERY_RIDER', 'DELIVERY_COORDINATOR', 'ADMIN', 'SYSTEM_ADMIN')")
 public class CourierController {
 
-    @Autowired
-    private DeliveryService deliveryService;
+    private final DeliveryService deliveryService;
 
-    /**
-     * GET /api/courier/deliveries: Endpoint tailored strictly for couriers.
-     * Only returns deliveryId/batchId, customerName (recipient), orderAddress, and customerPhone.
-     */
-    @GetMapping("/deliveries")
-    public ResponseEntity<List<CourierDeliveryResponse>> getCourierDeliveries(
-            @RequestParam(value = "courier", required = false) String courier) {
-        return ResponseEntity.ok(deliveryService.getCourierDeliveries(courier));
+    public CourierController(DeliveryService deliveryService) {
+        this.deliveryService = deliveryService;
     }
 
-    /**
-     * PUT /api/courier/deliveries/{id}/status: Endpoint for couriers to update delivery status.
-     * - Allows direct updates to IN_TRANSIT and FAILED.
-     * - Strictly requires a valid OTP in the request payload for DELIVERED.
-     */
+    @GetMapping("/deliveries")
+    public ResponseEntity<ApiResponse<List<CourierDeliveryResponse>>> getCourierDeliveries(
+            @RequestParam(value = "courier", required = false) String courier) {
+        return ResponseEntity.ok(ApiResponse.success("Courier deliveries", deliveryService.getCourierDeliveries(courier)));
+    }
+
+    /** IN_TRANSIT (picked up), FAILED (reason) or DELIVERED (requires the customer's 6-digit OTP). */
     @PutMapping("/deliveries/{id}/status")
-    public ResponseEntity<CourierDeliveryResponse> updateCourierDeliveryStatus(
-            @PathVariable Long id,
-            @RequestBody CourierStatusUpdateRequest request) {
-        return ResponseEntity.ok(deliveryService.updateCourierStatus(id, request));
+    public ResponseEntity<ApiResponse<CourierDeliveryResponse>> updateCourierDeliveryStatus(
+            @PathVariable Long id, @Valid @RequestBody CourierStatusUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Delivery status updated", deliveryService.updateCourierStatus(id, request)));
     }
 }

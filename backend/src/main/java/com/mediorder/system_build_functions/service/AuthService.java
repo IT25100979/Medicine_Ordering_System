@@ -6,7 +6,11 @@ import com.mediorder.system_build_functions.model.Role;
 import com.mediorder.system_build_functions.model.User;
 import com.mediorder.system_build_functions.model.UserStatus;
 import com.mediorder.system_build_functions.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
@@ -25,6 +30,10 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
+
+    /** Mirrors ENABLE_DEMO_LOGIN; when false the demo endpoint behaves as if it does not exist. */
+    @Value("${app.demo-login.enabled:true}")
+    private boolean demoLoginEnabled = true;
 
     public AuthService(
             UserRepository userRepository,
@@ -39,16 +48,21 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email is already registered: " + request.getEmail());
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new IllegalArgumentException("Email is already registered: " + normalizedEmail);
         }
 
         Role userRole = request.getRole() != null ? request.getRole() : Role.CUSTOMER;
+        if (userRole == Role.SYSTEM_ADMIN || userRole == Role.ADMIN) {
+            // System administrators are created only via seed data / the admin console.
+            throw new AccessDeniedException("System Admin accounts cannot be self-registered.");
+        }
         UserStatus status = userRole.isAdminRole() ? UserStatus.PENDING_APPROVAL : UserStatus.ACTIVE;
 
         User user = User.builder()
                 .fullName(request.getFullName().trim())
-                .email(request.getEmail().trim().toLowerCase())
+                .email(normalizedEmail)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getContactNumber().trim())
                 .role(userRole)
@@ -58,6 +72,15 @@ public class AuthService {
                 .build();
 
         User savedUser = userRepository.save(user);
+
+        // Staff accounts must be approved before they can act, so no session token is issued yet.
+        if (savedUser.getStatus() != UserStatus.ACTIVE) {
+            return AuthResponse.builder()
+                    .tokenType("Bearer")
+                    .message("Registration received. Your staff account is pending System Admin approval.")
+                    .user(mapToUserResponse(savedUser))
+                    .build();
+        }
 
         String token = tokenProvider.generateTokenFromUsername(savedUser.getEmail());
 
@@ -103,6 +126,10 @@ public class AuthService {
                 .build();
         } catch (BadCredentialsException ex) {
             throw new BadCredentialsException("Invalid email or password");
+        } catch (DisabledException ex) {
+            throw new AccessDeniedException("Your account is pending administrator approval.");
+        } catch (LockedException ex) {
+            throw new AccessDeniedException("Your account has been suspended.");
         }
     }
 
@@ -140,6 +167,10 @@ public class AuthService {
                     .build();
         } catch (BadCredentialsException ex) {
             throw new BadCredentialsException("Invalid email or password");
+        } catch (DisabledException ex) {
+            throw new AccessDeniedException("Admin account is pending IT / System Admin approval.");
+        } catch (LockedException ex) {
+            throw new AccessDeniedException("Admin account has been suspended.");
         }
     }
 
@@ -149,6 +180,9 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse demoLogin(DemoLoginRequest request) {
+        if (!demoLoginEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         String roleStr = request.getRole() != null ? request.getRole().trim().toUpperCase() : "CUSTOMER";
         
         Role targetRole;

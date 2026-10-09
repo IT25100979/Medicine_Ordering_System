@@ -23,7 +23,11 @@ import OrderProcessingPage from './pages/modules/OrderProcessingPage';
 import ColdChainPage from './pages/modules/ColdChainPage';
 import SubscriptionsPage from './pages/modules/SubscriptionsPage';
 import DeliveryPage from './pages/modules/DeliveryPage';
+import MyDeliveriesPage from './pages/MyDeliveriesPage';
 import SystemAdminConsolePage from './pages/admin/SystemAdminConsolePage';
+
+const DELIVERY_ROLES = ['DELIVERY_COORDINATOR', 'DELIVERY_RIDER', 'ADMIN', 'SYSTEM_ADMIN'];
+const STOCK_ROLES = ['OPERATIONS_MANAGER', 'CHIEF_PHARMACIST', 'PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN'];
 
 const App = () => {
   return (
@@ -92,17 +96,34 @@ const App = () => {
                 </ProtectedRoute>
               } />
 
-              {/* Module Routes */}
-              <Route path="/prescription" element={<PrescriptionPage />} />
-              <Route path="/modules/prescription" element={<PrescriptionPage />} />
-              <Route path="/modules/prescriptions" element={<PrescriptionPage />} />
-              <Route path="/modules/inventory" element={<InventoryPage />} />
-              <Route path="/modules/orders" element={<OrderProcessingPage />} />
-              <Route path="/modules/cold-chain" element={<ColdChainPage />} />
-              <Route path="/modules/subscriptions" element={<SubscriptionsPage />} />
-              <Route path="/modules/delivery" element={<DeliveryPage />} />
-              <Route path="/delivery" element={<DeliveryPage />} />
-              <Route path="/admin/delivery" element={<DeliveryPage />} />
+              {/* Customer delivery tracking */}
+              <Route path="/my-deliveries" element={
+                <ProtectedRoute allowedRoles={['CUSTOMER']} loginPath="/login">
+                  <MyDeliveriesPage />
+                </ProtectedRoute>
+              } />
+
+              {/* Module Routes (every module page requires login; staff modules also check role) */}
+              <Route path="/prescription" element={<ProtectedRoute loginPath="/login"><PrescriptionPage /></ProtectedRoute>} />
+              <Route path="/modules/prescription" element={<ProtectedRoute loginPath="/login"><PrescriptionPage /></ProtectedRoute>} />
+              <Route path="/modules/prescriptions" element={<ProtectedRoute loginPath="/login"><PrescriptionPage /></ProtectedRoute>} />
+              <Route path="/modules/inventory" element={
+                <ProtectedRoute allowedRoles={STOCK_ROLES}><InventoryPage /></ProtectedRoute>
+              } />
+              <Route path="/modules/orders" element={<ProtectedRoute><OrderProcessingPage /></ProtectedRoute>} />
+              <Route path="/modules/cold-chain" element={
+                <ProtectedRoute allowedRoles={STOCK_ROLES}><ColdChainPage /></ProtectedRoute>
+              } />
+              <Route path="/modules/subscriptions" element={<ProtectedRoute loginPath="/login"><SubscriptionsPage /></ProtectedRoute>} />
+              <Route path="/modules/delivery" element={
+                <ProtectedRoute allowedRoles={DELIVERY_ROLES}><DeliveryPage /></ProtectedRoute>
+              } />
+              <Route path="/delivery" element={
+                <ProtectedRoute allowedRoles={DELIVERY_ROLES}><DeliveryPage /></ProtectedRoute>
+              } />
+              <Route path="/admin/delivery" element={
+                <ProtectedRoute allowedRoles={DELIVERY_ROLES}><DeliveryPage /></ProtectedRoute>
+              } />
             </Routes>
           </main>
         </div>
