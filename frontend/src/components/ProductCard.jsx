@@ -48,12 +48,12 @@ const ProductCard = ({ product }) => {
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-      <Link to={`/product/${product.id}`} className="block bg-neutral-50">
+      <Link to={`/product/${product.id}`} className="block bg-neutral-50 p-2">
         <img
           src={productImage(product)}
           alt={product.name}
           onError={(e) => { e.currentTarget.src = CLINICAL_FALLBACK_IMAGES.General; }}
-          className="w-full aspect-square object-cover"
+          className="w-full aspect-square object-contain"
           loading="lazy"
         />
       </Link>

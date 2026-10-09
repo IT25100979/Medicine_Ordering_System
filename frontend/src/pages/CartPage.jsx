@@ -216,7 +216,7 @@ const CartPage = () => {
               return (
                 <div key={item.id} className="bg-white rounded-2xl border border-neutral-200 p-4 flex items-center gap-4">
                   <img
-                    src={item.imageUrl || productImage(item)}
+                    src={productImage(item)}
                     alt={item.name}
                     onError={(e) => { e.currentTarget.src = CLINICAL_FALLBACK_IMAGES.General; }}
                     className="w-16 h-16 rounded-xl object-cover bg-neutral-50 shrink-0"

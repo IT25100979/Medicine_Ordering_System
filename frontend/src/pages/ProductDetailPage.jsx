@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import client, { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { CLINICAL_FALLBACK_IMAGES } from './CatalogPage';
+import { CLINICAL_FALLBACK_IMAGES, productImage } from '../utils/productImages';
 
 const money = (n) => `LKR ${Number(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}`;
 
@@ -53,7 +53,7 @@ const ProductDetailPage = () => {
   const maxQty = Math.max(0, Math.min(100, stock - inCart));
   const outOfStock = stock <= 0 || product.isQuarantined;
   const isStaff = isAuthenticated && user?.role && user.role !== 'CUSTOMER';
-  const image = product.imageUrl || CLINICAL_FALLBACK_IMAGES[product.category] || CLINICAL_FALLBACK_IMAGES.General;
+  const image = productImage(product);
 
   const setQty = (value) => {
     const n = Math.floor(Number(value) || 1);
@@ -110,7 +110,7 @@ const ProductDetailPage = () => {
           src={image}
           alt={product.name}
           onError={(e) => { e.currentTarget.src = CLINICAL_FALLBACK_IMAGES.General; }}
-          className="w-full aspect-square object-cover rounded-2xl bg-neutral-50 border border-neutral-100"
+          className="w-full aspect-square object-contain rounded-2xl bg-neutral-50 border border-neutral-100"
         />
 
         <div className="space-y-5">
