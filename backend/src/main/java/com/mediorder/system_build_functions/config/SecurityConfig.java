@@ -82,7 +82,9 @@ public class SecurityConfig {
                     // 1. Core public endpoints owned by the auth/system module
                     auth.requestMatchers(
                             "/api/health",
+                            "/api/health/**",
                             "/api/v1/health",
+                            "/api/v1/health/**",
                             "/api/auth/**",
                             "/api/v1/auth/**",
                             "/api/realtime/**",

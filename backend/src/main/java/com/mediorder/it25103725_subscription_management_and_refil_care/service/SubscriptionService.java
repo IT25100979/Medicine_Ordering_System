@@ -18,6 +18,10 @@ import java.util.Optional;
 @Transactional
 public class SubscriptionService {
 
+    /** System Admin kill switch; optional so unit tests without it still work. */
+    @Autowired(required = false)
+    private com.mediorder.system_build_functions.service.FeatureFlagService featureFlagService;
+
     @Autowired
     private SubscriptionRepository subscriptionRepository;
 
@@ -39,7 +43,15 @@ public class SubscriptionService {
         return subscriptionRepository.findById(id);
     }
 
+    private void assertRefillsEnabled() {
+        if (featureFlagService != null) {
+            featureFlagService.assertFeatureEnabled(
+                    com.mediorder.system_build_functions.service.FeatureKeys.REFILLS, "Refill subscriptions");
+        }
+    }
+
     public Subscription createSubscription(SubscriptionRequest request) {
+        assertRefillsEnabled();
         Optional<User> userOpt = userRepository.findById(request.getCustomerId());
         if (userOpt.isEmpty()) {
             throw new IllegalArgumentException("Customer not found with id: " + request.getCustomerId());
@@ -67,6 +79,7 @@ public class SubscriptionService {
     }
 
     public Optional<Subscription> advanceRefillCycle(Long id) {
+        assertRefillsEnabled();
         return subscriptionRepository.findById(id).map(sub -> {
             sub.setNextRefillDate(sub.getNextRefillDate().plusDays(sub.getFrequencyDays()));
             return subscriptionRepository.save(sub);

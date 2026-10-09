@@ -30,6 +30,10 @@ import java.util.stream.Collectors;
 @Transactional
 public class PrescriptionService {
 
+    /** System Admin kill switch; optional so unit tests without it still work. */
+    @Autowired(required = false)
+    private com.mediorder.system_build_functions.service.FeatureFlagService featureFlagService;
+
     @Autowired
     private PrescriptionRepository prescriptionRepository;
 
@@ -60,12 +64,20 @@ public class PrescriptionService {
                 || r == Role.OPERATIONS_MANAGER || r == Role.FINANCE_MANAGER;
     }
 
+    private void assertPrescriptionsEnabled() {
+        if (featureFlagService != null) {
+            featureFlagService.assertFeatureEnabled(
+                    com.mediorder.system_build_functions.service.FeatureKeys.PRESCRIPTIONS, "Prescription intake and review");
+        }
+    }
+
     public PrescriptionResponse uploadPrescription(
             MultipartFile file,
             String doctorName,
             String patientNotes,
             Boolean chronicSubscription,
             Authentication authentication) {
+        assertPrescriptionsEnabled();
 
         User customer = getAuthenticatedUser(authentication);
         String storedFileName = fileStorageService.storeFile(file);
@@ -174,6 +186,7 @@ public class PrescriptionService {
             Long id,
             PrescriptionVerificationRequest request,
             Authentication authentication) {
+        assertPrescriptionsEnabled();
 
         User pharmacist = getAuthenticatedUser(authentication);
         if (!isStaffUser(pharmacist)) {

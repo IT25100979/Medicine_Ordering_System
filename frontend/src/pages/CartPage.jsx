@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { CLINICAL_FALLBACK_IMAGES } from './CatalogPage';
 import { deliveryApi, COURIER_PARTNERS_FALLBACK } from '../api/deliveryApi';
 import { errorMessage } from '../api/client';
+import useFeatureStatus from '../hooks/useFeatureStatus';
+import FeaturePausedBanner from '../components/FeaturePausedBanner';
 
 const PHONE_PATTERN = /^[0-9+ -]{7,15}$/;
 
@@ -53,6 +55,8 @@ const CartPage = () => {
   const [checkoutErrors, setCheckoutErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [placingOrder, setPlacingOrder] = useState(false);
+  const { status: featureStatus, isEnabled } = useFeatureStatus();
+  const orderingPaused = !isEnabled('ORDERING') || !isEnabled('DELIVERY');
 
   useEffect(() => {
     deliveryApi.courierPartners()
@@ -170,6 +174,13 @@ const CartPage = () => {
           </Link>
         </div>
       </div>
+
+      {checkoutStep !== 'confirmed' && (
+        <>
+          <FeaturePausedBanner title="Online ordering" info={featureStatus.ORDERING} />
+          <FeaturePausedBanner title="Home delivery" info={featureStatus.DELIVERY} />
+        </>
+      )}
 
       {/* Guest Warning Banner if Not Logged In */}
       {actualIsGuest && cartItems.length > 0 && checkoutStep !== 'confirmed' && (
@@ -519,7 +530,7 @@ const CartPage = () => {
                   )}
                   <button
                     type="button"
-                    disabled={cartItems.length === 0 || placingOrder}
+                    disabled={cartItems.length === 0 || placingOrder || orderingPaused}
                     onClick={handleCheckout}
                     className="w-full py-3.5 bg-neutral-900 hover:bg-black disabled:bg-neutral-300 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                   >

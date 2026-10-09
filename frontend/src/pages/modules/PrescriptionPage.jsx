@@ -2,8 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import useFeatureStatus from '../../hooks/useFeatureStatus';
+import FeaturePausedBanner from '../../components/FeaturePausedBanner';
 
 const PrescriptionPage = () => {
+  const { status: featureStatus } = useFeatureStatus();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -214,6 +217,7 @@ const PrescriptionPage = () => {
 
   return (
     <div className="pt-24 pb-16 px-4 md:px-8 max-w-[1280px] mx-auto">
+      <FeaturePausedBanner title="Prescription upload and review" info={featureStatus.PRESCRIPTIONS} />
       {/* Breadcrumb Navigation */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <nav className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-on-surface-variant">

@@ -48,6 +48,7 @@ class CustomerDeliveryServiceTest {
     @Mock private CurrentUserProvider currentUserProvider;
     @Mock private OrderService orderService;
     @Mock private MedicineRepository medicineRepository;
+    @Mock private com.mediorder.system_build_functions.service.FeatureFlagService featureFlagService;
 
     private RecordingObserver observer;
     private CustomerDeliveryService service;
@@ -59,7 +60,7 @@ class CustomerDeliveryServiceTest {
         DeliveryLifecycleManager lifecycle = new DeliveryLifecycleManager(
                 deliveryRepository, new DeliveryEventPublisher(List.of(observer)), currentUserProvider);
         service = new CustomerDeliveryService(deliveryRepository, timelineRepository, lifecycle,
-                deliveryZoneService, currentUserProvider, orderService, medicineRepository);
+                deliveryZoneService, currentUserProvider, orderService, medicineRepository, featureFlagService);
 
         customer = User.builder().id(1L).fullName("customer1").email("customer1@gmail.com").role(Role.CUSTOMER).build();
         when(currentUserProvider.currentUser()).thenReturn(Optional.of(customer));
@@ -122,6 +123,16 @@ class CustomerDeliveryServiceTest {
                 new OrderLine(null, "Plasters", 1, new BigDecimal("250"))));
 
         assertEquals(new BigDecimal("600.00"), result.getOrderTotal());
+    }
+
+    @Test
+    void checkout_blockedWhenOrderingKillSwitchIsOff() {
+        org.mockito.Mockito.doThrow(new IllegalStateException("Service Unavailable: Online ordering is currently disabled."))
+                .when(featureFlagService).assertFeatureEnabled(org.mockito.ArgumentMatchers.eq("ORDERING"), anyString());
+
+        assertThrows(IllegalStateException.class, () -> service.requestDelivery(request("DHL",
+                new OrderLine(null, "Plasters", 1, new BigDecimal("250")))));
+        org.mockito.Mockito.verify(orderService, org.mockito.Mockito.never()).createOrder(any());
     }
 
     @Test

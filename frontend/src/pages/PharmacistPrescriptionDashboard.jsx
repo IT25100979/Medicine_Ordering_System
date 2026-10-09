@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import useFeatureStatus from '../hooks/useFeatureStatus';
+import FeaturePausedBanner from '../components/FeaturePausedBanner';
 import { formatDateDDMMYYYY, getShelfLifeStatus } from './OperationsCatalogDashboard';
 
 const REJECTION_TAGS = [
@@ -72,6 +74,7 @@ const CANONICAL_SECTIONS = [
 ];
 
 const PharmacistPrescriptionDashboard = () => {
+  const { status: featureStatus } = useFeatureStatus();
   const { user, logout } = useAuth();
 
   // Navigation: 'prescriptions' (Rx Verification Queue) | 'condition_tagging' (Cold Chain & Shelf Tagging)
@@ -832,6 +835,9 @@ const PharmacistPrescriptionDashboard = () => {
 
   return (
     <div className="bg-[#fcfbf9] min-h-screen text-neutral-900 pb-16 font-sans">
+      <div className="max-w-[1536px] mx-auto px-4 pt-4">
+        <FeaturePausedBanner title="Prescription review" info={featureStatus.PRESCRIPTIONS} />
+      </div>
       {/* Toast Alert */}
       {toast && (
         <div

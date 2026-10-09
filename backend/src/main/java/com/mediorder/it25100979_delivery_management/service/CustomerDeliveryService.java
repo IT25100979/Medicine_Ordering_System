@@ -21,6 +21,8 @@ import com.mediorder.it25103946_order_processing_and_workflow.service.OrderServi
 import com.mediorder.system_build_functions.model.Role;
 import com.mediorder.system_build_functions.model.User;
 import com.mediorder.system_build_functions.security.CurrentUserProvider;
+import com.mediorder.system_build_functions.service.FeatureFlagService;
+import com.mediorder.system_build_functions.service.FeatureKeys;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +54,7 @@ public class CustomerDeliveryService {
     private final CurrentUserProvider currentUserProvider;
     private final OrderService orderService;
     private final MedicineRepository medicineRepository;
+    private final FeatureFlagService featureFlagService;
 
     public CustomerDeliveryService(DeliveryRepository deliveryRepository,
                                    DeliveryTimelineRepository timelineRepository,
@@ -59,7 +62,8 @@ public class CustomerDeliveryService {
                                    DeliveryZoneService deliveryZoneService,
                                    CurrentUserProvider currentUserProvider,
                                    OrderService orderService,
-                                   MedicineRepository medicineRepository) {
+                                   MedicineRepository medicineRepository,
+                                   FeatureFlagService featureFlagService) {
         this.deliveryRepository = deliveryRepository;
         this.timelineRepository = timelineRepository;
         this.lifecycle = lifecycle;
@@ -67,6 +71,7 @@ public class CustomerDeliveryService {
         this.currentUserProvider = currentUserProvider;
         this.orderService = orderService;
         this.medicineRepository = medicineRepository;
+        this.featureFlagService = featureFlagService;
     }
 
     @Transactional(readOnly = true)
@@ -81,6 +86,9 @@ public class CustomerDeliveryService {
      * Creates the Order + a PENDING delivery, and the observers push it to the Delivery Management page.
      */
     public CustomerDeliveryResponse requestDelivery(CustomerDeliveryRequest request) {
+        // System Admin kill switches: no new orders while ordering or delivery is paused.
+        featureFlagService.assertFeatureEnabled(FeatureKeys.ORDERING, "Online ordering");
+        featureFlagService.assertFeatureEnabled(FeatureKeys.DELIVERY, "Delivery");
         User customer = currentUserProvider.requireCurrentUser();
         if (customer.getRole() != Role.CUSTOMER) {
             throw new AccessDeniedException("Only customer accounts can place delivery orders.");

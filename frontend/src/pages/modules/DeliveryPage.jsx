@@ -40,6 +40,8 @@ import { errorMessage } from '../../api/client';
 import { deliveryApi } from '../../api/deliveryApi';
 import { useAuth } from '../../context/AuthContext';
 import useRealtimeChannel, { DELIVERY_EVENT_TYPES } from '../../hooks/useRealtimeChannel';
+import useFeatureStatus from '../../hooks/useFeatureStatus';
+import FeaturePausedBanner from '../../components/FeaturePausedBanner';
 
 const COURIER_OPTIONS = [
   'DHL',
@@ -55,6 +57,8 @@ const ROUTE_OPTIONS = [
 const DeliveryPage = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+
+  const { status: featureStatus } = useFeatureStatus();
 
   // Tab state: 'management' | 'courier' | 'routes' (No stacked "all sections" layout)
   const [activeTab, setActiveTab] = useState('management');
@@ -673,6 +677,8 @@ const DeliveryPage = () => {
             </button>
           </div>
         )}
+
+        <FeaturePausedBanner title="Delivery dispatching" info={featureStatus.DELIVERY} />
 
         {/* Live notice: a customer just confirmed an order */}
         {liveNotice && (
