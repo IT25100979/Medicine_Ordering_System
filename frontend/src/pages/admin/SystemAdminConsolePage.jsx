@@ -15,72 +15,100 @@ const DEPARTMENTS = [
   { id: 'SYSTEM_ADMIN', label: 'System Infrastructure', icon: 'fa-server' }
 ];
 
-const ROLES = [
+const ADMIN_ROLES = [
   'SYSTEM_ADMIN',
+  'ADMIN',
   'CHIEF_PHARMACIST',
   'OPERATIONS_MANAGER',
   'DELIVERY_COORDINATOR',
-  'DELIVERY_RIDER',
   'FINANCE_MANAGER',
   'IT_MANAGER',
-  'CUSTOMER'
+  'DELIVERY_RIDER'
 ];
+
+const ROLE_BADGES = {
+  SYSTEM_ADMIN: 'bg-purple-100 text-purple-800 border-purple-200',
+  ADMIN: 'bg-purple-50 text-purple-700 border-purple-200',
+  CHIEF_PHARMACIST: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  OPERATIONS_MANAGER: 'bg-blue-100 text-blue-800 border-blue-200',
+  DELIVERY_COORDINATOR: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  DELIVERY_RIDER: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  FINANCE_MANAGER: 'bg-amber-100 text-amber-800 border-amber-200',
+  IT_MANAGER: 'bg-teal-100 text-teal-800 border-teal-200',
+  CUSTOMER: 'bg-neutral-100 text-neutral-700 border-neutral-200'
+};
+
+const STATUS_BADGES = {
+  ACTIVE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  PENDING_APPROVAL: 'bg-amber-50 text-amber-700 border-amber-200',
+  SUSPENDED: 'bg-red-50 text-red-700 border-red-200',
+  BANNED: 'bg-rose-100 text-rose-800 border-rose-300 font-black'
+};
 
 const SystemAdminConsolePage = () => {
   const { user } = useAuth();
-  const [activeModule, setActiveModule] = useState('rbac'); // rbac | audit | flags | subscriptions
   
+  // Top Level Module: 'rbac' | 'audit'
+  const [activeModule, setActiveModule] = useState('rbac');
+  
+  // RBAC Sub-Tag: 'admin-users' | 'regular-users'
+  const [rbacTag, setRbacTag] = useState('admin-users');
+
   // Data states
   const [usersList, setUsersList] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
-  const [flags, setFlags] = useState([]);
-  const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
 
-  // Filter & Search states for RBAC
+  // Filter & Search states
   const [userSearch, setUserSearch] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState('ALL');
+  const [adminRoleFilter, setAdminRoleFilter] = useState('ALL');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
-
-  // Filter & Search states for Audit Logs
   const [auditDeptFilter, setAuditDeptFilter] = useState('ALL');
   const [auditSearch, setAuditSearch] = useState('');
 
-  // User CRUD Modal States
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [isEditingUser, setIsEditingUser] = useState(false);
-  const [userForm, setUserForm] = useState({
-    userId: null,
+  // User Modals
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [adminForm, setAdminForm] = useState({
     fullName: '',
     email: '',
     password: '',
     role: 'SYSTEM_ADMIN',
     status: 'ACTIVE',
-    phoneNumber: '',
-    avatarUrl: ''
+    phoneNumber: ''
+  });
+  const [editUserForm, setEditUserForm] = useState({
+    userId: null,
+    fullName: '',
+    email: '',
+    password: '',
+    role: 'CUSTOMER',
+    status: 'ACTIVE',
+    phoneNumber: ''
   });
   const [userDeleteConfirm, setUserDeleteConfirm] = useState(null);
+  const [userBanConfirm, setUserBanConfirm] = useState(null);
 
-  // Audit Log CRUD Modal States
+  // Audit Modals
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [isEditingAudit, setIsEditingAudit] = useState(false);
   const [auditForm, setAuditForm] = useState({
     id: null,
-    department: 'DELIVERY_MANAGEMENT',
-    action: 'MANUAL_OVERRIDE',
-    entity: 'Delivery',
+    department: 'USER_SECURITY',
+    action: 'USER_ROLE_CHANGED',
+    entity: 'User',
     entityId: '',
     beforeState: '',
     afterState: '',
     severity: 'INFO',
     notes: '',
-    actorEmail: '',
-    actorRole: 'SYSTEM_ADMIN'
+    actorEmail: user?.email || 'admin@mediorder.com',
+    actorRole: user?.role || 'SYSTEM_ADMIN'
   });
   const [auditDeleteConfirm, setAuditDeleteConfirm] = useState(null);
 
-  // Load Data by active module
+  // Fetch data
   const loadModuleData = async (mod = activeModule) => {
     setLoading(true);
     setFeedback({ type: '', text: '' });
@@ -92,12 +120,6 @@ const SystemAdminConsolePage = () => {
         const deptParam = auditDeptFilter !== 'ALL' ? `&department=${auditDeptFilter}` : '';
         const res = await client.get(`/api/v1/admin/audit?page=0&size=100${deptParam}`);
         setAuditLogs(res.data?.data?.content || res.data?.content || []);
-      } else if (mod === 'flags') {
-        const res = await client.get('/api/v1/admin/flags');
-        setFlags(res.data?.data || res.data || []);
-      } else if (mod === 'subscriptions') {
-        const res = await client.get('/api/v1/subscriptions');
-        setSubscriptions(res.data?.data || res.data || []);
       }
     } catch (err) {
       console.warn('Console module fetch notice:', err);
@@ -110,134 +132,174 @@ const SystemAdminConsolePage = () => {
     loadModuleData(activeModule);
   }, [activeModule, auditDeptFilter]);
 
-  // ==========================================
-  // RBAC User CRUD Handlers
-  // ==========================================
-  const handleOpenCreateUser = () => {
-    setIsEditingUser(false);
-    setUserForm({
-      userId: null,
+  // Derived filtered users
+  const adminUsers = usersList.filter((u) => u.role && u.role !== 'CUSTOMER');
+  const regularUsers = usersList.filter((u) => !u.role || u.role === 'CUSTOMER');
+
+  const filteredAdminUsers = adminUsers.filter((u) => {
+    const q = userSearch.toLowerCase();
+    const matchSearch =
+      !q ||
+      (u.fullName && u.fullName.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.contactNumber && u.contactNumber.toLowerCase().includes(q));
+    const matchRole = adminRoleFilter === 'ALL' || u.role === adminRoleFilter;
+    const matchStatus = userStatusFilter === 'ALL' || u.status === userStatusFilter;
+    return matchSearch && matchRole && matchStatus;
+  });
+
+  const filteredRegularUsers = regularUsers.filter((u) => {
+    const q = userSearch.toLowerCase();
+    const matchSearch =
+      !q ||
+      (u.fullName && u.fullName.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.contactNumber && u.contactNumber.toLowerCase().includes(q));
+    const matchStatus = userStatusFilter === 'ALL' || u.status === userStatusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  // Filtered Audit logs
+  const filteredAuditLogs = auditLogs.filter((log) => {
+    const q = auditSearch.toLowerCase();
+    return (
+      !q ||
+      (log.actorEmail && log.actorEmail.toLowerCase().includes(q)) ||
+      (log.action && log.action.toLowerCase().includes(q)) ||
+      (log.entity && log.entity.toLowerCase().includes(q)) ||
+      (log.notes && log.notes.toLowerCase().includes(q))
+    );
+  });
+
+  // =========================================================================
+  // RBAC Actions: Create Admin, Edit, Ban, Remove
+  // =========================================================================
+  const handleOpenCreateAdmin = () => {
+    setAdminForm({
       fullName: '',
       email: '',
       password: '',
       role: 'SYSTEM_ADMIN',
       status: 'ACTIVE',
-      phoneNumber: '',
-      avatarUrl: ''
+      phoneNumber: ''
     });
-    setShowUserModal(true);
+    setShowCreateAdminModal(true);
+  };
+
+  const handleCreateAdmin = async (e) => {
+    e.preventDefault();
+    if (!adminForm.fullName.trim() || !adminForm.email.trim() || !adminForm.password.trim()) {
+      setFeedback({ type: 'error', text: 'Full Name, Email, and Password are required.' });
+      return;
+    }
+    if (adminForm.password.length < 6) {
+      setFeedback({ type: 'error', text: 'Password must be at least 6 characters.' });
+      return;
+    }
+
+    try {
+      await client.post('/api/v1/users', {
+        fullName: adminForm.fullName.trim(),
+        email: adminForm.email.trim(),
+        password: adminForm.password.trim(),
+        role: adminForm.role,
+        status: adminForm.status || 'ACTIVE',
+        phoneNumber: adminForm.phoneNumber.trim() || null
+      });
+      setFeedback({
+        type: 'success',
+        text: `Admin account for ${adminForm.email} (${adminForm.role}) created and saved to DB successfully.`
+      });
+      setShowCreateAdminModal(false);
+      loadModuleData('rbac');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to create admin account';
+      setFeedback({ type: 'error', text: msg });
+    }
   };
 
   const handleOpenEditUser = (u) => {
-    setIsEditingUser(true);
-    setUserForm({
+    setEditUserForm({
       userId: u.userId || u.id,
       fullName: u.fullName || '',
       email: u.email || '',
-      password: '', // leave empty unless resetting
+      password: '',
       role: u.role || 'CUSTOMER',
       status: u.status || 'ACTIVE',
-      phoneNumber: u.contactNumber || u.phoneNumber || '',
-      avatarUrl: u.avatarUrl || ''
+      phoneNumber: u.contactNumber || u.phoneNumber || ''
     });
-    setShowUserModal(true);
+    setShowEditUserModal(true);
   };
 
-  const handleSaveUser = async (e) => {
+  const handleSaveEditUser = async (e) => {
     e.preventDefault();
-    if (!userForm.fullName || !userForm.email) {
-      setFeedback({ type: 'error', text: 'Full name and email are required' });
-      return;
-    }
-    if (!isEditingUser && !userForm.password) {
-      setFeedback({ type: 'error', text: 'Initial password is required for new profiles' });
-      return;
-    }
-
     try {
-      if (isEditingUser) {
-        const payload = {
-          fullName: userForm.fullName,
-          email: userForm.email,
-          role: userForm.role,
-          status: userForm.status,
-          phoneNumber: userForm.phoneNumber,
-          avatarUrl: userForm.avatarUrl
-        };
-        if (userForm.password && userForm.password.trim().length > 0) {
-          payload.password = userForm.password.trim();
-        }
-        await client.put(`/api/v1/users/${userForm.userId}`, payload);
-        setFeedback({ type: 'success', text: `Profile for ${userForm.email} updated successfully` });
-      } else {
-        await client.post('/api/v1/users', {
-          fullName: userForm.fullName,
-          email: userForm.email,
-          password: userForm.password,
-          role: userForm.role,
-          status: userForm.status,
-          phoneNumber: userForm.phoneNumber,
-          avatarUrl: userForm.avatarUrl
-        });
-        setFeedback({ type: 'success', text: `Admin/User profile for ${userForm.email} created successfully` });
+      const payload = {
+        fullName: editUserForm.fullName.trim(),
+        email: editUserForm.email.trim(),
+        role: editUserForm.role,
+        status: editUserForm.status,
+        phoneNumber: editUserForm.phoneNumber.trim() || null
+      };
+      if (editUserForm.password && editUserForm.password.trim().length > 0) {
+        payload.password = editUserForm.password.trim();
       }
-      setShowUserModal(false);
+      await client.put(`/api/v1/users/${editUserForm.userId}`, payload);
+      setFeedback({ type: 'success', text: `User account #${editUserForm.userId} updated successfully in database.` });
+      setShowEditUserModal(false);
       loadModuleData('rbac');
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to save user profile';
+      const msg = err.response?.data?.message || err.message || 'Failed to update user profile';
       setFeedback({ type: 'error', text: msg });
     }
   };
 
+  // Ban or Unban / Reactivate user
+  const handleBanToggleUser = async (u) => {
+    const isCurrentlyBanned = u.status === 'BANNED' || u.status === 'SUSPENDED';
+    const nextStatus = isCurrentlyBanned ? 'ACTIVE' : 'BANNED';
+    try {
+      await client.put(`/api/v1/users/${u.userId || u.id}/status`, { status: nextStatus });
+      setFeedback({
+        type: 'success',
+        text: `User ${u.email} has been ${isCurrentlyBanned ? 'unbanned (ACTIVE)' : 'banned (BANNED)'} in database.`
+      });
+      setUserBanConfirm(null);
+      loadModuleData('rbac');
+    } catch (err) {
+      setFeedback({ type: 'error', text: 'Failed to update user ban status in database.' });
+    }
+  };
+
+  // Permanently delete / remove user from database
   const handleDeleteUser = async (userId) => {
     try {
       await client.delete(`/api/v1/users/${userId}`);
-      setFeedback({ type: 'success', text: `User account #${userId} deleted successfully` });
+      setFeedback({ type: 'success', text: `User ID #${userId} permanently removed from database.` });
       setUserDeleteConfirm(null);
       loadModuleData('rbac');
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to delete user account';
+      const msg = err.response?.data?.message || err.message || 'Failed to remove user account';
       setFeedback({ type: 'error', text: msg });
     }
   };
 
-  const handleToggleUserStatus = async (userId, currentStatus) => {
-    const nextStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-    try {
-      await client.put(`/api/v1/users/${userId}/status`, { status: nextStatus });
-      setFeedback({ type: 'success', text: `User ID #${userId} status set to ${nextStatus}` });
-      loadModuleData('rbac');
-    } catch (err) {
-      setFeedback({ type: 'error', text: 'Failed to update user status' });
-    }
-  };
-
-  const handleChangeUserRole = async (userId, newRole) => {
-    try {
-      await client.put(`/api/v1/users/${userId}/role`, { role: newRole });
-      setFeedback({ type: 'success', text: `User ID #${userId} role updated to ${newRole}` });
-      loadModuleData('rbac');
-    } catch (err) {
-      setFeedback({ type: 'error', text: 'Failed to change user role' });
-    }
-  };
-
-  // ==========================================
-  // Audit Log CRUD Handlers
-  // ==========================================
+  // =========================================================================
+  // Audit Trail Actions
+  // =========================================================================
   const handleOpenCreateAudit = () => {
     setIsEditingAudit(false);
     setAuditForm({
       id: null,
-      department: auditDeptFilter !== 'ALL' ? auditDeptFilter : 'DELIVERY_MANAGEMENT',
-      action: 'MANUAL_OVERRIDE',
-      entity: 'Delivery',
-      entityId: '',
+      department: auditDeptFilter !== 'ALL' ? auditDeptFilter : 'USER_SECURITY',
+      action: 'MANUAL_AUDIT_ENTRY',
+      entity: 'SecurityAudit',
+      entityId: String(Date.now()).slice(-6),
       beforeState: '',
       afterState: '',
       severity: 'INFO',
       notes: '',
-      actorEmail: user?.email || 'admin@mediorder.com',
+      actorEmail: user?.email || 'systemadmin1@gmail.com',
       actorRole: user?.role || 'SYSTEM_ADMIN'
     });
     setShowAuditModal(true);
@@ -247,15 +309,15 @@ const SystemAdminConsolePage = () => {
     setIsEditingAudit(true);
     setAuditForm({
       id: log.id,
-      department: log.department || 'SYSTEM_ADMIN',
-      action: log.action || '',
-      entity: log.entity || '',
+      department: log.department || 'USER_SECURITY',
+      action: log.action || 'AUDIT_UPDATE',
+      entity: log.entity || 'System',
       entityId: log.entityId || '',
       beforeState: log.beforeState || '',
       afterState: log.afterState || '',
       severity: log.severity || 'INFO',
-      notes: log.afterState || '',
-      actorEmail: log.actorEmail || user?.email || '',
+      notes: log.notes || '',
+      actorEmail: log.actorEmail || user?.email || 'admin',
       actorRole: log.actorRole || 'SYSTEM_ADMIN'
     });
     setShowAuditModal(true);
@@ -263,38 +325,13 @@ const SystemAdminConsolePage = () => {
 
   const handleSaveAudit = async (e) => {
     e.preventDefault();
-    if (!auditForm.department || !auditForm.action || !auditForm.entity) {
-      setFeedback({ type: 'error', text: 'Department, action, and entity are required' });
-      return;
-    }
-
     try {
       if (isEditingAudit) {
-        await client.put(`/api/v1/admin/audit/${auditForm.id}`, {
-          department: auditForm.department,
-          action: auditForm.action,
-          entity: auditForm.entity,
-          entityId: auditForm.entityId,
-          beforeState: auditForm.beforeState,
-          afterState: auditForm.afterState,
-          severity: auditForm.severity,
-          notes: auditForm.notes
-        });
-        setFeedback({ type: 'success', text: `Audit log record #${auditForm.id} updated successfully` });
+        await client.put(`/api/v1/admin/audit/${auditForm.id}`, auditForm);
+        setFeedback({ type: 'success', text: `Audit log #${auditForm.id} updated in database` });
       } else {
-        await client.post('/api/v1/admin/audit', {
-          department: auditForm.department,
-          action: auditForm.action,
-          entity: auditForm.entity,
-          entityId: auditForm.entityId,
-          beforeState: auditForm.beforeState,
-          afterState: auditForm.afterState || auditForm.notes,
-          severity: auditForm.severity,
-          notes: auditForm.notes,
-          actorEmail: auditForm.actorEmail || user?.email,
-          actorRole: auditForm.actorRole || user?.role
-        });
-        setFeedback({ type: 'success', text: `Department audit log for [${auditForm.department}] created successfully` });
+        await client.post('/api/v1/admin/audit', auditForm);
+        setFeedback({ type: 'success', text: 'New audit log entry recorded in database' });
       }
       setShowAuditModal(false);
       loadModuleData('audit');
@@ -304,506 +341,340 @@ const SystemAdminConsolePage = () => {
     }
   };
 
-  const handleDeleteAudit = async (auditId) => {
+  const handleDeleteAudit = async (id) => {
     try {
-      await client.delete(`/api/v1/admin/audit/${auditId}`);
-      setFeedback({ type: 'success', text: `Audit log entry #${auditId} deleted` });
+      await client.delete(`/api/v1/admin/audit/${id}`);
+      setFeedback({ type: 'success', text: `Audit log #${id} deleted from database` });
       setAuditDeleteConfirm(null);
       loadModuleData('audit');
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to delete audit log';
-      setFeedback({ type: 'error', text: msg });
+      setFeedback({ type: 'error', text: 'Failed to delete audit log entry' });
     }
   };
 
-  // ==========================================
-  // Feature Flag Toggle
-  // ==========================================
-  const handleToggleFlag = async (flagKey, currentVal) => {
-    try {
-      await client.put(`/api/v1/admin/flags/${flagKey}`, {
-        enabled: !currentVal,
-        reason: `Manual switch by ${user?.email || 'admin'}`,
-      });
-      setFeedback({ type: 'success', text: `Emergency switch ${flagKey} updated to ${!currentVal ? 'ENABLED' : 'DISABLED'}` });
-      loadModuleData('flags');
-    } catch (err) {
-      setFeedback({ type: 'error', text: 'Failed to update feature flag' });
-    }
+  const exportAuditLogs = () => {
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      'ID,Timestamp,Department,Action,Entity,EntityID,Actor,Role,Severity,Notes\n' +
+      auditLogs
+        .map(
+          (l) =>
+            `"${l.id}","${l.timestamp}","${l.department}","${l.action}","${l.entity}","${l.entityId || ''}","${l.actorEmail || ''}","${l.actorRole || ''}","${l.severity || 'INFO'}","${(l.notes || '').replace(/"/g, '""')}"`
+        )
+        .join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `mediorder_audit_trail_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
-
-  // Filtered lists
-  const filteredUsers = usersList.filter((u) => {
-    const matchesSearch = !userSearch || 
-      (u.fullName && u.fullName.toLowerCase().includes(userSearch.toLowerCase())) ||
-      (u.email && u.email.toLowerCase().includes(userSearch.toLowerCase())) ||
-      (u.contactNumber && u.contactNumber.includes(userSearch));
-    const matchesRole = userRoleFilter === 'ALL' || u.role === userRoleFilter;
-    const matchesStatus = userStatusFilter === 'ALL' || u.status === userStatusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
-  });
-
-  const filteredAudits = auditLogs.filter((l) => {
-    const matchesDept = auditDeptFilter === 'ALL' || 
-      (l.department && l.department.toUpperCase() === auditDeptFilter.toUpperCase());
-    const matchesSearch = !auditSearch ||
-      (l.action && l.action.toLowerCase().includes(auditSearch.toLowerCase())) ||
-      (l.entity && l.entity.toLowerCase().includes(auditSearch.toLowerCase())) ||
-      (l.actorEmail && l.actorEmail.toLowerCase().includes(auditSearch.toLowerCase())) ||
-      (l.afterState && l.afterState.toLowerCase().includes(auditSearch.toLowerCase()));
-    return matchesDept && matchesSearch;
-  });
-
-  // Master Active Modules List (As explicitly requested by user)
-  const masterModules = [
-    { id: 'rbac', label: '1. RBAC Authority Grid', subtitle: 'User & Admin Profile CRUD', icon: 'fa-users-gear' },
-    { id: 'audit', label: '2. Audit Log & Department Ledger', subtitle: 'Departmental Audit CRUD', icon: 'fa-list-check' },
-    { id: 'flags', label: '3. Emergency Kill Switches', subtitle: 'Circuit Breakers & Controls', icon: 'fa-toggle-on' },
-    { id: 'subscriptions', label: '4. Refill Subscriptions', subtitle: 'Chronic Care & Refill Engine', icon: 'fa-arrows-rotate' },
-  ];
-
-  // Coming Soon Modules
-  const comingSoonModules = [
-    { label: 'Server Telemetry & JVM Cluster', desc: 'Real-time multi-node cluster metrics' },
-    { label: 'Crash & Error AI Telemetry', desc: 'Predictive exception diagnosis & telemetry' },
-    { label: 'Fleet Telemetry & GIS Drone Routing', desc: 'Live GIS geofencing & courier dispatch AI' },
-    { label: 'Cold Storage Deep Archives', desc: 'Regulatory cold chain archival storage' },
-  ];
 
   return (
-    <div className="pt-28 pb-20 px-4 sm:px-6 lg:px-10 max-w-[1600px] mx-auto min-h-screen">
-      {/* Breadcrumb */}
+    <div className="pt-28 pb-20 px-4 sm:px-6 lg:px-12 max-w-[1440px] mx-auto min-h-screen">
+      {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500 mb-6">
         <Link to="/" className="hover:text-black transition-colors">Home</Link>
         <span>/</span>
-        <span className="text-black">Master Administration Console</span>
+        <span className="text-black">System Administration</span>
       </div>
 
       {/* Header Banner */}
-      <div className="bg-neutral-900 text-white rounded-3xl p-6 sm:p-8 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl border border-neutral-800">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200 shadow-sm mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center gap-3">
-            <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
-            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
-              System Admin Master Console
-            </h1>
-            <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              Authority Level 0
-            </span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-xs font-black uppercase tracking-wider mb-2">
+            <i className="fa-solid fa-server text-purple-600" />
+            <span>Core Administration &amp; Governance</span>
           </div>
-          <p className="text-xs text-neutral-400 mt-1">
-            RBAC Authority Management, Departmental Audit Trails, Emergency Kill Switches, and Chronic Care Refills.
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
+            System Administration Console
+          </h1>
+          <p className="text-xs sm:text-sm text-neutral-500 mt-1 max-w-2xl">
+            Enterprise role-based access control (RBAC), administrator provisioning, regular user account governance, and system-wide audit verification.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={() => loadModuleData(activeModule)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold uppercase tracking-wider rounded-xl border border-neutral-700 transition-colors"
+            disabled={loading}
+            className="px-4 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
           >
-            <i className={`fa-solid fa-rotate ${loading ? 'fa-spin' : ''}`} />
-            <span>Refresh</span>
+            <i className={`fa-solid fa-arrows-rotate text-xs ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh Data</span>
           </button>
         </div>
       </div>
 
-      {/* Feedback Alert */}
+      {/* Feedback Toast */}
       {feedback.text && (
-        <div className={`mb-6 p-4 rounded-2xl text-xs font-bold flex items-center justify-between ${
-          feedback.type === 'success' ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' : 'bg-red-50 text-red-900 border border-red-200'
-        }`}>
-          <span>{feedback.text}</span>
-          <button onClick={() => setFeedback({ type: '', text: '' })} className="text-neutral-400 hover:text-black">
-            <i className="fa-solid fa-xmark" />
+        <div
+          className={`mb-6 p-4 rounded-2xl border text-xs font-semibold flex items-center justify-between gap-3 animate-slideDown ${
+            feedback.type === 'success'
+              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+              : 'bg-red-50 text-red-900 border-red-200'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check text-emerald-600' : 'fa-triangle-exclamation text-red-600'} text-base`} />
+            <span>{feedback.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedback({ type: '', text: '' })}
+            className="text-neutral-400 hover:text-neutral-700"
+          >
+            <i className="fa-solid fa-xmark text-sm" />
           </button>
         </div>
       )}
 
-      {/* Main Master Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        
-        {/* Module Selector Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Active Master Modules */}
-          <div className="space-y-1 bg-white rounded-3xl p-4 border border-neutral-200 shadow-sm">
-            <p className="text-[11px] font-black uppercase tracking-wider text-neutral-400 px-3 py-2">Master Modules</p>
-            {masterModules.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveModule(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all text-left ${
-                  activeModule === item.id
-                    ? 'bg-neutral-900 text-white shadow-md'
-                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-                }`}
-              >
-                <i className={`fa-solid ${item.icon} w-5 text-center text-sm ${activeModule === item.id ? 'text-emerald-400' : 'text-neutral-400'}`} />
-                <div className="truncate">
-                  <span className="block">{item.label}</span>
-                  <span className={`text-[10px] font-normal normal-case block ${activeModule === item.id ? 'text-neutral-300' : 'text-neutral-400'}`}>
-                    {item.subtitle}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+      {/* Main Module Tabs: RBAC Authority & Audit Trail Only */}
+      <div className="flex items-center gap-3 mb-6 pb-2 border-b border-neutral-200">
+        <button
+          type="button"
+          onClick={() => setActiveModule('rbac')}
+          className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+            activeModule === 'rbac'
+              ? 'bg-neutral-900 text-white shadow-md'
+              : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+          }`}
+        >
+          <i className="fa-solid fa-shield-halved text-xs text-purple-400" />
+          <span>RBAC Authority</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${activeModule === 'rbac' ? 'bg-neutral-700 text-white' : 'bg-neutral-200 text-neutral-700'}`}>
+            {usersList.length}
+          </span>
+        </button>
 
-          {/* Coming Soon Modules Box */}
-          <div className="bg-neutral-50 rounded-3xl p-5 border border-dashed border-neutral-300 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-wider text-neutral-500">Upcoming Modules</span>
-              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                Coming Soon
+        <button
+          type="button"
+          onClick={() => setActiveModule('audit')}
+          className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+            activeModule === 'audit'
+              ? 'bg-neutral-900 text-white shadow-md'
+              : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+          }`}
+        >
+          <i className="fa-solid fa-clipboard-list text-xs text-emerald-400" />
+          <span>Audit Trail</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${activeModule === 'audit' ? 'bg-neutral-700 text-white' : 'bg-neutral-200 text-neutral-700'}`}>
+            {auditLogs.length}
+          </span>
+        </button>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MODULE 1: RBAC AUTHORITY (WITH ADMIN USERS & REGULAR USERS TAGS)          */}
+      {/* ========================================================================= */}
+      {activeModule === 'rbac' && (
+        <div className="space-y-6">
+          {/* Sub-Tabs / Tags */}
+          <div className="bg-white rounded-2xl p-2 border border-neutral-200 shadow-xs inline-flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setRbacTag('admin-users');
+                setUserSearch('');
+                setUserStatusFilter('ALL');
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                rbacTag === 'admin-users'
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+              }`}
+            >
+              <i className="fa-solid fa-user-shield text-xs" />
+              <span>Admin Users</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${rbacTag === 'admin-users' ? 'bg-purple-800 text-white' : 'bg-neutral-100 text-neutral-600'}`}>
+                {adminUsers.length}
               </span>
-            </div>
-            <div className="space-y-2">
-              {comingSoonModules.map((mod, idx) => (
-                <div key={idx} className="p-3 bg-white rounded-xl border border-neutral-200/80 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-neutral-700">{mod.label}</span>
-                    <span className="text-[9px] font-bold text-neutral-400">v2.1</span>
-                  </div>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">{mod.desc}</p>
-                </div>
-              ))}
-            </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRbacTag('regular-users');
+                setUserSearch('');
+                setUserStatusFilter('ALL');
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                rbacTag === 'regular-users'
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+              }`}
+            >
+              <i className="fa-solid fa-users text-xs" />
+              <span>Regular Users</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${rbacTag === 'regular-users' ? 'bg-purple-800 text-white' : 'bg-neutral-100 text-neutral-600'}`}>
+                {regularUsers.length}
+              </span>
+            </button>
           </div>
-        </div>
 
-        {/* Module Content Area */}
-        <div className="lg:col-span-3 space-y-6">
-
-          {/* ========================================================================= */}
-          {/* MODULE 1: RBAC Authority Grid & User Profile CRUD */}
-          {/* ========================================================================= */}
-          {activeModule === 'rbac' && (
+          {/* --------------------------------------------------------------------- */}
+          {/* TAG A: ADMIN USERS VIEW                                               */}
+          {/* --------------------------------------------------------------------- */}
+          {rbacTag === 'admin-users' && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200 shadow-sm space-y-6">
-              
-              {/* Header & Create Action */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
                 <div>
                   <h2 className="text-lg font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
-                    <i className="fa-solid fa-users-gear text-emerald-700" />
-                    <span>Module 1: RBAC Authority Grid &amp; Profile Management</span>
+                    <i className="fa-solid fa-user-gear text-purple-700" />
+                    <span>Administrator &amp; Staff Directory</span>
                   </h2>
                   <p className="text-xs text-neutral-500 mt-0.5">
-                    Create admin profiles, assign emails, set initial passwords, and govern roles across the 8 security tiers.
+                    Authorized system administrators, pharmacists, coordinators, and operations managers with platform access.
                   </p>
                 </div>
 
                 <button
-                  onClick={handleOpenCreateUser}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm shrink-0"
+                  type="button"
+                  onClick={handleOpenCreateAdmin}
+                  className="px-5 py-2.5 rounded-full bg-purple-700 hover:bg-purple-800 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer"
                 >
-                  <i className="fa-solid fa-user-plus" />
-                  <span>Create Admin Profile</span>
+                  <i className="fa-solid fa-user-plus text-xs" />
+                  <span>+ Create New Admin</span>
                 </button>
               </div>
 
-              {/* Statistics Strip */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200">
-                  <span className="text-[10px] font-black uppercase text-neutral-400 block">Total Profiles</span>
-                  <span className="text-xl font-black text-neutral-900 mt-0.5 block">{usersList.length}</span>
-                </div>
-                <div className="p-4 bg-purple-50 rounded-2xl border border-purple-200">
-                  <span className="text-[10px] font-black uppercase text-purple-700 block">System Admins</span>
-                  <span className="text-xl font-black text-purple-900 mt-0.5 block">
-                    {usersList.filter(u => u.role === 'SYSTEM_ADMIN' || u.role === 'ADMIN').length}
-                  </span>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200">
-                  <span className="text-[10px] font-black uppercase text-blue-700 block">Clinical &amp; Ops</span>
-                  <span className="text-xl font-black text-blue-900 mt-0.5 block">
-                    {usersList.filter(u => u.role === 'CHIEF_PHARMACIST' || u.role === 'OPERATIONS_MANAGER').length}
-                  </span>
-                </div>
-                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
-                  <span className="text-[10px] font-black uppercase text-emerald-700 block">Active Status</span>
-                  <span className="text-xl font-black text-emerald-900 mt-0.5 block">
-                    {usersList.filter(u => u.status === 'ACTIVE').length}
-                  </span>
-                </div>
-              </div>
-
-              {/* Search and Filters Bar */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-200">
-                <div className="relative flex-1 w-full">
+              {/* Filters Bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="relative sm:col-span-2">
                   <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xs" />
                   <input
                     type="text"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
-                    placeholder="Search by user name, email, or contact number..."
-                    className="w-full pl-9 pr-4 py-2 bg-white border border-neutral-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="Search admins by name, email, or phone..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   />
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-2">
                   <select
-                    value={userRoleFilter}
-                    onChange={(e) => setUserRoleFilter(e.target.value)}
-                    className="px-3 py-2 bg-white border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 focus:outline-none"
+                    value={adminRoleFilter}
+                    onChange={(e) => setAdminRoleFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-bold text-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   >
-                    <option value="ALL">All Roles</option>
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    <option value="ALL">All Admin Roles</option>
+                    {ADMIN_ROLES.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
                   </select>
 
                   <select
                     value={userStatusFilter}
                     onChange={(e) => setUserStatusFilter(e.target.value)}
-                    className="px-3 py-2 bg-white border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-bold text-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   >
                     <option value="ALL">All Statuses</option>
                     <option value="ACTIVE">ACTIVE</option>
+                    <option value="PENDING_APPROVAL">PENDING</option>
                     <option value="SUSPENDED">SUSPENDED</option>
-                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="BANNED">BANNED</option>
                   </select>
                 </div>
               </div>
 
-              {/* Profiles Table */}
-              <div className="overflow-x-auto">
+              {/* Admin Users Table */}
+              <div className="overflow-x-auto rounded-2xl border border-neutral-200">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-neutral-100 text-neutral-700 font-bold uppercase tracking-wider">
+                  <thead className="bg-neutral-50 text-[10px] font-black uppercase text-neutral-500 border-b border-neutral-200">
                     <tr>
-                      <th className="p-3.5 rounded-l-xl">User Profile</th>
-                      <th className="p-3.5">Assigned Email</th>
-                      <th className="p-3.5">Security Role</th>
-                      <th className="p-3.5">Account Status</th>
-                      <th className="p-3.5">Contact / Created</th>
-                      <th className="p-3.5 rounded-r-xl text-right">Actions (CRUD)</th>
+                      <th className="p-4">Admin Staff</th>
+                      <th className="p-4">Email Address</th>
+                      <th className="p-4">Assigned Role</th>
+                      <th className="p-4">Account Status</th>
+                      <th className="p-4">Contact Phone</th>
+                      <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {filteredUsers.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="p-8 text-center text-neutral-400 font-bold">
-                          No profiles found matching search criteria.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredUsers.map((u) => {
-                        const uid = u.userId || u.id;
+                  <tbody className="divide-y divide-neutral-200 bg-white">
+                    {filteredAdminUsers.length > 0 ? (
+                      filteredAdminUsers.map((u) => {
+                        const isSelf = user?.email && u.email && user.email.toLowerCase() === u.email.toLowerCase();
                         return (
-                          <tr key={uid} className="hover:bg-neutral-50/80 transition-colors">
-                            <td className="p-3.5">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-neutral-900 text-white font-black flex items-center justify-center text-xs">
-                                  {u.fullName ? u.fullName.charAt(0).toUpperCase() : 'U'}
-                                </div>
-                                <div>
-                                  <span className="font-bold text-neutral-900 block">{u.fullName}</span>
-                                  <span className="text-[10px] text-neutral-400">ID #{uid}</span>
-                                </div>
+                          <tr key={u.userId || u.id} className="hover:bg-neutral-50 transition-colors">
+                            <td className="p-4 font-bold text-neutral-900 flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-800 flex items-center justify-center font-black text-xs shrink-0">
+                                {(u.fullName || 'A').slice(0, 1).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="block">{u.fullName}</span>
+                                {isSelf && (
+                                  <span className="text-[9px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                                    Your Account
+                                  </span>
+                                )}
                               </div>
                             </td>
-
-                            <td className="p-3.5 font-mono text-neutral-700">{u.email}</td>
-
-                            <td className="p-3.5">
-                              <select
-                                value={u.role}
-                                onChange={(e) => handleChangeUserRole(uid, e.target.value)}
-                                className="px-2.5 py-1 bg-white border border-neutral-300 rounded-lg text-[11px] font-extrabold uppercase focus:ring-1 focus:ring-black"
-                              >
-                                {ROLES.map(r => (
-                                  <option key={r} value={r}>{r}</option>
-                                ))}
-                              </select>
+                            <td className="p-4 font-mono font-medium text-neutral-700">
+                              <a href={`mailto:${u.email}`} className="text-purple-800 hover:underline flex items-center gap-1.5">
+                                <i className="fa-solid fa-envelope text-neutral-400 text-[10px]" />
+                                <span>{u.email}</span>
+                              </a>
                             </td>
-
-                            <td className="p-3.5">
-                              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                                u.status === 'ACTIVE'
-                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                  : 'bg-red-100 text-red-800 border border-red-300'
-                              }`}>
+                            <td className="p-4">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${ROLE_BADGES[u.role] || 'bg-neutral-100 text-neutral-800'}`}>
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${STATUS_BADGES[u.status] || 'bg-neutral-100'}`}>
                                 {u.status || 'ACTIVE'}
                               </span>
                             </td>
-
-                            <td className="p-3.5 text-neutral-500 text-[11px]">
-                              <div>{u.contactNumber || 'No Phone'}</div>
-                              <div className="text-[10px] text-neutral-400">
-                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
-                              </div>
+                            <td className="p-4 text-neutral-500">
+                              {u.contactNumber || u.phoneNumber || '—'}
                             </td>
-
-                            <td className="p-3.5 text-right">
-                              <div className="flex items-center justify-end gap-2">
+                            <td className="p-4 text-right">
+                              <div className="inline-flex items-center gap-1.5">
                                 <button
-                                  onClick={() => handleToggleUserStatus(uid, u.status || 'ACTIVE')}
-                                  title={u.status === 'ACTIVE' ? 'Suspend Account' : 'Activate Account'}
-                                  className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[10px] font-bold uppercase rounded-lg transition-colors"
-                                >
-                                  {u.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
-                                </button>
-
-                                <button
+                                  type="button"
                                   onClick={() => handleOpenEditUser(u)}
-                                  title="Edit Profile & Password"
-                                  className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg transition-colors"
+                                  className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-600 hover:text-black transition-colors"
+                                  title="Edit Admin Profile & Role"
                                 >
-                                  <i className="fa-solid fa-pen-to-square w-3.5 h-3.5 flex items-center justify-center text-xs" />
+                                  <i className="fa-solid fa-pen-to-square text-xs" />
                                 </button>
 
                                 <button
-                                  onClick={() => setUserDeleteConfirm(uid)}
-                                  title="Delete Account"
-                                  className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors"
+                                  type="button"
+                                  disabled={isSelf}
+                                  onClick={() => setUserBanConfirm(u)}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    u.status === 'BANNED' || u.status === 'SUSPENDED'
+                                      ? 'hover:bg-emerald-50 text-emerald-600'
+                                      : 'hover:bg-amber-50 text-amber-600'
+                                  } disabled:opacity-30 disabled:cursor-not-allowed`}
+                                  title={u.status === 'BANNED' || u.status === 'SUSPENDED' ? 'Unban / Activate Admin' : 'Suspend / Ban Admin'}
                                 >
-                                  <i className="fa-solid fa-trash-can w-3.5 h-3.5 flex items-center justify-center text-xs" />
+                                  <i className={`fa-solid ${u.status === 'BANNED' || u.status === 'SUSPENDED' ? 'fa-user-check' : 'fa-user-slash'} text-xs`} />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={isSelf}
+                                  onClick={() => setUserDeleteConfirm(u)}
+                                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                  title="Delete Admin Account from DB"
+                                >
+                                  <i className="fa-solid fa-trash text-xs" />
                                 </button>
                               </div>
                             </td>
                           </tr>
                         );
                       })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* MODULE 2: Audit Log & Department Ledger CRUD */}
-          {/* ========================================================================= */}
-          {activeModule === 'audit' && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200 shadow-sm space-y-6">
-              
-              {/* Header & Create Audit Action */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
-                    <i className="fa-solid fa-list-check text-emerald-700" />
-                    <span>Module 2: Department Audit Log &amp; Regulatory Ledger</span>
-                  </h2>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    Immutable append-only ledger and CRUD tools for delivery, catalog, cold-chain, prescription, and system audits.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleOpenCreateAudit}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm shrink-0"
-                >
-                  <i className="fa-solid fa-plus" />
-                  <span>Create Department Audit</span>
-                </button>
-              </div>
-
-              {/* Department Tabs Selector */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                {DEPARTMENTS.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => setAuditDeptFilter(d.id)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-2 ${
-                      auditDeptFilter === d.id
-                        ? 'bg-neutral-900 text-white shadow-sm'
-                        : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-                    }`}
-                  >
-                    <i className={`fa-solid ${d.icon} text-xs`} />
-                    <span>{d.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Search Bar */}
-              <div className="relative w-full">
-                <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xs" />
-                <input
-                  type="text"
-                  value={auditSearch}
-                  onChange={(e) => setAuditSearch(e.target.value)}
-                  placeholder="Search audit records by action, entity, actor email, or state changes..."
-                  className="w-full pl-9 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-
-              {/* Audit Records Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-neutral-100 text-neutral-700 font-bold uppercase tracking-wider">
-                    <tr>
-                      <th className="p-3.5 rounded-l-xl">Timestamp</th>
-                      <th className="p-3.5">Department</th>
-                      <th className="p-3.5">Actor / Email</th>
-                      <th className="p-3.5">Action &amp; Severity</th>
-                      <th className="p-3.5">Target Entity</th>
-                      <th className="p-3.5">Audit Trail Details</th>
-                      <th className="p-3.5 rounded-r-xl text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100">
-                    {filteredAudits.length === 0 ? (
+                    ) : (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-neutral-400 font-bold">
-                          No audit records found for the selected department.
+                        <td colSpan="6" className="p-8 text-center text-neutral-400 font-medium">
+                          No administrator accounts found matching your criteria.
                         </td>
                       </tr>
-                    ) : (
-                      filteredAudits.map((log) => (
-                        <tr key={log.id} className="hover:bg-neutral-50/80 transition-colors">
-                          <td className="p-3.5 font-mono text-[11px] text-neutral-500 whitespace-nowrap">
-                            {new Date(log.createdAt).toLocaleString()}
-                          </td>
-
-                          <td className="p-3.5">
-                            <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-neutral-200 text-neutral-800">
-                              {log.department || 'SYSTEM_ADMIN'}
-                            </span>
-                          </td>
-
-                          <td className="p-3.5">
-                            <span className="font-bold text-neutral-900 block">{log.actorEmail || 'system'}</span>
-                            <span className="text-[10px] text-neutral-400 uppercase font-mono">{log.actorRole || 'SYSTEM'}</span>
-                          </td>
-
-                          <td className="p-3.5">
-                            <span className="font-mono font-bold text-emerald-800 block">{log.action}</span>
-                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full inline-block mt-0.5 ${
-                              log.severity === 'CRITICAL' ? 'bg-red-100 text-red-800' :
-                              log.severity === 'WARNING' ? 'bg-amber-100 text-amber-800' :
-                              'bg-neutral-100 text-neutral-700'
-                            }`}>
-                              {log.severity || 'INFO'}
-                            </span>
-                          </td>
-
-                          <td className="p-3.5 font-medium text-neutral-800">
-                            {log.entity} {log.entityId ? `#${log.entityId}` : ''}
-                          </td>
-
-                          <td className="p-3.5 text-neutral-600 text-[11px] max-w-xs">
-                            <div className="truncate" title={log.afterState || log.beforeState || ''}>
-                              {log.afterState || log.beforeState || '-'}
-                            </div>
-                          </td>
-
-                          <td className="p-3.5 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => handleOpenEditAudit(log)}
-                                title="Edit Audit Notes"
-                                className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg transition-colors"
-                              >
-                                <i className="fa-solid fa-pen text-xs" />
-                              </button>
-                              <button
-                                onClick={() => setAuditDeleteConfirm(log.id)}
-                                title="Delete Log Record"
-                                className="p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors"
-                              >
-                                <i className="fa-solid fa-trash-can text-xs" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
                     )}
                   </tbody>
                 </table>
@@ -811,210 +682,410 @@ const SystemAdminConsolePage = () => {
             </div>
           )}
 
-          {/* ========================================================================= */}
-          {/* MODULE 3: Emergency Kill Switches */}
-          {/* ========================================================================= */}
-          {activeModule === 'flags' && (
+          {/* --------------------------------------------------------------------- */}
+          {/* TAG B: REGULAR USERS VIEW                                             */}
+          {/* --------------------------------------------------------------------- */}
+          {rbacTag === 'regular-users' && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200 shadow-sm space-y-6">
-              <div>
-                <h2 className="text-lg font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
-                  <i className="fa-solid fa-toggle-on text-emerald-700" />
-                  <span>Module 3: Emergency Kill Switches &amp; Circuit Breakers</span>
-                </h2>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Instant circuit breaker controls to isolate failing operations without bringing down unaffected modules.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {flags.map((flag) => (
-                  <div key={flag.id || flag.flagKey} className="p-5 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-50/50">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-black text-xs text-neutral-900">{flag.flagKey}</span>
-                        <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
-                          flag.enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {flag.enabled ? 'ENABLED' : 'DISABLED'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-neutral-500 mt-1">{flag.reason || 'Standard operational control flag.'}</p>
-                      <p className="text-[10px] text-neutral-400 mt-0.5">Updated by: {flag.setBy || 'SYSTEM'} • Scope: {flag.scope || 'GLOBAL'}</p>
-                    </div>
-
-                    <button
-                      onClick={() => handleToggleFlag(flag.flagKey, flag.enabled)}
-                      className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm shrink-0 ${
-                        flag.enabled
-                          ? 'bg-red-600 hover:bg-red-700 text-white'
-                          : 'bg-emerald-700 hover:bg-emerald-800 text-white'
-                      }`}
-                    >
-                      {flag.enabled ? 'Trigger Kill Switch' : 'Enable Subsystem'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* MODULE 4: Refill Subscriptions */}
-          {/* ========================================================================= */}
-          {activeModule === 'subscriptions' && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200 shadow-sm space-y-6">
-              <div>
-                <h2 className="text-lg font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
-                  <i className="fa-solid fa-arrows-rotate text-emerald-700" />
-                  <span>Module 4: Recurring Refill Subscriptions &amp; Chronic Care</span>
-                </h2>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Manage automated recurring refill scheduler, chronic care regimens, and delivery dispatch cadence.
-                </p>
-              </div>
-
-              <div className="p-6 bg-neutral-50 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
                 <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-neutral-900">Active Refill Regimens</span>
+                  <h2 className="text-lg font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
+                    <i className="fa-solid fa-users text-purple-700" />
+                    <span>Customer &amp; Regular User Directory</span>
+                  </h2>
                   <p className="text-xs text-neutral-500 mt-0.5">
-                    {subscriptions.length} active customer recurring prescriptions in auto-dispense schedule.
+                    Registered pharmacy patients and customers. System admins can inspect records, ban accounts, or permanently delete users from the database.
                   </p>
                 </div>
-                <Link
-                  to="/modules/subscriptions"
-                  className="px-5 py-2.5 bg-neutral-900 text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-black transition-all shadow-sm shrink-0"
-                >
-                  Open Full Subscription Engine
-                </Link>
+              </div>
+
+              {/* Search & Filter Bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="relative sm:col-span-2">
+                  <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xs" />
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder="Search users by name, email, or contact number..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  />
+                </div>
+
+                <div>
+                  <select
+                    value={userStatusFilter}
+                    onChange={(e) => setUserStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-bold text-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  >
+                    <option value="ALL">All Account Statuses</option>
+                    <option value="ACTIVE">ACTIVE Only</option>
+                    <option value="BANNED">BANNED Only</option>
+                    <option value="SUSPENDED">SUSPENDED Only</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Regular Users Table */}
+              <div className="overflow-x-auto rounded-2xl border border-neutral-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-neutral-50 text-[10px] font-black uppercase text-neutral-500 border-b border-neutral-200">
+                    <tr>
+                      <th className="p-4">User ID</th>
+                      <th className="p-4">Customer Name</th>
+                      <th className="p-4">Email Address</th>
+                      <th className="p-4">Contact Phone</th>
+                      <th className="p-4">Account Standing</th>
+                      <th className="p-4">Registration Date</th>
+                      <th className="p-4 text-right">Moderation Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200 bg-white">
+                    {filteredRegularUsers.length > 0 ? (
+                      filteredRegularUsers.map((u) => {
+                        const isBanned = u.status === 'BANNED' || u.status === 'SUSPENDED';
+                        return (
+                          <tr key={u.userId || u.id} className="hover:bg-neutral-50 transition-colors">
+                            <td className="p-4 font-mono font-bold text-neutral-500">
+                              #USR-{u.userId || u.id}
+                            </td>
+                            <td className="p-4 font-bold text-neutral-900">
+                              {u.fullName || 'Registered Customer'}
+                            </td>
+                            <td className="p-4 font-mono font-medium text-neutral-700">
+                              <a href={`mailto:${u.email}`} className="text-neutral-800 hover:text-purple-700 hover:underline flex items-center gap-1.5">
+                                <i className="fa-solid fa-envelope text-neutral-400 text-[10px]" />
+                                <span>{u.email}</span>
+                              </a>
+                            </td>
+                            <td className="p-4 text-neutral-600">
+                              {u.contactNumber || u.phoneNumber || '—'}
+                            </td>
+                            <td className="p-4">
+                              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${STATUS_BADGES[u.status] || 'bg-neutral-100'}`}>
+                                {u.status || 'ACTIVE'}
+                              </span>
+                            </td>
+                            <td className="p-4 text-neutral-500">
+                              {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="inline-flex items-center gap-2">
+                                {/* Ban / Unban Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => setUserBanConfirm(u)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs ${
+                                    isBanned
+                                      ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                      : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200'
+                                  }`}
+                                  title={isBanned ? 'Unban and reactivate user' : 'Ban and block user from login'}
+                                >
+                                  <i className={`fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'} text-xs`} />
+                                  <span>{isBanned ? 'Unban User' : 'Ban User'}</span>
+                                </button>
+
+                                {/* Remove / Delete Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => setUserDeleteConfirm(u)}
+                                  className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs"
+                                  title="Permanently remove user from DB"
+                                >
+                                  <i className="fa-solid fa-trash-can text-xs" />
+                                  <span>Remove</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan="7" className="p-8 text-center text-neutral-400 font-medium">
+                          No regular customer accounts found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
-
         </div>
-
-      </div>
+      )}
 
       {/* ========================================================================= */}
-      {/* MODAL: Create / Edit User & Admin Profile */}
+      {/* MODULE 2: AUDIT TRAIL                                                     */}
       {/* ========================================================================= */}
-      {showUserModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 my-8">
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
-              <div>
-                <h3 className="text-base font-black uppercase tracking-tight text-neutral-900">
-                  {isEditingUser ? 'Edit User / Admin Profile' : 'Create New Admin / Staff Profile'}
-                </h3>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  {isEditingUser ? 'Update role, contact details, or reset initial password.' : 'Assign system permissions, email, and set initial credentials.'}
-                </p>
+      {activeModule === 'audit' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-neutral-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
+            <div>
+              <h2 className="text-lg font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
+                <i className="fa-solid fa-clipboard-check text-emerald-700" />
+                <span>Enterprise Audit &amp; Compliance Trail</span>
+              </h2>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Tamper-evident logs of administrative actions, role transitions, delivery overrides, and catalog edits.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={exportAuditLogs}
+                className="px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5"
+              >
+                <i className="fa-solid fa-file-arrow-down text-xs" />
+                <span>Export CSV</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenCreateAudit}
+                className="px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5"
+              >
+                <i className="fa-solid fa-plus text-xs" />
+                <span>+ Record Entry</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Department Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {DEPARTMENTS.map((dept) => (
+              <button
+                key={dept.id}
+                type="button"
+                onClick={() => setAuditDeptFilter(dept.id)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  auditDeptFilter === dept.id
+                    ? 'bg-neutral-900 text-white shadow-xs'
+                    : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600'
+                }`}
+              >
+                <i className={`fa-solid ${dept.icon} text-xs`} />
+                <span>{dept.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-xs" />
+            <input
+              type="text"
+              value={auditSearch}
+              onChange={(e) => setAuditSearch(e.target.value)}
+              placeholder="Search audit logs by actor, action type, entity, or notes..."
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            />
+          </div>
+
+          {/* Audit Logs Table */}
+          <div className="overflow-x-auto rounded-2xl border border-neutral-200">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-neutral-50 text-[10px] font-black uppercase text-neutral-500 border-b border-neutral-200">
+                <tr>
+                  <th className="p-4">Timestamp</th>
+                  <th className="p-4">Department</th>
+                  <th className="p-4">Action</th>
+                  <th className="p-4">Target Entity</th>
+                  <th className="p-4">Actor</th>
+                  <th className="p-4">Severity</th>
+                  <th className="p-4">Notes &amp; Details</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-200 bg-white">
+                {filteredAuditLogs.length > 0 ? (
+                  filteredAuditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-neutral-50 transition-colors">
+                      <td className="p-4 font-mono text-[11px] text-neutral-500 whitespace-nowrap">
+                        {log.timestamp ? new Date(log.timestamp).toLocaleString() : '—'}
+                      </td>
+                      <td className="p-4 font-bold text-neutral-800 text-[11px]">
+                        {log.department}
+                      </td>
+                      <td className="p-4 font-mono font-bold text-emerald-800">
+                        {log.action}
+                      </td>
+                      <td className="p-4 text-neutral-600 font-medium">
+                        {log.entity} {log.entityId ? `#${log.entityId}` : ''}
+                      </td>
+                      <td className="p-4">
+                        <span className="block font-bold text-neutral-900">{log.actorEmail || 'System'}</span>
+                        <span className="text-[10px] text-neutral-400 font-semibold">{log.actorRole || 'SYSTEM'}</span>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
+                            log.severity === 'CRITICAL'
+                              ? 'bg-red-100 text-red-800 border-red-300'
+                              : log.severity === 'WARN'
+                              ? 'bg-amber-100 text-amber-800 border-amber-300'
+                              : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          }`}
+                        >
+                          {log.severity || 'INFO'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-neutral-600 max-w-xs truncate" title={log.notes}>
+                        {log.notes || '—'}
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditAudit(log)}
+                            className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-600 hover:text-black transition-colors"
+                            title="Edit Audit Entry"
+                          >
+                            <i className="fa-solid fa-pen-to-square text-xs" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAuditDeleteConfirm(log)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                            title="Delete Audit Entry"
+                          >
+                            <i className="fa-solid fa-trash text-xs" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" className="p-8 text-center text-neutral-400 font-medium">
+                      No audit log entries recorded for this selection.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 1: CREATE NEW ADMIN (SYSTEM_ADMIN ONLY)                             */}
+      {/* ========================================================================= */}
+      {showCreateAdminModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 animate-scaleUp">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-800 flex items-center justify-center">
+                  <i className="fa-solid fa-user-shield text-lg" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase text-neutral-900">
+                    Create New Administrator
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Provision new administrative credentials directly to MySQL DB.
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setShowUserModal(false)} className="text-neutral-400 hover:text-black">
-                <i className="fa-solid fa-xmark text-lg" />
+              <button
+                type="button"
+                onClick={() => setShowCreateAdminModal(false)}
+                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center transition-colors"
+              >
+                <i className="fa-solid fa-xmark text-xs" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveUser} className="space-y-4 pt-4">
+            <form onSubmit={handleCreateAdmin} className="space-y-4 text-xs">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
                   Full Name *
                 </label>
                 <input
                   type="text"
                   required
-                  value={userForm.fullName}
-                  onChange={(e) => setUserForm({ ...userForm, fullName: e.target.value })}
-                  placeholder="e.g. Dr. Alex Morgan"
-                  className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black"
+                  value={adminForm.fullName}
+                  onChange={(e) => setAdminForm({ ...adminForm, fullName: e.target.value })}
+                  placeholder="e.g. John Doe"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
                   Email Address *
                 </label>
                 <input
                   type="email"
                   required
-                  value={userForm.email}
-                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                  placeholder="e.g. admin@mediorder.com"
-                  className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black"
+                  value={adminForm.email}
+                  onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                  placeholder="e.g. newadmin@mediorder.com"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20 font-mono"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                  Initial Password * (min 6 characters)
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={adminForm.password}
+                  onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                    Security Role *
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                    Admin Role *
                   </label>
                   <select
-                    value={userForm.role}
-                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-black"
+                    value={adminForm.role}
+                    onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-bold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   >
-                    {ROLES.map((r) => (
+                    {ADMIN_ROLES.map((r) => (
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                    Account Status
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                    Contact Phone (optional)
                   </label>
-                  <select
-                    value={userForm.status}
-                    onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-black"
-                  >
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="SUSPENDED">SUSPENDED</option>
-                    <option value="INACTIVE">INACTIVE</option>
-                  </select>
+                  <input
+                    type="tel"
+                    value={adminForm.phoneNumber}
+                    onChange={(e) => setAdminForm({ ...adminForm, phoneNumber: e.target.value })}
+                    placeholder="0771234567"
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                  {isEditingUser ? 'Reset Password (Leave blank to keep current)' : 'Initial Password *'}
-                </label>
-                <input
-                  type="password"
-                  required={!isEditingUser}
-                  value={userForm.password}
-                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                  placeholder={isEditingUser ? 'Enter new password if resetting...' : 'Min. 6 characters'}
-                  className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                  Contact Phone Number
-                </label>
-                <input
-                  type="text"
-                  value={userForm.phoneNumber}
-                  onChange={(e) => setUserForm({ ...userForm, phoneNumber: e.target.value })}
-                  placeholder="e.g. +94 77 123 4567"
-                  className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100">
+              <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-neutral-100">
                 <button
                   type="button"
-                  onClick={() => setShowUserModal(false)}
-                  className="px-5 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold uppercase rounded-xl transition-colors"
+                  onClick={() => setShowCreateAdminModal(false)}
+                  className="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors shadow-sm"
+                  className="px-6 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
                 >
-                  {isEditingUser ? 'Save Profile Changes' : 'Create Profile'}
+                  Create &amp; Save Admin
                 </button>
               </div>
             </form>
@@ -1023,128 +1094,111 @@ const SystemAdminConsolePage = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: Create / Edit Department Audit Log */}
+      {/* MODAL 2: EDIT USER PROFILE & ROLE                                         */}
       {/* ========================================================================= */}
-      {showAuditModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 my-8">
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
-              <div>
-                <h3 className="text-base font-black uppercase tracking-tight text-neutral-900">
-                  {isEditingAudit ? 'Edit Department Audit Entry' : 'Create Department Audit Log'}
-                </h3>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Log regulatory events, supervisory overrides, warehouse counts, or disciplinary holds.
-                </p>
-              </div>
-              <button onClick={() => setShowAuditModal(false)} className="text-neutral-400 hover:text-black">
-                <i className="fa-solid fa-xmark text-lg" />
+      {showEditUserModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 animate-scaleUp">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-6">
+              <h3 className="text-base font-black uppercase text-neutral-900">
+                Edit User Account #{editUserForm.userId}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowEditUserModal(false)}
+                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center"
+              >
+                <i className="fa-solid fa-xmark text-xs" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveAudit} className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={handleSaveEditUser} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editUserForm.fullName}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, fullName: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={editUserForm.email}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                    Department *
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                    Role
                   </label>
                   <select
-                    value={auditForm.department}
-                    onChange={(e) => setAuditForm({ ...auditForm, department: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-black"
+                    value={editUserForm.role}
+                    onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-bold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   >
-                    {DEPARTMENTS.filter(d => d.id !== 'ALL').map((d) => (
-                      <option key={d.id} value={d.id}>{d.label}</option>
+                    <option value="CUSTOMER">CUSTOMER</option>
+                    {ADMIN_ROLES.map((r) => (
+                      <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                    Severity Level
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                    Account Status
                   </label>
                   <select
-                    value={auditForm.severity}
-                    onChange={(e) => setAuditForm({ ...auditForm, severity: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-black"
+                    value={editUserForm.status}
+                    onChange={(e) => setEditUserForm({ ...editUserForm, status: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-bold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   >
-                    <option value="INFO">INFO</option>
-                    <option value="WARNING">WARNING</option>
-                    <option value="CRITICAL">CRITICAL</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="SUSPENDED">SUSPENDED</option>
+                    <option value="BANNED">BANNED</option>
+                    <option value="PENDING_APPROVAL">PENDING</option>
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                    Action Type *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={auditForm.action}
-                    onChange={(e) => setAuditForm({ ...auditForm, action: e.target.value })}
-                    placeholder="e.g. MANUAL_OVERRIDE"
-                    className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                    Target Entity *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={auditForm.entity}
-                    onChange={(e) => setAuditForm({ ...auditForm, entity: e.target.value })}
-                    placeholder="e.g. Delivery, Medicine, Batch"
-                    className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                  Target Entity ID / Reference
+                <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                  Reset Password (leave blank to keep current)
                 </label>
                 <input
-                  type="text"
-                  value={auditForm.entityId}
-                  onChange={(e) => setAuditForm({ ...auditForm, entityId: e.target.value })}
-                  placeholder="e.g. DEL-1002 or MED-001"
-                  className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black"
+                  type="password"
+                  value={editUserForm.password}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
+                  placeholder="New password..."
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                  Audit Notes / State Description *
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  value={auditForm.afterState}
-                  onChange={(e) => setAuditForm({ ...auditForm, afterState: e.target.value, notes: e.target.value })}
-                  placeholder="Detailed description of the change, supervisory sign-off reason, or department note..."
-                  className="w-full px-3.5 py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100">
+              <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-neutral-100">
                 <button
                   type="button"
-                  onClick={() => setShowAuditModal(false)}
-                  className="px-5 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold uppercase rounded-xl transition-colors"
+                  onClick={() => setShowEditUserModal(false)}
+                  className="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-neutral-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors shadow-sm"
+                  className="px-6 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-black text-xs uppercase tracking-wider shadow-md"
                 >
-                  {isEditingAudit ? 'Update Audit Entry' : 'Log Department Audit'}
+                  Save Changes
                 </button>
               </div>
             </form>
@@ -1153,29 +1207,50 @@ const SystemAdminConsolePage = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: Delete User Confirmation */}
+      {/* CONFIRM MODAL: BAN USER                                                   */}
       {/* ========================================================================= */}
-      {userDeleteConfirm && (
+      {userBanConfirm && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 space-y-4">
-            <h3 className="text-base font-black uppercase tracking-tight text-neutral-900">
-              Confirm Account Deletion
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center animate-scaleUp">
+            <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4 text-2xl">
+              <i className={`fa-solid ${userBanConfirm.status === 'BANNED' || userBanConfirm.status === 'SUSPENDED' ? 'fa-unlock' : 'fa-ban'}`} />
+            </div>
+
+            <h3 className="text-lg font-black uppercase tracking-tight text-neutral-900">
+              {userBanConfirm.status === 'BANNED' || userBanConfirm.status === 'SUSPENDED'
+                ? 'Unban & Reactivate User?'
+                : 'Ban User Account?'}
             </h3>
-            <p className="text-xs text-neutral-600">
-              Are you sure you want to delete user account <span className="font-bold font-mono">#{userDeleteConfirm}</span>? This action is permanent and will be logged in the immutable audit trail.
+            <p className="text-xs text-neutral-600 mt-2 mb-6 leading-relaxed">
+              {userBanConfirm.status === 'BANNED' || userBanConfirm.status === 'SUSPENDED' ? (
+                <>
+                  Are you sure you want to reactivate <strong>{userBanConfirm.email}</strong>? They will regain access to login and make orders.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to ban <strong>{userBanConfirm.email}</strong>? This user will be immediately blocked from signing in and placing orders.
+                </>
+              )}
             </p>
-            <div className="flex items-center justify-end gap-3 pt-2">
+
+            <div className="flex items-center justify-center gap-3">
               <button
-                onClick={() => setUserDeleteConfirm(null)}
-                className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold uppercase rounded-xl transition-colors"
+                type="button"
+                onClick={() => setUserBanConfirm(null)}
+                className="px-5 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs"
               >
                 Cancel
               </button>
               <button
-                onClick={() => handleDeleteUser(userDeleteConfirm)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors shadow-sm"
+                type="button"
+                onClick={() => handleBanToggleUser(userBanConfirm)}
+                className={`px-6 py-2.5 rounded-full text-white font-black text-xs uppercase tracking-wider shadow-md ${
+                  userBanConfirm.status === 'BANNED' || userBanConfirm.status === 'SUSPENDED'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-700'
+                }`}
               >
-                Delete Account
+                {userBanConfirm.status === 'BANNED' || userBanConfirm.status === 'SUSPENDED' ? 'Confirm Unban' : 'Confirm Ban'}
               </button>
             </div>
           </div>
@@ -1183,27 +1258,34 @@ const SystemAdminConsolePage = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: Delete Audit Log Confirmation */}
+      {/* CONFIRM MODAL: DELETE USER                                                */}
       {/* ========================================================================= */}
-      {auditDeleteConfirm && (
+      {userDeleteConfirm && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 space-y-4">
-            <h3 className="text-base font-black uppercase tracking-tight text-neutral-900">
-              Delete Audit Record
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center animate-scaleUp">
+            <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4 text-2xl">
+              <i className="fa-solid fa-triangle-exclamation" />
+            </div>
+
+            <h3 className="text-lg font-black uppercase tracking-tight text-neutral-900">
+              Permanently Remove User?
             </h3>
-            <p className="text-xs text-neutral-600">
-              Are you sure you want to delete audit log entry <span className="font-bold font-mono">#{auditDeleteConfirm}</span>?
+            <p className="text-xs text-neutral-600 mt-2 mb-6 leading-relaxed">
+              Are you sure you want to delete <strong>{userDeleteConfirm.email}</strong> (ID #{userDeleteConfirm.userId || userDeleteConfirm.id})? This will permanently delete the user row from the SQL database.
             </p>
-            <div className="flex items-center justify-end gap-3 pt-2">
+
+            <div className="flex items-center justify-center gap-3">
               <button
-                onClick={() => setAuditDeleteConfirm(null)}
-                className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold uppercase rounded-xl transition-colors"
+                type="button"
+                onClick={() => setUserDeleteConfirm(null)}
+                className="px-5 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs"
               >
                 Cancel
               </button>
               <button
-                onClick={() => handleDeleteAudit(auditDeleteConfirm)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors shadow-sm"
+                type="button"
+                onClick={() => handleDeleteUser(userDeleteConfirm.userId || userDeleteConfirm.id)}
+                className="px-6 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider shadow-md"
               >
                 Confirm Delete
               </button>
@@ -1212,6 +1294,156 @@ const SystemAdminConsolePage = () => {
         </div>
       )}
 
+      {/* ========================================================================= */}
+      {/* MODAL 3: AUDIT ENTRY MODAL                                                */}
+      {/* ========================================================================= */}
+      {showAuditModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 animate-scaleUp">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-6">
+              <h3 className="text-base font-black uppercase text-neutral-900">
+                {isEditingAudit ? `Edit Audit Entry #${auditForm.id}` : 'Record Manual Audit Entry'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAuditModal(false)}
+                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center"
+              >
+                <i className="fa-solid fa-xmark text-xs" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAudit} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                    Department
+                  </label>
+                  <select
+                    value={auditForm.department}
+                    onChange={(e) => setAuditForm({ ...auditForm, department: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-bold"
+                  >
+                    {DEPARTMENTS.filter((d) => d.id !== 'ALL').map((d) => (
+                      <option key={d.id} value={d.id}>{d.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                    Severity
+                  </label>
+                  <select
+                    value={auditForm.severity}
+                    onChange={(e) => setAuditForm({ ...auditForm, severity: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-bold"
+                  >
+                    <option value="INFO">INFO</option>
+                    <option value="WARN">WARN</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                    Action Type
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={auditForm.action}
+                    onChange={(e) => setAuditForm({ ...auditForm, action: e.target.value })}
+                    placeholder="e.g. USER_ROLE_CHANGED"
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                    Entity &amp; ID
+                  </label>
+                  <input
+                    type="text"
+                    value={auditForm.entity}
+                    onChange={(e) => setAuditForm({ ...auditForm, entity: e.target.value })}
+                    placeholder="e.g. User"
+                    className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                  Audit Notes &amp; Rationale
+                </label>
+                <textarea
+                  rows="3"
+                  value={auditForm.notes}
+                  onChange={(e) => setAuditForm({ ...auditForm, notes: e.target.value })}
+                  placeholder="Describe the administrative action taken and context..."
+                  className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs"
+                />
+              </div>
+
+              <div className="pt-4 flex items-center justify-end gap-2.5 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAuditModal(false)}
+                  className="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs uppercase tracking-wider shadow-md"
+                >
+                  Save Entry
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* CONFIRM MODAL: DELETE AUDIT                                               */}
+      {/* ========================================================================= */}
+      {auditDeleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center animate-scaleUp">
+            <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4 text-2xl">
+              <i className="fa-solid fa-trash text-xl" />
+            </div>
+
+            <h3 className="text-lg font-black uppercase tracking-tight text-neutral-900">
+              Delete Audit Entry?
+            </h3>
+            <p className="text-xs text-neutral-600 mt-2 mb-6">
+              Delete audit log #{auditDeleteConfirm.id} ({auditDeleteConfirm.action}) permanently from database?
+            </p>
+
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setAuditDeleteConfirm(null)}
+                className="px-5 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteAudit(auditDeleteConfirm.id)}
+                className="px-6 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider shadow-md"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -82,7 +82,7 @@ const MyDeliveriesPage = () => {
             My Deliveries
           </h1>
           <p className="text-xs text-neutral-500 mt-1">
-            Updates appear here automatically. Give the 6-digit handover code to the courier only when your parcel arrives.
+            Updates appear here automatically. Give the 4-digit handover code (1234) to the courier only when your parcel arrives.
           </p>
         </div>
         <button

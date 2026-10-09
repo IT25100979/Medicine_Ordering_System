@@ -11,7 +11,7 @@ stateDiagram-v2
     PENDING --> REJECTED: Coordinator rejects (reason required)
     APPROVED --> DISPATCHED: Coordinator assigns courier\n(customer's choice by default), OTP issued
     DISPATCHED --> IN_TRANSIT: Courier picks up
-    IN_TRANSIT --> DELIVERED: Courier enters customer's 6-digit OTP
+    IN_TRANSIT --> DELIVERED: Courier enters customer's 4-digit OTP (1234)
     IN_TRANSIT --> FAILED: Failed attempt / 5 wrong OTPs
     DISPATCHED --> FAILED
     FAILED --> DISPATCHED: Re-dispatch

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatDateDDMMYYYY, getShelfLifeStatus } from './OperationsCatalogDashboard';
+import useRealtimeChannel from '../hooks/useRealtimeChannel';
 
 const REJECTION_TAGS = [
   'Not clear photo',
@@ -19,6 +20,51 @@ export const resolveFileUrl = (url) => {
   const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
   return `${base.replace(/\/+$/, '')}/${url.replace(/^\/+/, '')}`;
 };
+
+export const TEMP_TAG_OPTIONS = [
+  {
+    key: 'WARM',
+    label: 'Warm',
+    subLabel: 'Room Temperature (15°C – 25°C)',
+    range: '15°C – 25°C',
+    section: 'AMBIENT',
+    minTemp: 15.0,
+    maxTemp: 25.0,
+    storageReq: 'Room Temperature (15°C - 25°C)',
+    icon: 'wb_sunny',
+    activeBg: 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400',
+    inactiveBg: 'bg-amber-50/70 hover:bg-amber-100 text-amber-950 border-amber-200',
+    badgeClass: 'bg-amber-100 text-amber-900 border-amber-300'
+  },
+  {
+    key: 'COOL',
+    label: 'Cool',
+    subLabel: 'Cool Room (8°C – 15°C)',
+    range: '8°C – 15°C',
+    section: 'COOL_ROOM',
+    minTemp: 8.0,
+    maxTemp: 15.0,
+    storageReq: 'Cool Room (8°C - 15°C)',
+    icon: 'air',
+    activeBg: 'bg-teal-600 text-white border-teal-700 ring-2 ring-teal-400',
+    inactiveBg: 'bg-teal-50/70 hover:bg-teal-100 text-teal-950 border-teal-200',
+    badgeClass: 'bg-teal-100 text-teal-900 border-teal-300'
+  },
+  {
+    key: 'COLD',
+    label: 'Cold',
+    subLabel: 'Cold Chain (2°C – 8°C)',
+    range: '2°C – 8°C',
+    section: 'REFRIGERATED',
+    minTemp: 2.0,
+    maxTemp: 8.0,
+    storageReq: 'Cold Chain (2°C - 8°C)',
+    icon: 'ac_unit',
+    activeBg: 'bg-cyan-600 text-white border-cyan-700 ring-2 ring-cyan-400',
+    inactiveBg: 'bg-cyan-50/70 hover:bg-cyan-100 text-cyan-950 border-cyan-200',
+    badgeClass: 'bg-cyan-100 text-cyan-900 border-cyan-300'
+  },
+];
 
 // 4 Canonical Pharmacy Shelf Storage Sections
 const CANONICAL_SECTIONS = [
@@ -368,32 +414,13 @@ const PharmacistPrescriptionDashboard = () => {
     return expandedBatches[batchNumber] !== false; // default expanded
   };
 
-  // Tag Editor Modal State
+  // Simplified Cold Chain Configure Modal State
   const [showTagModal, setShowTagModal] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState(null);
   const [editingTag, setEditingTag] = useState(null);
+  const [selectedTempTag, setSelectedTempTag] = useState('COLD'); // 'WARM' | 'COOL' | 'COLD'
+  const [configureDescription, setConfigureDescription] = useState('');
   const [savingTag, setSavingTag] = useState(false);
-
-  // Tag Form Fields
-  const [tagForm, setTagForm] = useState({
-    section: 'AMBIENT',
-    storageTempMin: 15.0,
-    storageTempMax: 25.0,
-    shelfLifeDays: 730,
-    intensity: 'LOW',
-    securityLevel: 'STANDARD',
-    deliveryActions: {
-      insulatedBox: false,
-      icePack: false,
-      keepUpright: false,
-      avoidSunlight: false,
-      signatureRequired: false,
-      idAgeCheck: false,
-      maxTransitHours: '12',
-      noLeaveAtDoor: false,
-      customNotes: '',
-    },
-  });
 
   // Dual-Confirmation Dialog State
   const [showDualModal, setShowDualModal] = useState(false);
@@ -425,6 +452,19 @@ const PharmacistPrescriptionDashboard = () => {
       setLoadingTagging(false);
     }
   };
+
+  // Real-time SSE listener for Cold Chain events
+  useRealtimeChannel(
+    'cold_chain',
+    ['COLD_CHAIN_APPROVAL_REQUESTED', 'COLD_CHAIN_UPDATED', 'COLD_CHAIN_REVIEWED'],
+    (eventType, payload) => {
+      fetchTaggingData();
+      fetchCatalogMedicines();
+      if (eventType === 'COLD_CHAIN_APPROVAL_REQUESTED') {
+        showToast(`Cold chain approval request received in real-time for "${payload?.medicineName || 'Item'}"!`);
+      }
+    }
+  );
 
   useEffect(() => {
     fetchPrescriptions();
@@ -710,213 +750,101 @@ const PharmacistPrescriptionDashboard = () => {
     return fallbackList.filter((b) => b.medicines.length > 0 || (tagProductSearch.trim() && (b.batchNumber || '').toLowerCase().includes(tagProductSearch.toLowerCase().trim())));
   }, [batches, medicines, tags, combinedTaggedItems, tagStatusFilter, tagSectionFilter, tagProductSearch, tagExpiryFilter]);
 
-  // Open Tag Editor Modal
-  const handleOpenTagEditor = (item) => {
-    setEditingMedicine(item.medicine || item.rawMedicine || item);
-    setEditingTag(item.tag || null);
+  // Open Simplified Configure Modal
+  const handleOpenConfigureModal = (item) => {
+    const med = item.medicine || item.rawMedicine || item;
+    const tag = item.tag || tags.find((t) => t.medicine?.id === med.id || t.medicineId === med.id);
+    setEditingMedicine(med);
+    setEditingTag(tag || null);
 
-    const sectionMeta = CANONICAL_SECTIONS.find((s) => s.key === item.section) || CANONICAL_SECTIONS[0];
-    const act = item.actionsObj || {};
-
-    setTagForm({
-      section: item.section || sectionMeta.key,
-      storageTempMin: item.storageTempMin !== undefined ? Number(item.storageTempMin) : sectionMeta.minTemp,
-      storageTempMax: item.storageTempMax !== undefined ? Number(item.storageTempMax) : sectionMeta.maxTemp,
-      shelfLifeDays: item.shelfLifeDays || sectionMeta.defaultShelfDays,
-      intensity: item.intensity || sectionMeta.defaultIntensity,
-      securityLevel: item.securityLevel || sectionMeta.defaultSecurity,
-      deliveryActions: {
-        insulatedBox: act.insulatedBox || (item.section === 'REFRIGERATED' || item.section === 'FROZEN'),
-        icePack: act.icePack || (item.section === 'REFRIGERATED' || item.section === 'COOL_ROOM'),
-        keepUpright: act.keepUpright || false,
-        avoidSunlight: act.avoidSunlight || false,
-        signatureRequired: act.signatureRequired || (item.intensity === 'HIGH' || item.intensity === 'CRITICAL'),
-        idAgeCheck: act.idAgeCheck || (item.securityLevel === 'CONTROLLED_SUBSTANCE'),
-        maxTransitHours: '12',
-        noLeaveAtDoor: act.noLeaveAtDoor || (item.securityLevel === 'CONTROLLED_SUBSTANCE'),
-        customNotes: item.deliveryActions || '',
-      },
-    });
-
+    // Initial temperature tag
+    let initialTag = 'COLD';
+    if (tag?.section === 'AMBIENT' || (!med.isTemperatureSensitive && !tag)) {
+      initialTag = 'WARM';
+    } else if (tag?.section === 'COOL_ROOM') {
+      initialTag = 'COOL';
+    } else {
+      initialTag = 'COLD';
+    }
+    setSelectedTempTag(initialTag);
+    setConfigureDescription(med.description || '');
     setShowTagModal(true);
   };
 
-  // Section Change in Tag Editor: Auto-fills temp range & defaults
-  const handleSectionChange = (newSecKey) => {
-    const meta = CANONICAL_SECTIONS.find((s) => s.key === newSecKey) || CANONICAL_SECTIONS[0];
-    setTagForm((prev) => ({
-      ...prev,
-      section: newSecKey,
-      storageTempMin: meta.minTemp,
-      storageTempMax: meta.maxTemp,
-      shelfLifeDays: meta.defaultShelfDays,
-      intensity: meta.defaultIntensity,
-      securityLevel: meta.defaultSecurity,
-      deliveryActions: {
-        ...prev.deliveryActions,
-        insulatedBox: (newSecKey === 'REFRIGERATED' || newSecKey === 'FROZEN'),
-        icePack: (newSecKey === 'REFRIGERATED' || newSecKey === 'COOL_ROOM'),
-        signatureRequired: (newSecKey === 'FROZEN'),
-      },
-    }));
+  // Direct Approve Tag for single item (from row button)
+  const handleDirectApprove = async (item) => {
+    try {
+      const medId = item.medicineId || item.medicine?.id || item.id;
+      const tagId = item.tagId || item.tag?.id;
+      if (tagId) {
+        await client.post(`/api/v1/cold-chain/tags/${tagId}/review?action=APPROVE`);
+      } else {
+        await client.post(`/api/v1/cold-chain/tags/medicine/${medId}/review?action=APPROVE`);
+      }
+      showToast(`Cold chain approved for "${item.name}"! Synced to Catalog & DB.`);
+      await fetchTaggingData();
+      await fetchCatalogMedicines();
+    } catch (err) {
+      console.error('Approve tag error:', err);
+      showToast(err.response?.data?.message || 'Failed to approve cold chain tag.', 'error');
+    }
   };
 
-  // Save Tag Configuration
-  const handleSaveTag = async (e, forceApprove = false) => {
-    if (e) e.preventDefault();
-    if (!editingMedicine) return;
-
-    // Check if dual confirmation is required
-    const isCritical = tagForm.intensity === 'CRITICAL';
-    const isControlled = tagForm.securityLevel === 'CONTROLLED_SUBSTANCE';
-    const isFrozen = tagForm.section === 'FROZEN';
-
-    if ((isCritical || isControlled || isFrozen) && forceApprove) {
-      setShowTagModal(false);
-      setDualTargetMedicine(editingMedicine);
-      setDualTargetTag(editingTag);
-      setShowDualModal(true);
-      return;
+  // Direct Reject Tag for single item (from row button)
+  const handleDirectReject = async (item) => {
+    try {
+      const medId = item.medicineId || item.medicine?.id || item.id;
+      const tagId = item.tagId || item.tag?.id;
+      if (tagId) {
+        await client.post(`/api/v1/cold-chain/tags/${tagId}/review?action=REJECT`);
+      } else {
+        await client.post(`/api/v1/cold-chain/tags/medicine/${medId}/review?action=REJECT`);
+      }
+      showToast(`Cold chain rejected for "${item.name}". Synced to DB.`);
+      await fetchTaggingData();
+      await fetchCatalogMedicines();
+    } catch (err) {
+      console.error('Reject tag error:', err);
+      showToast(err.response?.data?.message || 'Failed to reject cold chain tag.', 'error');
     }
+  };
 
+  // Save / Approve / Reject inside Configure Modal
+  const handleModalAction = async (actionType) => {
+    if (!editingMedicine) return;
     setSavingTag(true);
     try {
-      // Build delivery actions comma-separated string
-      const actionsList = [];
-      if (tagForm.deliveryActions.insulatedBox) actionsList.push('Insulated Thermal Box');
-      if (tagForm.deliveryActions.icePack) actionsList.push('Ice Pack / Chilled Cold Gel Pad');
-      if (tagForm.deliveryActions.keepUpright) actionsList.push('Keep Upright');
-      if (tagForm.deliveryActions.avoidSunlight) actionsList.push('Avoid Direct Sunlight');
-      if (tagForm.deliveryActions.signatureRequired) actionsList.push('Signature Required Upon Delivery');
-      if (tagForm.deliveryActions.idAgeCheck) actionsList.push('ID & Age Verification Required');
-      if (tagForm.deliveryActions.maxTransitHours) actionsList.push(`Max Transit ${tagForm.deliveryActions.maxTransitHours} Hours`);
-      if (tagForm.deliveryActions.noLeaveAtDoor) actionsList.push('No Leave At Door');
-      if (tagForm.deliveryActions.customNotes?.trim()) actionsList.push(tagForm.deliveryActions.customNotes.trim());
-
+      const selectedOpt = TEMP_TAG_OPTIONS.find((t) => t.key === selectedTempTag) || TEMP_TAG_OPTIONS[2];
       const payload = {
-        section: tagForm.section,
-        storageTempMin: parseFloat(tagForm.storageTempMin),
-        storageTempMax: parseFloat(tagForm.storageTempMax),
-        shelfLifeDays: parseInt(tagForm.shelfLifeDays, 10) || 730,
-        intensity: tagForm.intensity,
-        securityLevel: tagForm.securityLevel,
-        deliveryActions: actionsList.join(', '),
+        section: selectedOpt.section,
+        storageTempMin: selectedOpt.minTemp,
+        storageTempMax: selectedOpt.maxTemp,
+        shelfLifeDays: 730,
+        intensity: selectedTempTag === 'COLD' ? 'HIGH' : 'LOW',
+        securityLevel: selectedTempTag === 'COLD' ? 'TAMPER_EVIDENT' : 'STANDARD',
+        deliveryActions: `${selectedOpt.label} storage (${selectedOpt.range}). ${configureDescription.trim()}`,
+        description: configureDescription.trim(),
+        status: actionType === 'APPROVE' ? 'APPROVED' : (actionType === 'REJECT' ? 'REJECTED' : (editingTag?.status || 'APPROVED')),
       };
 
       await client.post(`/api/v1/cold-chain/tags/medicine/${editingMedicine.id}`, payload);
-      showToast(`Cold chain condition tag configured for "${editingMedicine.name}"! Synced to Catalog & Delivery.`);
+
+      if (actionType === 'APPROVE') {
+        showToast(`Cold chain approved & updated for "${editingMedicine.name}"! Synced to Catalog & DB.`);
+      } else if (actionType === 'REJECT') {
+        showToast(`Cold chain rejected for "${editingMedicine.name}". Synced to DB.`);
+      } else {
+        showToast(`Configuration & description saved for "${editingMedicine.name}"! Synced to Catalog.`);
+      }
+
       setShowTagModal(false);
       await fetchTaggingData();
+      await fetchCatalogMedicines();
     } catch (err) {
-      console.error('Failed to save tag', err);
-      showToast(err.response?.data?.message || 'Failed to save cold chain tag.', 'error');
+      console.error('Modal action error:', err);
+      showToast(err.response?.data?.message || 'Failed to update cold chain configuration.', 'error');
     } finally {
       setSavingTag(false);
-    }
-  };
-
-  // Dual-Confirmation Submit
-  const handleDualConfirmSubmit = async (e) => {
-    e.preventDefault();
-    if (!dualTargetMedicine && !dualTargetTag) return;
-
-    setSubmittingDual(true);
-    try {
-      const tagId = dualTargetTag?.id || (tags.find(t => t.medicine?.id === dualTargetMedicine?.id)?.id);
-
-      if (tagId) {
-        await client.post(`/api/v1/cold-chain/tags/${tagId}/dual-confirm`, {
-          secondReviewer: dualSecondReviewer.trim(),
-          notes: dualNotes.trim(),
-        });
-      } else if (dualTargetMedicine) {
-        // Save and approve directly
-        const payload = {
-          section: tagForm.section,
-          storageTempMin: parseFloat(tagForm.storageTempMin),
-          storageTempMax: parseFloat(tagForm.storageTempMax),
-          shelfLifeDays: parseInt(tagForm.shelfLifeDays, 10) || 730,
-          intensity: tagForm.intensity,
-          securityLevel: tagForm.securityLevel,
-          deliveryActions: 'Tamper-Evident Bag, Dual Pharmacist Seal, Signature Required',
-        };
-        const res = await client.post(`/api/v1/cold-chain/tags/medicine/${dualTargetMedicine.id}`, payload);
-        if (res.data?.data?.id) {
-          await client.post(`/api/v1/cold-chain/tags/${res.data.data.id}/dual-confirm`, {
-            secondReviewer: dualSecondReviewer.trim(),
-            notes: dualNotes.trim(),
-          });
-        }
-      }
-
-      showToast(`Dual-confirmation signed by ${dualSecondReviewer}! Item marked LIVE.`);
-      setShowDualModal(false);
-      await fetchTaggingData();
-    } catch (err) {
-      console.error('Dual confirm error:', err);
-      showToast(err.response?.data?.message || 'Failed to record dual confirmation', 'error');
-    } finally {
-      setSubmittingDual(false);
-    }
-  };
-
-  // Move Item to Shelf Section (Interactive Shelf Arrangement with Audit Logging)
-  const handleMoveSection = async (tagId, medicineId, newSectionKey) => {
-    try {
-      if (tagId) {
-        await client.post(`/api/v1/cold-chain/tags/${tagId}/move-section?section=${newSectionKey}`);
-      } else {
-        // Auto create and move
-        const meta = CANONICAL_SECTIONS.find(s => s.key === newSectionKey);
-        await client.post(`/api/v1/cold-chain/tags/medicine/${medicineId}`, {
-          section: newSectionKey,
-          storageTempMin: meta.minTemp,
-          storageTempMax: meta.maxTemp,
-          shelfLifeDays: meta.defaultShelfDays,
-          intensity: meta.defaultIntensity,
-          securityLevel: meta.defaultSecurity,
-          deliveryActions: `Assigned to ${meta.displayName}`,
-        });
-      }
-      showToast(`Item relocated to ${newSectionKey.replace('_', ' ')}! Audit event recorded.`);
-      await fetchTaggingData();
-    } catch (err) {
-      console.error('Move section error:', err);
-      showToast(err.response?.data?.message || 'Failed to relocate item', 'error');
-    }
-  };
-
-  // Direct Approve Tag for single item
-  const handleDirectApprove = async (item) => {
-    const isCritical = item.intensity === 'CRITICAL';
-    const isControlled = item.securityLevel === 'CONTROLLED_SUBSTANCE' || item.section === 'FROZEN';
-
-    if (isCritical || isControlled) {
-      setDualTargetMedicine(item.medicine || item.rawMedicine || item);
-      setDualTargetTag(item.tag || { id: item.tagId });
-      setShowDualModal(true);
-      return;
-    }
-
-    try {
-      if (item.tagId) {
-        await client.post(`/api/v1/cold-chain/tags/${item.tagId}/review?action=APPROVE`);
-      } else {
-        await client.post(`/api/v1/cold-chain/tags/medicine/${item.medicineId}`, {
-          section: item.section || 'AMBIENT',
-          storageTempMin: item.storageTempMin || 15.0,
-          storageTempMax: item.storageTempMax || 25.0,
-          shelfLifeDays: item.shelfLifeDays || 730,
-          intensity: item.intensity || 'LOW',
-          securityLevel: item.securityLevel || 'STANDARD',
-          deliveryActions: item.deliveryActions || 'Standard Packaging',
-        });
-      }
-      showToast(`"${item.name}" approved LIVE! Synced to Catalog & Delivery.`);
-      await fetchTaggingData();
-    } catch (err) {
-      console.error('Approve tag error:', err);
-      showToast(err.response?.data?.message || 'Failed to approve item', 'error');
     }
   };
 
@@ -1326,14 +1254,20 @@ const PharmacistPrescriptionDashboard = () => {
         {/* ======================================================= */}
         {activeNavTab === 'condition_tagging' && (
           <div>
-            {/* Top Title & Telemetry Header */}
+            {/* Top Title & Realtime Status Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
-                  Condition &amp; Cold-Chain Tagging
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
+                    Cold-Chain &amp; Item Tagging
+                  </h1>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                    <span>Real-Time Sync Active</span>
+                  </span>
+                </div>
                 <p className="text-xs text-neutral-500 mt-1">
-                  Assign 4-section storage envelopes, temperature ranges, expiry validation, potency intensity &amp; delivery handling actions.
+                  Review and configure temperature parameters (Warm, Cool, Cold) and descriptions for medicines sent by Operations Management.
                 </p>
               </div>
 
@@ -1348,621 +1282,337 @@ const PharmacistPrescriptionDashboard = () => {
               </button>
             </div>
 
-            {/* Metrics Dashboard Banner */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-              <div className="bg-white rounded-2xl p-4 border border-neutral-200 shadow-xs">
-                <div className="text-[10px] font-extrabold uppercase text-neutral-400">Total Items</div>
-                <div className="text-xl font-black text-neutral-900 mt-0.5">{tagMetrics.totalItems}</div>
-              </div>
+            {/* BATCH & ITEM TAGGING QUEUE */}
+            <div className="space-y-6 mb-8">
+              
+              {/* Filters Bar */}
+              <div className="bg-white rounded-3xl border border-neutral-200 p-4 sm:p-6 shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  
+                  {/* Search by Product Name, SKU, Batch # */}
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={tagProductSearch}
+                      onChange={(e) => setTagProductSearch(e.target.value)}
+                      placeholder="Search product, generic name, SKU, batch lot #..."
+                      className="w-full h-10 pl-9 pr-8 rounded-full bg-neutral-50 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-black border border-neutral-200 transition-all shadow-inner"
+                    />
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-[18px] pointer-events-none">
+                      search
+                    </span>
+                    {tagProductSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setTagProductSearch('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black font-bold text-sm cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
 
-              <div className="bg-amber-50/80 rounded-2xl p-4 border border-amber-200 shadow-xs">
-                <div className="text-[10px] font-extrabold uppercase text-amber-800 flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                  <span>Awaiting Review</span>
-                </div>
-                <div className="text-xl font-black text-amber-950 mt-0.5">{tagMetrics.awaitingReviewCount}</div>
-              </div>
-
-              <div className="bg-purple-50/80 rounded-2xl p-4 border border-purple-200 shadow-xs">
-                <div className="text-[10px] font-extrabold uppercase text-purple-800 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">lock</span>
-                  <span>Dual Review Req</span>
-                </div>
-                <div className="text-xl font-black text-purple-950 mt-0.5">{tagMetrics.pendingDualCount}</div>
-              </div>
-
-              <div className="bg-cyan-50/80 rounded-2xl p-4 border border-cyan-200 shadow-xs">
-                <div className="text-[10px] font-extrabold uppercase text-cyan-800 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">ac_unit</span>
-                  <span>Cold Chain</span>
-                </div>
-                <div className="text-xl font-black text-cyan-950 mt-0.5">{tagMetrics.coldChainCount}</div>
-              </div>
-
-              <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 shadow-xs">
-                <div className="text-[10px] font-extrabold uppercase text-emerald-800 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">verified</span>
-                  <span>Approved Live</span>
-                </div>
-                <div className="text-xl font-black text-emerald-950 mt-0.5">{tagMetrics.approvedCount}</div>
-              </div>
-            </div>
-
-            {/* Sub-View Switcher: Batch & Item Tagging Queue vs Shelf Arrangement */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-              <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
-                <button
-                  type="button"
-                  onClick={() => setTaggingSubView('queue')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    taggingSubView === 'queue'
-                      ? 'bg-zinc-900 text-white shadow-xs'
-                      : 'text-neutral-700 hover:bg-neutral-200/70'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px]">checklist</span>
-                  <span>Batch &amp; Item Tagging Queue</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setTaggingSubView('shelves')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    taggingSubView === 'shelves'
-                      ? 'bg-zinc-900 text-white shadow-xs'
-                      : 'text-neutral-700 hover:bg-neutral-200/70'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px]">shelves</span>
-                  <span>Shelf Arrangement</span>
-                </button>
-              </div>
-
-              <div className="text-xs text-neutral-500">
-                Active Batches in Queue: <strong className="text-black font-bold">{groupedBatchesForTagging.length}</strong>
-              </div>
-            </div>
-
-            {/* SUB-VIEW 1: BATCH & ITEM TAGGING QUEUE (Stocks Style with Pharmacist Focus) */}
-            {taggingSubView === 'queue' && (
-              <div className="space-y-6 mb-8">
-                
-                {/* Filters Bar */}
-                <div className="bg-white rounded-3xl border border-neutral-200 p-4 sm:p-6 shadow-sm">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  {/* Filter Dropdowns */}
+                  <div className="flex flex-wrap items-center gap-2">
                     
-                    {/* Search by Product Name, SKU, Batch # */}
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        value={tagProductSearch}
-                        onChange={(e) => setTagProductSearch(e.target.value)}
-                        placeholder="Search product, generic name, SKU, batch lot #, shelf..."
-                        className="w-full h-10 pl-9 pr-8 rounded-full bg-neutral-50 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-black border border-neutral-200 transition-all shadow-inner"
-                      />
-                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-[18px] pointer-events-none">
-                        search
-                      </span>
-                      {tagProductSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setTagProductSearch('')}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black font-bold text-sm cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
+                    {/* Review Status Filter */}
+                    <select
+                      value={tagStatusFilter}
+                      onChange={(e) => setTagStatusFilter(e.target.value)}
+                      className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
+                    >
+                      <option value="ALL">All Review Statuses</option>
+                      <option value="AWAITING_REVIEW">Awaiting Review</option>
+                      <option value="APPROVED">Approved &amp; Live</option>
+                      <option value="REJECTED">Rejected</option>
+                    </select>
 
-                    {/* Filter Dropdowns */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      
-                      {/* Review Status Filter */}
-                      <select
-                        value={tagStatusFilter}
-                        onChange={(e) => setTagStatusFilter(e.target.value)}
-                        className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                      >
-                        <option value="ALL">All Review Statuses</option>
-                        <option value="AWAITING_REVIEW">Awaiting Tagging / Review</option>
-                        <option value="PENDING_DUAL_REVIEW">Dual Review Required (Critical/Frozen)</option>
-                        <option value="APPROVED">Approved &amp; Live</option>
-                        <option value="REJECTED">Rejected</option>
-                      </select>
+                    {/* Shelf Section / Temp Filter */}
+                    <select
+                      value={tagSectionFilter}
+                      onChange={(e) => setTagSectionFilter(e.target.value)}
+                      className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
+                    >
+                      <option value="ALL">All Temperature Envelopes</option>
+                      <option value="AMBIENT">Warm (15°C – 25°C)</option>
+                      <option value="COOL_ROOM">Cool (8°C – 15°C)</option>
+                      <option value="REFRIGERATED">Cold (2°C – 8°C)</option>
+                    </select>
 
-                      {/* Shelf Section Filter (4 Canonical Sections) */}
-                      <select
-                        value={tagSectionFilter}
-                        onChange={(e) => setTagSectionFilter(e.target.value)}
-                        className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                      >
-                        <option value="ALL">All 4 Shelf Sections</option>
-                        <option value="AMBIENT">Ambient Storage (15–25°C)</option>
-                        <option value="COOL_ROOM">Cold storage (8–15°C)</option>
-                        <option value="REFRIGERATED">Refrigerated (2–8°C)</option>
-                        <option value="FROZEN">Frozen storage (-25°C to -10°C)</option>
-                      </select>
-
-                      {/* Expiry Filter */}
-                      <select
-                        value={tagExpiryFilter}
-                        onChange={(e) => setTagExpiryFilter(e.target.value)}
-                        className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                      >
-                        <option value="ALL">All Expiry Dates</option>
-                        <option value="GOOD">Good Shelf Life (&gt; 60d)</option>
-                        <option value="NEAR_EXPIRY">Near Expiry (≤ 60d)</option>
-                        <option value="EXPIRED">Expired</option>
-                      </select>
-
-                    </div>
+                    {/* Expiry Filter */}
+                    <select
+                      value={tagExpiryFilter}
+                      onChange={(e) => setTagExpiryFilter(e.target.value)}
+                      className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
+                    >
+                      <option value="ALL">All Expiry Dates</option>
+                      <option value="GOOD">Good Shelf Life (&gt; 60d)</option>
+                      <option value="NEAR_EXPIRY">Near Expiry (≤ 60d)</option>
+                      <option value="EXPIRED">Expired</option>
+                    </select>
 
                   </div>
+
                 </div>
-
-                {/* Batch Cards Tagging Queue List */}
-                {loadingTagging ? (
-                  <div className="p-16 text-center text-xs font-semibold text-neutral-500 bg-white rounded-3xl border border-neutral-200 shadow-sm">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-3"></div>
-                    Loading batch and condition tagging queue...
-                  </div>
-                ) : groupedBatchesForTagging.length === 0 ? (
-                  <div className="p-16 text-center space-y-3 bg-white rounded-3xl border border-neutral-200 shadow-sm">
-                    <span className="material-symbols-outlined text-[42px] text-neutral-300">layers</span>
-                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                      No batches match the selected condition tagging filters.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {groupedBatchesForTagging.map((b) => {
-                      const isExpanded = isBatchExpanded(b.batchNumber);
-                      const isApproving = approvingBatch === b.batchNumber;
-                      const isBatchLive = b.status === 'LIVE';
-                      const hasPendingDual = b.medicines.some(m => m.status === 'PENDING_DUAL_REVIEW');
-
-                      return (
-                        <div
-                          key={b.batchNumber}
-                          className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden transition-all"
-                        >
-                          {/* Batch Header Bar */}
-                          <div className="p-4 sm:p-5 bg-neutral-50/80 border-b border-neutral-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              {/* Expand / Collapse Button */}
-                              <button
-                                type="button"
-                                onClick={() => toggleBatchExpand(b.batchNumber)}
-                                className="w-8 h-8 rounded-full bg-white hover:bg-neutral-200 border border-neutral-300 flex items-center justify-center text-neutral-700 transition-colors cursor-pointer shrink-0"
-                                title={isExpanded ? 'Collapse Batch' : 'Expand Batch'}
-                              >
-                                <span className="material-symbols-outlined text-[20px]">
-                                  {isExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
-                                </span>
-                              </button>
-
-                              <div>
-                                <div className="flex items-center gap-2.5 flex-wrap">
-                                  <span className="font-mono text-sm font-black text-neutral-900">
-                                    {b.batchDisplayName || b.batchNumber}
-                                  </span>
-
-                                  {/* Batch Status Badge */}
-                                  {isBatchLive ? (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                                      <span>LIVE APPROVED</span>
-                                    </span>
-                                  ) : hasPendingDual ? (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-900 border border-purple-300 animate-pulse">
-                                      <span className="material-symbols-outlined text-[12px]">lock</span>
-                                      <span>DUAL REVIEW REQ</span>
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300">
-                                      <span className="material-symbols-outlined text-[12px] text-amber-700">ac_unit</span>
-                                      <span>IN COLD-CHAIN REVIEW</span>
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Pharmacist View: Only Batch number, date batch came, and medicine count */}
-                                <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500 flex-wrap">
-                                  <span>
-                                    Medicines in Batch: <strong className="text-black font-bold">{b.medicines?.length || 0}</strong>
-                                  </span>
-                                  <span>•</span>
-                                  <span>
-                                    Date Batch Came: <strong className="text-neutral-700 font-medium">{formatDateDDMMYYYY(b.arrivedDate)}</strong>
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Batch Operational Action Buttons */}
-                            <div className="flex items-center gap-2.5 self-end lg:self-auto flex-wrap">
-                              {!isBatchLive && (
-                                <button
-                                  type="button"
-                                  disabled={isApproving}
-                                  onClick={() => handleApproveBatchLive(b.batchNumber, b.medicines)}
-                                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs cursor-pointer"
-                                  title="Approve all condition tags in this batch and set batch LIVE"
-                                >
-                                  <span className="material-symbols-outlined text-[16px]">
-                                    {isApproving ? 'hourglass_top' : 'verified'}
-                                  </span>
-                                  <span>
-                                    {isApproving ? 'Approving Batch...' : 'Approve Batch Live'}
-                                  </span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Batch Contained Medicines Table */}
-                          {isExpanded && (
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-left text-xs">
-                                <thead className="bg-neutral-100/70 text-neutral-600 font-extrabold uppercase tracking-wider border-b border-neutral-200">
-                                  <tr>
-                                    <th className="py-3 px-4">Medicine Item</th>
-                                    <th className="py-3 px-4">Shelf Section &amp; Envelope</th>
-                                    <th className="py-3 px-4">Shelf-Life &amp; Expiry</th>
-                                    <th className="py-3 px-4">Intensity &amp; Security</th>
-                                    <th className="py-3 px-4">Delivery Handling Tags</th>
-                                    <th className="py-3 px-4">Tagging Status</th>
-                                    <th className="py-3 px-4 text-right">Actions</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-neutral-100">
-                                  {(b.medicines || []).map((item) => {
-                                    const isDual = item.status === 'PENDING_DUAL_REVIEW';
-                                    const isApproved = item.status === 'APPROVED' || item.status === 'LIVE';
-
-                                    return (
-                                      <tr key={item.medicineId} className="hover:bg-neutral-50/80 transition-colors">
-                                        
-                                        {/* Medicine Item */}
-                                        <td className="py-3.5 px-4 align-top">
-                                          <div className="flex items-start gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200 flex items-center justify-center mt-0.5">
-                                              {item.imageUrl ? (
-                                                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                                              ) : (
-                                                <span className="material-symbols-outlined text-neutral-400 text-[18px]">medication</span>
-                                              )}
-                                            </div>
-                                            <div>
-                                              <div className="font-extrabold text-neutral-900 leading-tight">
-                                                {item.name}
-                                              </div>
-                                              <div className="text-[10px] text-neutral-500 truncate max-w-xs">
-                                                {item.genericName || 'Pharmaceutical compound'}
-                                              </div>
-                                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-700 border border-neutral-200">
-                                                  {item.sku}
-                                                </span>
-                                                <span className="font-mono text-[10px] text-neutral-500">
-                                                  Lot: <strong>{item.batchNumber}</strong>
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </td>
-
-                                        {/* Shelf Section & Temp Envelope */}
-                                        <td className="py-3.5 px-4 align-top">
-                                          <div className="space-y-1">
-                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                                              item.section === 'REFRIGERATED'
-                                                ? 'bg-cyan-100 text-cyan-900 border border-cyan-300'
-                                                : item.section === 'COOL_ROOM'
-                                                ? 'bg-teal-100 text-teal-900 border border-teal-300'
-                                                : item.section === 'FROZEN'
-                                                ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                                                : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                                            }`}>
-                                              <span className="material-symbols-outlined text-[13px]">
-                                                {item.section === 'AMBIENT' ? 'shelves' : 'ac_unit'}
-                                              </span>
-                                              <span>
-                                                {item.section === 'COOL_ROOM'
-                                                  ? 'Cold storage'
-                                                  : item.section === 'AMBIENT'
-                                                  ? 'Ambient Storage'
-                                                  : item.section === 'FROZEN'
-                                                  ? 'Frozen storage'
-                                                  : 'Refrigerated'}
-                                              </span>
-                                            </span>
-
-                                            <div className="text-[11px] font-mono text-neutral-700 font-bold">
-                                              {item.storageTempMin}°C to {item.storageTempMax}°C
-                                            </div>
-                                            <div className="text-[10px] text-neutral-400">
-                                              {item.shelfLocation}
-                                            </div>
-                                          </div>
-                                        </td>
-
-                                        {/* Shelf-Life & Expiry */}
-                                        <td className="py-3.5 px-4 align-top">
-                                          <div className="space-y-1">
-                                            <div className="text-xs font-bold text-neutral-800">
-                                              {item.shelfLifeDays} days shelf-life
-                                            </div>
-                                            <div className="text-[11px] text-neutral-600">
-                                              Exp: <strong>{formatDateDDMMYYYY(item.expiryDate)}</strong>
-                                            </div>
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[9px] border ${item.shelfLifeStatus.badgeClass}`}>
-                                              <span className={`w-1 h-1 rounded-full ${item.shelfLifeStatus.dotClass}`}></span>
-                                              <span>{item.shelfLifeStatus.label}</span>
-                                            </span>
-                                          </div>
-                                        </td>
-
-                                        {/* Intensity & Security */}
-                                        <td className="py-3.5 px-4 align-top">
-                                          <div className="space-y-1.5">
-                                            <div>
-                                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                                                item.intensity === 'CRITICAL'
-                                                  ? 'bg-rose-100 text-rose-900 border border-rose-300 animate-pulse'
-                                                  : item.intensity === 'HIGH'
-                                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                                                  : item.intensity === 'MEDIUM'
-                                                  ? 'bg-blue-100 text-blue-900 border border-blue-200'
-                                                  : 'bg-neutral-100 text-neutral-700'
-                                              }`}>
-                                                <span>Intensity: {item.intensity}</span>
-                                              </span>
-                                            </div>
-
-                                            <div className="text-[10px] font-mono font-semibold text-neutral-600">
-                                              Sec: <span className="text-black">{item.securityLevel.replace('_', ' ')}</span>
-                                            </div>
-                                          </div>
-                                        </td>
-
-                                        {/* Delivery Handling Tags */}
-                                        <td className="py-3.5 px-4 align-top max-w-xs">
-                                          <div className="flex flex-wrap gap-1">
-                                            {item.actionsObj.insulatedBox && (
-                                              <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
-                                                Insulated Box
-                                              </span>
-                                            )}
-                                            {item.actionsObj.icePack && (
-                                              <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
-                                                Ice Pack
-                                              </span>
-                                            )}
-                                            {item.actionsObj.keepUpright && (
-                                              <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 text-[9px] font-bold">
-                                                Upright
-                                              </span>
-                                            )}
-                                            {item.actionsObj.signatureRequired && (
-                                              <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-bold">
-                                                Signature Req.
-                                              </span>
-                                            )}
-                                            {item.actionsObj.idAgeCheck && (
-                                              <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-[9px] font-bold">
-                                                ID Check
-                                              </span>
-                                            )}
-                                            {item.actionsObj.noLeaveAtDoor && (
-                                              <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-800 border border-red-200 text-[9px] font-bold">
-                                                Hand-to-Hand
-                                              </span>
-                                            )}
-                                            {!item.deliveryActions && (
-                                              <span className="text-[10px] text-neutral-400 italic">Standard ambient dispatch</span>
-                                            )}
-                                          </div>
-                                        </td>
-
-                                        {/* Tagging Status */}
-                                        <td className="py-3.5 px-4 align-top whitespace-nowrap">
-                                          {isApproved ? (
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                                              <span>LIVE APPROVED</span>
-                                            </span>
-                                          ) : isDual ? (
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-100 text-purple-900 border border-purple-300 animate-pulse">
-                                              <span className="material-symbols-outlined text-[13px]">lock</span>
-                                              <span>DUAL REVIEW REQ</span>
-                                            </span>
-                                          ) : (
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-300">
-                                              <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                                              <span>PENDING REVIEW</span>
-                                            </span>
-                                          )}
-                                        </td>
-
-                                        {/* Actions */}
-                                        <td className="py-3.5 px-4 align-top text-right whitespace-nowrap">
-                                          <div className="flex items-center justify-end gap-1.5">
-                                            {/* Configure Tag */}
-                                            <button
-                                              type="button"
-                                              onClick={() => handleOpenTagEditor(item)}
-                                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
-                                              title="Edit condition tags & parameters"
-                                            >
-                                              <span className="material-symbols-outlined text-[14px]">tune</span>
-                                              <span>Configure</span>
-                                            </button>
-
-                                            {/* Approve / Dual Sign Action */}
-                                            {isDual ? (
-                                              <button
-                                                type="button"
-                                                onClick={() => handleDirectApprove(item)}
-                                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-purple-700 hover:bg-purple-800 text-white text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
-                                                title="Sign second-pharmacist dual review"
-                                              >
-                                                <span className="material-symbols-outlined text-[14px]">lock_open</span>
-                                                <span>Dual Sign</span>
-                                              </button>
-                                            ) : !isApproved ? (
-                                              <button
-                                                type="button"
-                                                onClick={() => handleDirectApprove(item)}
-                                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
-                                                title="Approve condition tag and mark item LIVE"
-                                              >
-                                                <span className="material-symbols-outlined text-[14px]">check</span>
-                                                <span>Approve</span>
-                                              </button>
-                                            ) : null}
-                                          </div>
-                                        </td>
-
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
               </div>
-            )}
 
-            {/* SUB-VIEW 2: SHELF ARRANGEMENT VIEW (4 Canonical Sections) */}
-            {taggingSubView === 'shelves' && (
-              <div className="space-y-6 mb-8">
-                
-                <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-base font-black uppercase tracking-tight text-neutral-900">
-                        Physical Pharmacy Shelf Zones (4 Canonical Sections)
-                      </h3>
-                      <p className="text-xs text-neutral-500">
-                        Move items between climate envelopes with real-time temperature synchronization and audit trail logging.
-                      </p>
-                    </div>
-                    <div className="text-xs font-mono font-bold text-neutral-600">
-                      Active Shelving Envelopes: <strong>4 of 4</strong>
-                    </div>
-                  </div>
+              {/* Batch Cards Tagging Queue List */}
+              {loadingTagging ? (
+                <div className="p-16 text-center text-xs font-semibold text-neutral-500 bg-white rounded-3xl border border-neutral-200 shadow-sm">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-3"></div>
+                  Loading batch and condition tagging queue...
                 </div>
-
-                {/* 4 Canonical Section Columns */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {CANONICAL_SECTIONS.map((sec) => {
-                    const itemsInSection = combinedTaggedItems.filter((i) => i.section === sec.key);
+              ) : groupedBatchesForTagging.length === 0 ? (
+                <div className="p-16 text-center space-y-3 bg-white rounded-3xl border border-neutral-200 shadow-sm">
+                  <span className="material-symbols-outlined text-[42px] text-neutral-300">layers</span>
+                  <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                    No items match the selected condition tagging filters.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {groupedBatchesForTagging.map((b) => {
+                    const isExpanded = isBatchExpanded(b.batchNumber);
+                    const isApproving = approvingBatch === b.batchNumber;
+                    const isBatchLive = b.status === 'LIVE';
 
                     return (
                       <div
-                        key={sec.key}
-                        className="bg-white rounded-3xl border border-neutral-200 shadow-sm flex flex-col overflow-hidden"
+                        key={b.batchNumber}
+                        className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden transition-all"
                       >
-                        {/* Section Card Header */}
-                        <div className="p-4 border-b border-neutral-200 bg-neutral-50">
-                          <div className="flex items-center justify-between">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-neutral-900 text-white">
-                              <span className="material-symbols-outlined text-[14px]">{sec.icon}</span>
-                              <span>{sec.displayName}</span>
-                            </span>
-                            <span className="font-mono text-[11px] font-bold text-neutral-700 bg-white px-2 py-0.5 rounded border border-neutral-200">
-                              {itemsInSection.length} items
-                            </span>
-                          </div>
+                        {/* Batch Header Bar */}
+                        <div className="p-4 sm:p-5 bg-neutral-50/80 border-b border-neutral-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            {/* Expand / Collapse Button */}
+                            <button
+                              type="button"
+                              onClick={() => toggleBatchExpand(b.batchNumber)}
+                              className="w-8 h-8 rounded-full bg-white hover:bg-neutral-200 border border-neutral-300 flex items-center justify-center text-neutral-700 transition-colors cursor-pointer shrink-0"
+                              title={isExpanded ? 'Collapse Batch' : 'Expand Batch'}
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                {isExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+                              </span>
+                            </button>
 
-                          <div className="text-xs font-mono font-extrabold text-neutral-900 mt-2">
-                            {sec.tempRange}
-                          </div>
-                          <p className="text-[10px] text-neutral-500 mt-1 leading-relaxed">
-                            {sec.description}
-                          </p>
-                          <div className="mt-2 text-[9px] font-mono text-neutral-400 border-t border-neutral-200/60 pt-1.5">
-                            <strong>Pack:</strong> {sec.packaging}
-                          </div>
-                        </div>
+                            <div>
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="font-mono text-sm font-black text-neutral-900">
+                                  {b.batchDisplayName || b.batchNumber}
+                                </span>
 
-                        {/* Items in Section */}
-                        <div className="flex-1 p-3 space-y-2.5 overflow-y-auto max-h-[600px] bg-neutral-50/30">
-                          {itemsInSection.length === 0 ? (
-                            <div className="p-8 text-center text-xs text-neutral-400 italic">
-                              No items currently shelved in this section.
-                            </div>
-                          ) : (
-                            itemsInSection.map((item) => (
-                              <div
-                                key={item.medicineId}
-                                className="bg-white rounded-2xl p-3 border border-neutral-200/90 shadow-2xs space-y-2 hover:shadow-xs transition-shadow"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <div className="font-bold text-neutral-900 text-xs leading-tight truncate" title={item.name}>
-                                      {item.name}
-                                    </div>
-                                    <div className="text-[10px] text-neutral-500 font-mono mt-0.5">
-                                      {item.sku} • Shelf: <strong>{item.shelfLocation}</strong>
-                                    </div>
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenTagEditor(item)}
-                                    className="w-6 h-6 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 transition-colors shrink-0 cursor-pointer"
-                                    title="Edit Tag"
-                                  >
-                                    <span className="material-symbols-outlined text-[13px]">tune</span>
-                                  </button>
-                                </div>
-
-                                <div className="flex items-center justify-between text-[10px] font-mono text-neutral-600 pt-1 border-t border-neutral-100">
-                                  <span>Exp: {formatDateDDMMYYYY(item.expiryDate)}</span>
-                                  <span className={`font-bold ${item.status === 'APPROVED' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                    {item.status}
+                                {/* Batch Status Badge */}
+                                {isBatchLive ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                    <span>LIVE APPROVED</span>
                                   </span>
-                                </div>
-
-                                {/* Relocate / Move to Another Section Dropdown */}
-                                <div className="pt-1">
-                                  <select
-                                    onChange={(e) => {
-                                      if (e.target.value && e.target.value !== sec.key) {
-                                        handleMoveSection(item.tagId, item.medicineId, e.target.value);
-                                      }
-                                    }}
-                                    defaultValue=""
-                                    className="w-full h-7 px-2 text-[10px] font-bold rounded-lg bg-neutral-50 border border-neutral-200 text-neutral-700 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                                  >
-                                    <option value="" disabled>Move to section...</option>
-                                    {CANONICAL_SECTIONS.filter(s => s.key !== sec.key).map(target => (
-                                      <option key={target.key} value={target.key}>
-                                        Move to {target.displayName}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300">
+                                    <span className="material-symbols-outlined text-[12px] text-amber-700">ac_unit</span>
+                                    <span>IN COLD-CHAIN REVIEW</span>
+                                  </span>
+                                )}
                               </div>
-                            ))
-                          )}
+
+                              <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500 flex-wrap">
+                                <span>
+                                  Medicines in Batch: <strong className="text-black font-bold">{b.medicines?.length || 0}</strong>
+                                </span>
+                                <span>•</span>
+                                <span>
+                                  Date Batch Came: <strong className="text-neutral-700 font-medium">{formatDateDDMMYYYY(b.arrivedDate)}</strong>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Batch Action Buttons */}
+                          <div className="flex items-center gap-2.5 self-end lg:self-auto flex-wrap">
+                            {!isBatchLive && (
+                              <button
+                                type="button"
+                                disabled={isApproving}
+                                onClick={() => handleApproveBatchLive(b.batchNumber, b.medicines)}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs cursor-pointer"
+                                title="Approve all condition tags in this batch and set batch LIVE"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">
+                                  {isApproving ? 'hourglass_top' : 'verified'}
+                                </span>
+                                <span>
+                                  {isApproving ? 'Approving Batch...' : 'Approve Batch Live'}
+                                </span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
+                        {/* Batch Contained Medicines Table */}
+                        {isExpanded && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-neutral-100/70 text-neutral-600 font-extrabold uppercase tracking-wider border-b border-neutral-200">
+                                <tr>
+                                  <th className="py-3 px-4">Medicine Item</th>
+                                  <th className="py-3 px-4">Storage Condition / Temp</th>
+                                  <th className="py-3 px-4">Shelf-Life &amp; Expiry</th>
+                                  <th className="py-3 px-4">Description</th>
+                                  <th className="py-3 px-4">Status</th>
+                                  <th className="py-3 px-4 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-neutral-100">
+                                {(b.medicines || []).map((item) => {
+                                  const isApproved = item.status === 'APPROVED' || item.status === 'LIVE';
+                                  const isRejected = item.status === 'REJECTED';
+
+                                  // Determine temp option
+                                  const tempOpt = item.section === 'AMBIENT'
+                                    ? TEMP_TAG_OPTIONS[0]
+                                    : (item.section === 'COOL_ROOM' ? TEMP_TAG_OPTIONS[1] : TEMP_TAG_OPTIONS[2]);
+
+                                  return (
+                                    <tr key={item.medicineId} className="hover:bg-neutral-50/80 transition-colors">
+                                      
+                                      {/* Medicine Item */}
+                                      <td className="py-3.5 px-4 align-top">
+                                        <div className="flex items-start gap-3">
+                                          <div className="w-10 h-10 rounded-xl bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200 flex items-center justify-center mt-0.5">
+                                            {item.imageUrl ? (
+                                              <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                              <span className="material-symbols-outlined text-neutral-400 text-[18px]">medication</span>
+                                            )}
+                                          </div>
+                                          <div>
+                                            <div className="font-extrabold text-neutral-900 leading-tight">
+                                              {item.name}
+                                            </div>
+                                            <div className="text-[10px] text-neutral-500 truncate max-w-xs">
+                                              {item.genericName || 'Pharmaceutical compound'}
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                              <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-700 border border-neutral-200">
+                                                {item.sku}
+                                              </span>
+                                              <span className="font-mono text-[10px] text-neutral-500">
+                                                Lot: <strong>{item.batchNumber}</strong>
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </td>
+
+                                      {/* Storage Condition / Temp Tag */}
+                                      <td className="py-3.5 px-4 align-top">
+                                        <div className="space-y-1">
+                                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${tempOpt.badgeClass}`}>
+                                            <span className="material-symbols-outlined text-[13px]">
+                                              {tempOpt.icon}
+                                            </span>
+                                            <span>{tempOpt.label} ({tempOpt.range})</span>
+                                          </span>
+
+                                          <div className="text-[10px] text-neutral-500 font-medium">
+                                            {item.storageRequirement || tempOpt.storageReq}
+                                          </div>
+                                        </div>
+                                      </td>
+
+                                      {/* Shelf-Life & Expiry */}
+                                      <td className="py-3.5 px-4 align-top">
+                                        <div className="space-y-1">
+                                          <div className="text-[11px] text-neutral-600">
+                                            Exp: <strong>{formatDateDDMMYYYY(item.expiryDate)}</strong>
+                                          </div>
+                                          <span className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[9px] border ${item.shelfLifeStatus.badgeClass}`}>
+                                            <span className={`w-1 h-1 rounded-full ${item.shelfLifeStatus.dotClass}`}></span>
+                                            <span>{item.shelfLifeStatus.label}</span>
+                                          </span>
+                                        </div>
+                                      </td>
+
+                                      {/* Description */}
+                                      <td className="py-3.5 px-4 align-top max-w-xs">
+                                        <div className="text-[11px] text-neutral-700 line-clamp-2 leading-relaxed" title={item.medicine?.description || 'No description added'}>
+                                          {item.medicine?.description || <span className="text-neutral-400 italic">No description</span>}
+                                        </div>
+                                      </td>
+
+                                      {/* Tagging Status */}
+                                      <td className="py-3.5 px-4 align-top whitespace-nowrap">
+                                        {isApproved ? (
+                                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                            <span>LIVE APPROVED</span>
+                                          </span>
+                                        ) : isRejected ? (
+                                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-rose-100 text-rose-900 border border-rose-300">
+                                            <span className="material-symbols-outlined text-[13px]">close</span>
+                                            <span>REJECTED</span>
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                                            <span>PENDING APPROVAL</span>
+                                          </span>
+                                        )}
+                                      </td>
+
+                                      {/* 3 Action Buttons: Approve, Reject, Configure */}
+                                      <td className="py-3.5 px-4 align-top text-right whitespace-nowrap">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          {/* 1. Approve Button */}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDirectApprove(item)}
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
+                                            title="Approve cold chain condition"
+                                          >
+                                            <span className="material-symbols-outlined text-[14px]">check</span>
+                                            <span>Approve</span>
+                                          </button>
+
+                                          {/* 2. Reject Button */}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDirectReject(item)}
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
+                                            title="Reject cold chain condition"
+                                          >
+                                            <span className="material-symbols-outlined text-[14px]">close</span>
+                                            <span>Reject</span>
+                                          </button>
+
+                                          {/* 3. Configure Button */}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenConfigureModal(item)}
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-black text-white text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-2xs"
+                                            title="Configure temperature tag & description"
+                                          >
+                                            <span className="material-symbols-outlined text-[14px]">tune</span>
+                                            <span>Configure</span>
+                                          </button>
+                                        </div>
+                                      </td>
+
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
+              )}
 
-              </div>
-            )}
+            </div>
 
           </div>
         )}
@@ -2440,20 +2090,21 @@ const PharmacistPrescriptionDashboard = () => {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 2: ITEM CONDITION & COLD CHAIN TAG EDITOR MODAL      */}
+      {/* MODAL 2: ITEM COLD CHAIN & TEMPERATURE CONFIGURE MODAL    */}
       {/* ========================================================= */}
       {showTagModal && editingMedicine && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 my-auto max-h-[92vh] flex flex-col">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-6 my-auto max-h-[92vh] flex flex-col">
             
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tight text-neutral-900">
-                  Condition &amp; Cold-Chain Tag Editor
+                <h3 className="text-lg font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 text-[22px]">device_thermostat</span>
+                  <span>Cold Chain Tag Configuration</span>
                 </h3>
                 <p className="text-xs text-neutral-500 mt-0.5">
-                  Target: <strong className="text-black">{editingMedicine.name}</strong> (SKU: {editingMedicine.sku})
+                  Product: <strong className="text-neutral-900">{editingMedicine.name}</strong> • SKU: <strong className="text-neutral-900 font-mono">{editingMedicine.sku}</strong>
                 </p>
               </div>
               <button
@@ -2465,220 +2116,101 @@ const PharmacistPrescriptionDashboard = () => {
               </button>
             </div>
 
-            {/* Form Body */}
-            <form onSubmit={(e) => handleSaveTag(e, false)} className="space-y-5 overflow-y-auto pr-1">
-              
-              {/* 1. Shelf Section Selection (4 Canonical Sections) */}
+            {/* Modal Body */}
+            <div className="space-y-5 overflow-y-auto pr-1">
+              {/* 1. 3 Temperature Tag Buttons: Warm, Cool, Cold */}
               <div>
-                <label className="block text-xs font-extrabold uppercase tracking-wider text-neutral-800 mb-2">
-                  1. Shelf Section (4 Canonical Envelopes)
+                <label className="block text-xs font-black uppercase tracking-wider text-neutral-800 mb-2.5">
+                  Temperature Tag
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {CANONICAL_SECTIONS.map((sec) => (
-                    <button
-                      key={sec.key}
-                      type="button"
-                      onClick={() => handleSectionChange(sec.key)}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
-                        tagForm.section === sec.key
-                          ? 'bg-zinc-900 text-white border-zinc-900 ring-2 ring-zinc-700 shadow-xs'
-                          : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border-neutral-200'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px] mt-0.5">{sec.icon}</span>
-                      <div>
-                        <div className="text-xs font-bold">{sec.displayName}</div>
-                        <div className={`text-[10px] font-mono ${tagForm.section === sec.key ? 'text-neutral-300' : 'text-neutral-500'}`}>
-                          {sec.tempRange}
+                <div className="grid grid-cols-3 gap-2.5">
+                  {TEMP_TAG_OPTIONS.map((opt) => {
+                    const isSelected = selectedTempTag === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => setSelectedTempTag(opt.key)}
+                        className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
+                          isSelected
+                            ? opt.activeBg + ' shadow-md scale-[1.02]'
+                            : opt.inactiveBg
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[24px]">{opt.icon}</span>
+                        <div className="text-sm font-black uppercase tracking-wide">{opt.label}</div>
+                        <div className={`text-[10px] font-mono font-bold ${isSelected ? 'text-white/90' : 'text-neutral-500'}`}>
+                          {opt.range}
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* 2. Temperature Range & Shelf-Life (Days) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-neutral-50 p-4 rounded-2xl border border-neutral-200">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-600 mb-1">
-                    Min Temp (°C)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={tagForm.storageTempMin}
-                    onChange={(e) => setTagForm({ ...tagForm, storageTempMin: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-300 text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-600 mb-1">
-                    Max Temp (°C)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={tagForm.storageTempMax}
-                    onChange={(e) => setTagForm({ ...tagForm, storageTempMax: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-300 text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-600 mb-1">
-                    Shelf Life (Days)
-                  </label>
-                  <input
-                    type="number"
-                    value={tagForm.shelfLifeDays}
-                    onChange={(e) => setTagForm({ ...tagForm, shelfLifeDays: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-300 text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-              </div>
-
-              {/* 3. Intensity & Security Level */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-neutral-800 mb-1.5">
-                    3. Medicine Intensity (Risk Class)
-                  </label>
-                  <select
-                    value={tagForm.intensity}
-                    onChange={(e) => setTagForm({ ...tagForm, intensity: e.target.value })}
-                    className="w-full h-10 px-3 rounded-2xl bg-neutral-50 border border-neutral-300 text-xs font-bold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                  >
-                    <option value="LOW">LOW — Standard OTC formulation</option>
-                    <option value="MEDIUM">MEDIUM — Moderate risk prescription</option>
-                    <option value="HIGH">HIGH — High potency prescription / biologic</option>
-                    <option value="CRITICAL">CRITICAL — Cytotoxic / life-critical (Dual-Review)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-neutral-800 mb-1.5">
-                    4. Security Level
-                  </label>
-                  <select
-                    value={tagForm.securityLevel}
-                    onChange={(e) => setTagForm({ ...tagForm, securityLevel: e.target.value })}
-                    className="w-full h-10 px-3 rounded-2xl bg-neutral-50 border border-neutral-300 text-xs font-bold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                  >
-                    <option value="STANDARD">STANDARD — Open dispensary shelf</option>
-                    <option value="TAMPER_EVIDENT">TAMPER_EVIDENT — Serialized seal packaging</option>
-                    <option value="LOCKED">LOCKED — Double locked cabinet / fridge</option>
-                    <option value="CONTROLLED_SUBSTANCE">CONTROLLED_SUBSTANCE — Biometric Vault (Dual-Review)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* 5. Delivery Handling Actions (Checkboxes + Free Text) */}
+              {/* 2. Description Box (Textarea) */}
               <div>
-                <label className="block text-xs font-extrabold uppercase tracking-wider text-neutral-800 mb-2">
-                  5. Delivery Handling Actions &amp; Courier Directives
+                <label className="block text-xs font-black uppercase tracking-wider text-neutral-800 mb-1.5">
+                  Description &amp; Storage Notes
                 </label>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-50 p-4 rounded-2xl border border-neutral-200">
-                  {[
-                    { key: 'insulatedBox', label: 'Insulated Box' },
-                    { key: 'icePack', label: 'Ice Pack / Gel' },
-                    { key: 'keepUpright', label: 'Keep Upright' },
-                    { key: 'avoidSunlight', label: 'Avoid Sunlight' },
-                    { key: 'signatureRequired', label: 'Signature Req.' },
-                    { key: 'idAgeCheck', label: 'ID / Age Check' },
-                    { key: 'noLeaveAtDoor', label: 'Hand-to-Hand' },
-                  ].map((act) => (
-                    <label key={act.key} className="flex items-center gap-2 text-xs font-semibold text-neutral-800 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(tagForm.deliveryActions[act.key])}
-                        onChange={(e) =>
-                          setTagForm({
-                            ...tagForm,
-                            deliveryActions: {
-                              ...tagForm.deliveryActions,
-                              [act.key]: e.target.checked,
-                            },
-                          })
-                        }
-                        className="w-4 h-4 rounded accent-cyan-600"
-                      />
-                      <span>{act.label}</span>
-                    </label>
-                  ))}
-
-                  <div className="col-span-2 sm:col-span-1 flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-neutral-500">Max Transit:</span>
-                    <input
-                      type="number"
-                      value={tagForm.deliveryActions.maxTransitHours}
-                      onChange={(e) =>
-                        setTagForm({
-                          ...tagForm,
-                          deliveryActions: {
-                            ...tagForm.deliveryActions,
-                            maxTransitHours: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-12 h-7 px-1.5 text-center text-xs font-mono font-bold bg-white border border-neutral-300 rounded-md"
-                    />
-                    <span className="text-[10px] text-neutral-500">hrs</span>
-                  </div>
-                </div>
-
-                <div className="mt-2.5">
-                  <input
-                    type="text"
-                    value={tagForm.deliveryActions.customNotes}
-                    onChange={(e) =>
-                      setTagForm({
-                        ...tagForm,
-                        deliveryActions: {
-                          ...tagForm.deliveryActions,
-                          customNotes: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="Custom courier instructions (e.g. Do not expose to heat above 25°C)..."
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 text-xs border border-neutral-300 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
+                <p className="text-[11px] text-neutral-500 mb-2">
+                  Add custom formulation notes, storage instructions, or precautions. This updates in Catalog Management and the database.
+                </p>
+                <textarea
+                  rows={4}
+                  value={configureDescription}
+                  onChange={(e) => setConfigureDescription(e.target.value)}
+                  placeholder="Type product description, storage guidance, handling precautions..."
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-neutral-50 text-xs font-medium text-neutral-900 border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-black transition-all resize-none shadow-inner"
+                />
               </div>
+            </div>
 
-              {/* Modal Buttons */}
-              <div className="pt-3 border-t border-neutral-200 flex items-center justify-between">
+            {/* Modal Footer Buttons */}
+            <div className="pt-4 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowTagModal(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-full border border-neutral-300 text-xs font-bold uppercase tracking-wider text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <div className="w-full sm:w-auto flex items-center justify-end gap-2 flex-wrap">
+                {/* Reject Button */}
                 <button
                   type="button"
-                  onClick={() => setShowTagModal(false)}
-                  className="px-4 py-2 rounded-full border border-neutral-300 text-xs font-bold uppercase tracking-wider text-neutral-700 hover:bg-neutral-50 cursor-pointer"
+                  disabled={savingTag}
+                  onClick={() => handleModalAction('REJECT')}
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Cancel
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <span>Reject</span>
                 </button>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    disabled={savingTag}
-                    className="px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    Save Tag Draft
-                  </button>
+                {/* Save Changes Button */}
+                <button
+                  type="button"
+                  disabled={savingTag}
+                  onClick={() => handleModalAction('SAVE')}
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-zinc-800 hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>Save</span>
+                </button>
 
-                  <button
-                    type="button"
-                    disabled={savingTag}
-                    onClick={(e) => handleSaveTag(e, true)}
-                    className="px-5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">verified</span>
-                    <span>Save &amp; Approve LIVE</span>
-                  </button>
-                </div>
+                {/* Approve Button */}
+                <button
+                  type="button"
+                  disabled={savingTag}
+                  onClick={() => handleModalAction('APPROVE')}
+                  className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                  <span>{savingTag ? 'Updating...' : 'Approve'}</span>
+                </button>
               </div>
-
-            </form>
+            </div>
 
           </div>
         </div>

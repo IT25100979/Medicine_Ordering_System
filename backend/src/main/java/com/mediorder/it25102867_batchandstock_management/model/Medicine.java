@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "medicines")
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties(value = {"hibernateLazyInitializer", "handler"}, ignoreUnknown = true)
 public class Medicine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,10 +24,10 @@ public class Medicine {
     private String sku;
 
     @Column(name = "requires_prescription", nullable = false)
-    private Boolean requiresPrescription = false;
+    private Boolean requiresPrescription;
 
     @Column(name = "is_temperature_sensitive", nullable = false)
-    private Boolean isTemperatureSensitive = false;
+    private Boolean isTemperatureSensitive;
 
     @Column(name = "min_temp", precision = 4, scale = 2)
     private BigDecimal minTemp;
@@ -91,6 +92,9 @@ public class Medicine {
 
     @Column(name = "tags", length = 255)
     private String tags;
+
+    @Column(name = "cold_chain_status", length = 50)
+    private String coldChainStatus;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -185,6 +189,9 @@ public class Medicine {
             if (Boolean.TRUE.equals(this.isTemperatureSensitive)) tagList.add("Cold Chain");
             this.tags = String.join(", ", tagList);
         }
+        if (this.coldChainStatus == null || this.coldChainStatus.trim().isEmpty()) {
+            this.coldChainStatus = Boolean.TRUE.equals(this.isTemperatureSensitive) ? "APPROVED" : "NOT_REQUIRED";
+        }
     }
 
     public Long getId() { return id; }
@@ -270,6 +277,14 @@ public class Medicine {
 
     public String getTags() { return tags; }
     public void setTags(String tags) { this.tags = tags; }
+
+    public String getColdChainStatus() {
+        if (coldChainStatus != null && !coldChainStatus.trim().isEmpty()) {
+            return coldChainStatus;
+        }
+        return Boolean.TRUE.equals(isTemperatureSensitive) ? "APPROVED" : "NOT_REQUIRED";
+    }
+    public void setColdChainStatus(String coldChainStatus) { this.coldChainStatus = coldChainStatus; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -217,7 +217,7 @@ const DeliveryPage = () => {
       await deliveryApi.assign(payload);
       setDeliveryFeedback({
         type: 'success',
-        message: `Assigned ${selectedDeliveryIds.length} delivery(ies) to ${batchCourier || "each customer's chosen partner"} on route ${batchRoute}. Customers received their handover OTP.`
+        message: `Assigned ${selectedDeliveryIds.length} delivery(ies) to ${batchCourier || "each customer's chosen partner"} on route ${batchRoute}. Customers received their 4-digit handover OTP (1234).`
       });
       setSelectedDeliveryIds([]);
       setBatchIdInput('');
@@ -318,7 +318,7 @@ const DeliveryPage = () => {
     }
   };
 
-  // Approval workflow: PENDING -> APPROVED (then assign courier) or PENDING -> REJECTED
+  // Approval workflow: PENDING -> DISPATCHED (sent to courier for transit with OTP 1234)
   const handleApprove = async (delivery) => {
     setBusyId(delivery.id);
     setDeliveryFeedback({ type: '', message: '' });
@@ -326,12 +326,13 @@ const DeliveryPage = () => {
       await deliveryApi.approve(delivery.id);
       setDeliveryFeedback({
         type: 'success',
-        message: `Delivery #DEL-${delivery.id} approved. Select it and use "Assign & Dispatch" to hand it to ${delivery.preferredCourier || 'a courier'}.`
+        message: `Delivery #DEL-${delivery.id} sent to ${delivery.preferredCourier || 'DHL'} for transit. Customer OTP (1234) issued.`
       });
-      setStatusFilter('APPROVED');
+      setStatusFilter('DISPATCHED');
       fetchDeliveries();
+      fetchCourierDeliveries();
     } catch (error) {
-      setDeliveryFeedback({ type: 'error', message: errorMessage(error, 'Could not approve delivery.') });
+      setDeliveryFeedback({ type: 'error', message: errorMessage(error, 'Could not send delivery to courier.') });
     } finally {
       setBusyId(null);
     }
@@ -991,10 +992,10 @@ const DeliveryPage = () => {
                                       type="button"
                                       disabled={busyId === id}
                                       onClick={() => handleApprove(delivery)}
-                                      title="Approve delivery request"
-                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold disabled:opacity-50"
+                                      title="Send parcel to courier for transit"
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold disabled:opacity-50 cursor-pointer shadow-xs"
                                     >
-                                      <Check className="w-3.5 h-3.5" /> Approve
+                                      <Truck className="w-3.5 h-3.5" /> Send to Courier
                                     </button>
                                     <button
                                       type="button"

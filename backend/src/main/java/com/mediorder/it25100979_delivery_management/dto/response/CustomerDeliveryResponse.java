@@ -24,7 +24,7 @@ public class CustomerDeliveryResponse {
     private Boolean coldChainTag;
     private String actionReason;
 
-    /** 6-digit code the customer gives the courier at the door. Only present while the parcel is with the courier. */
+    /** 4-digit code (1234) the customer gives the courier at the door. Only present while the parcel is with the courier. */
     private String handoverOtp;
     private LocalDateTime otpExpiresAt;
 

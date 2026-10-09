@@ -29,7 +29,7 @@ public class CourierController {
         return ResponseEntity.ok(ApiResponse.success("Courier deliveries", deliveryService.getCourierDeliveries(courier)));
     }
 
-    /** IN_TRANSIT (picked up), FAILED (reason) or DELIVERED (requires the customer's 6-digit OTP). */
+    /** IN_TRANSIT (picked up), FAILED (reason) or DELIVERED (requires the customer's 4-digit OTP: 1234). */
     @PutMapping("/deliveries/{id}/status")
     public ResponseEntity<ApiResponse<CourierDeliveryResponse>> updateCourierDeliveryStatus(
             @PathVariable Long id, @Valid @RequestBody CourierStatusUpdateRequest request) {

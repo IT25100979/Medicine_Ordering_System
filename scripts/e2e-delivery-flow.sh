@@ -67,7 +67,7 @@ echo "== 4. Courier delivers with the customer's OTP"
 OTP=$(curl -s "$B/api/v1/customer/deliveries/$ID" -H "Authorization: Bearer $CUST" | json "['data']['handoverOtp']")
 echo "  customer sees OTP on tracking page: $OTP"
 check "courier marks IN_TRANSIT" 200 "$(code -X PUT "$B/api/v1/courier/deliveries/$ID/status" -H "Authorization: Bearer $COORD" -H 'Content-Type: application/json' -d '{"status":"IN_TRANSIT"}')"
-WRONG=$([[ "$OTP" == "000000" ]] && echo 111111 || echo 000000)
+WRONG=$([[ "$OTP" == "0000" ]] && echo 9999 || echo 0000)
 # Build JSON bodies first: a comma inside "$( ... -d "{...}")" is subject to brace expansion.
 WRONG_BODY='{"status":"DELIVERED","otp":"'"$WRONG"'"}'
 RIGHT_BODY='{"status":"DELIVERED","otp":"'"$OTP"'"}'

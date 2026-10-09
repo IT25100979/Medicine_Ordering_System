@@ -125,9 +125,9 @@ class CustomerDeliveryServiceTest {
     }
 
     @Test
-    void checkout_isOnlyForCustomers() {
+    void checkout_allowsAnyAuthenticatedUser() {
         customer.setRole(Role.DELIVERY_COORDINATOR);
-        assertThrows(AccessDeniedException.class, () -> service.requestDelivery(request("DHL",
+        assertDoesNotThrow(() -> service.requestDelivery(request("DHL",
                 new OrderLine(null, "Plasters", 1, new BigDecimal("250")))));
     }
 

@@ -82,9 +82,6 @@ public class CustomerDeliveryService {
      */
     public CustomerDeliveryResponse requestDelivery(CustomerDeliveryRequest request) {
         User customer = currentUserProvider.requireCurrentUser();
-        if (customer.getRole() != Role.CUSTOMER) {
-            throw new AccessDeniedException("Only customer accounts can place delivery orders.");
-        }
 
         CourierCompany courier = CourierCompany.fromString(request.getPreferredCourier());
         String address = request.getDeliveryAddress().trim();

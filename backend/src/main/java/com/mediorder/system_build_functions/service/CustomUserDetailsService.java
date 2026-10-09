@@ -49,7 +49,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         // A null status is treated as ACTIVE for rows created before the status column existed.
         UserStatus status = user.getStatus() != null ? user.getStatus() : UserStatus.ACTIVE;
         boolean enabled = status != UserStatus.PENDING_APPROVAL;
-        boolean accountNonLocked = status != UserStatus.SUSPENDED;
+        boolean accountNonLocked = status != UserStatus.SUSPENDED && status != UserStatus.BANNED;
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),

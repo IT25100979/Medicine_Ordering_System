@@ -57,7 +57,7 @@ public class ColdChainController {
     }
 
     @PostMapping("/tags/medicine/{medicineId}")
-    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'CHIEF_PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'CHIEF_PHARMACIST', 'PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<ApiResponse<ColdChainTag>> tagMedicine(
             @PathVariable Long medicineId,
             @RequestBody ColdChainTag tagRequest,
@@ -65,29 +65,61 @@ public class ColdChainController {
         String email = authentication != null ? authentication.getName() : "system@mediorder.com";
         String role = authentication != null && !authentication.getAuthorities().isEmpty()
                 ? authentication.getAuthorities().iterator().next().getAuthority()
-                : "OPERATIONS_MANAGER";
+                : "PHARMACIST";
 
         ColdChainTag saved = coldChainService.tagMedicine(medicineId, tagRequest, email, role);
         return ResponseEntity.ok(ApiResponse.success("Medicine cold chain tag configured", saved));
     }
 
+    @PostMapping("/tags/medicine/{medicineId}/request-approval")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'CHIEF_PHARMACIST', 'PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
+    public ResponseEntity<ApiResponse<ColdChainTag>> requestColdChainApproval(
+            @PathVariable Long medicineId,
+            @RequestBody(required = false) ColdChainTag tagRequest,
+            Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : "operations@mediorder.com";
+        String role = authentication != null && !authentication.getAuthorities().isEmpty()
+                ? authentication.getAuthorities().iterator().next().getAuthority()
+                : "OPERATIONS_MANAGER";
+
+        ColdChainTag saved = coldChainService.requestApproval(medicineId, tagRequest, email, role);
+        return ResponseEntity.ok(ApiResponse.success("Cold chain approval request submitted for medicine #" + medicineId, saved));
+    }
+
     @PostMapping("/tags/{tagId}/review")
-    @PreAuthorize("hasAnyRole('CHIEF_PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('CHIEF_PHARMACIST', 'PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<ApiResponse<ColdChainTag>> reviewTag(
             @PathVariable Long tagId,
             @RequestParam String action,
+            @RequestParam(required = false) String description,
             Authentication authentication) {
         String email = authentication != null ? authentication.getName() : "pharmacist@mediorder.com";
         String role = authentication != null && !authentication.getAuthorities().isEmpty()
                 ? authentication.getAuthorities().iterator().next().getAuthority()
-                : "CHIEF_PHARMACIST";
+                : "PHARMACIST";
 
-        ColdChainTag reviewed = coldChainService.reviewTag(tagId, action, email, role);
+        ColdChainTag reviewed = coldChainService.reviewTag(tagId, action, description, email, role);
+        return ResponseEntity.ok(ApiResponse.success("Cold chain tag reviewed successfully", reviewed));
+    }
+
+    @PostMapping("/tags/medicine/{medicineId}/review")
+    @PreAuthorize("hasAnyRole('CHIEF_PHARMACIST', 'PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
+    public ResponseEntity<ApiResponse<ColdChainTag>> reviewTagByMedicine(
+            @PathVariable Long medicineId,
+            @RequestParam String action,
+            @RequestParam(required = false) String description,
+            Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : "pharmacist@mediorder.com";
+        String role = authentication != null && !authentication.getAuthorities().isEmpty()
+                ? authentication.getAuthorities().iterator().next().getAuthority()
+                : "PHARMACIST";
+
+        ColdChainTag reviewed = coldChainService.reviewTagByMedicine(medicineId, action, description, email, role);
         return ResponseEntity.ok(ApiResponse.success("Cold chain tag reviewed successfully", reviewed));
     }
 
     @PostMapping("/tags/{tagId}/move-section")
-    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'CHIEF_PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'CHIEF_PHARMACIST', 'PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<ApiResponse<ColdChainTag>> moveSection(
             @PathVariable Long tagId,
             @RequestParam com.mediorder.it25101882_cold_chain_tagging.model.ColdChainSection section,
@@ -95,14 +127,14 @@ public class ColdChainController {
         String email = authentication != null ? authentication.getName() : "pharmacist@mediorder.com";
         String role = authentication != null && !authentication.getAuthorities().isEmpty()
                 ? authentication.getAuthorities().iterator().next().getAuthority()
-                : "CHIEF_PHARMACIST";
+                : "PHARMACIST";
 
         ColdChainTag moved = coldChainService.moveShelfSection(tagId, section, email, role);
         return ResponseEntity.ok(ApiResponse.success("Shelf section updated with audit logging", moved));
     }
 
     @PostMapping("/tags/{tagId}/dual-confirm")
-    @PreAuthorize("hasAnyRole('CHIEF_PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('CHIEF_PHARMACIST', 'PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<ApiResponse<ColdChainTag>> dualConfirmTag(
             @PathVariable Long tagId,
             @RequestBody(required = false) Map<String, String> body,

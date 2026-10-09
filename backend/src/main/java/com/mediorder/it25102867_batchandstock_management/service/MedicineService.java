@@ -30,6 +30,9 @@ public class MedicineService {
     @Autowired
     private InventoryBatchRepository inventoryBatchRepository;
 
+    @Autowired(required = false)
+    private com.mediorder.it25101882_cold_chain_tagging.repository.ColdChainTagRepository coldChainTagRepository;
+
     @PostConstruct
     public void seedInitialCatalogIfEmpty() {
         // Handled by GlobalDataInitializer strictly from manualCodeEdits.md
@@ -108,10 +111,12 @@ public class MedicineService {
 
     public Medicine createMedicine(Medicine medicine) {
         if (medicine.getSku() == null || medicine.getSku().trim().isEmpty()) {
-            medicine.setSku("SKU-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+            medicine.setSku("PRD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        } else {
+            medicine.setSku(medicine.getSku().trim());
         }
         if (medicineRepository.existsBySku(medicine.getSku().trim())) {
-            throw new IllegalArgumentException("A medicine with SKU " + medicine.getSku() + " already exists.");
+            throw new IllegalArgumentException("A medicine with SKU / Product ID " + medicine.getSku() + " already exists.");
         }
         if (medicine.getUnitPrice() == null) {
             medicine.setUnitPrice(medicine.getPrice() != null ? medicine.getPrice() : BigDecimal.ZERO);
@@ -119,8 +124,33 @@ public class MedicineService {
         if (medicine.getCategory() == null || medicine.getCategory().trim().isEmpty()) {
             medicine.setCategory("Daily Health & Wellness");
         }
+        if (medicine.getColdChainStatus() == null || medicine.getColdChainStatus().trim().isEmpty()) {
+            medicine.setColdChainStatus(Boolean.TRUE.equals(medicine.getIsTemperatureSensitive()) ? "PENDING_REVIEW" : "NOT_REQUIRED");
+        }
         medicine.setCreatedAt(LocalDateTime.now());
-        return medicineRepository.save(medicine);
+        Medicine saved = medicineRepository.save(medicine);
+
+        // Sync Cold Chain Tag if temperature sensitive or requested
+        if (Boolean.TRUE.equals(saved.getIsTemperatureSensitive()) || "PENDING_REVIEW".equalsIgnoreCase(saved.getColdChainStatus())) {
+            if (coldChainTagRepository != null) {
+                try {
+                    com.mediorder.it25101882_cold_chain_tagging.model.ColdChainTag tag = new com.mediorder.it25101882_cold_chain_tagging.model.ColdChainTag();
+                    tag.setMedicine(saved);
+                    tag.setSection(com.mediorder.it25101882_cold_chain_tagging.model.ColdChainSection.REFRIGERATED);
+                    tag.setStorageTempMin(saved.getMinTemp() != null ? saved.getMinTemp() : new BigDecimal("2.00"));
+                    tag.setStorageTempMax(saved.getMaxTemp() != null ? saved.getMaxTemp() : new BigDecimal("8.00"));
+                    tag.setShelfLifeDays(730);
+                    tag.setIntensity(com.mediorder.it25101882_cold_chain_tagging.model.MedicineIntensity.HIGH);
+                    tag.setSecurityLevel(com.mediorder.it25101882_cold_chain_tagging.model.SecurityLevel.LOCKED);
+                    tag.setStatus(saved.getColdChainStatus() != null ? saved.getColdChainStatus() : "PENDING_REVIEW");
+                    coldChainTagRepository.save(tag);
+                } catch (Exception e) {
+                    // Ignore or log
+                }
+            }
+        }
+
+        return saved;
     }
 
     public Medicine updateMedicine(Long id, Medicine details) {
@@ -128,6 +158,13 @@ public class MedicineService {
 
         if (details.getName() != null) existing.setName(details.getName().trim());
         if (details.getGenericName() != null) existing.setGenericName(details.getGenericName().trim());
+        if (details.getSku() != null && !details.getSku().trim().isEmpty() && !details.getSku().trim().equalsIgnoreCase(existing.getSku())) {
+            String newSku = details.getSku().trim();
+            if (medicineRepository.existsBySku(newSku)) {
+                throw new IllegalArgumentException("A medicine with SKU / Product ID " + newSku + " already exists.");
+            }
+            existing.setSku(newSku);
+        }
         if (details.getUnitPrice() != null) existing.setUnitPrice(details.getUnitPrice());
         else if (details.getPrice() != null) existing.setUnitPrice(details.getPrice());
         if (details.getCategory() != null) existing.setCategory(details.getCategory().trim());
@@ -140,6 +177,10 @@ public class MedicineService {
         if (details.getIsTemperatureSensitive() != null) existing.setIsTemperatureSensitive(details.getIsTemperatureSensitive());
         if (details.getMinTemp() != null) existing.setMinTemp(details.getMinTemp());
         if (details.getMaxTemp() != null) existing.setMaxTemp(details.getMaxTemp());
+        if (details.getColdChainStatus() != null && !details.getColdChainStatus().trim().isEmpty()) {
+            existing.setColdChainStatus(details.getColdChainStatus().trim());
+        }
+        if (details.getStorageRequirement() != null) existing.setStorageRequirement(details.getStorageRequirement());
         if (details.getRating() != null) existing.setRating(details.getRating());
         if (details.getReviewsCount() != null) existing.setReviewsCount(details.getReviewsCount());
 
@@ -151,12 +192,30 @@ public class MedicineService {
         if (details.getAllocatedStock() != null) existing.setAllocatedStock(details.getAllocatedStock());
         if (details.getReorderLevel() != null) existing.setReorderLevel(details.getReorderLevel());
         if (details.getIsQuarantined() != null) existing.setIsQuarantined(details.getIsQuarantined());
+        if (details.getTags() != null) existing.setTags(details.getTags());
 
         return medicineRepository.save(existing);
     }
 
     public void deleteMedicine(Long id) {
         Medicine existing = getMedicineById(id);
+        if (coldChainTagRepository != null) {
+            try {
+                coldChainTagRepository.findByMedicineId(id).ifPresent(tag -> coldChainTagRepository.delete(tag));
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+        if (inventoryBatchRepository != null) {
+            try {
+                List<com.mediorder.it25102867_batchandstock_management.model.InventoryBatch> batches = inventoryBatchRepository.findByMedicineId(id);
+                if (batches != null && !batches.isEmpty()) {
+                    inventoryBatchRepository.deleteAll(batches);
+                }
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
         medicineRepository.delete(existing);
     }
 

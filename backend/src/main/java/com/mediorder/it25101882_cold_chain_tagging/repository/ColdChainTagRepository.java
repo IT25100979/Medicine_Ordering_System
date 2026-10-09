@@ -11,6 +11,7 @@ import java.util.Optional;
 @Repository
 public interface ColdChainTagRepository extends JpaRepository<ColdChainTag, Long> {
     Optional<ColdChainTag> findByMedicineId(Long medicineId);
+    void deleteByMedicineId(Long medicineId);
     List<ColdChainTag> findBySection(ColdChainSection section);
     List<ColdChainTag> findByStatus(String status);
 }

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import useRealtimeChannel from '../hooks/useRealtimeChannel';
 
-// Helper: Format Date as DD/MM/YYYY
+// Helper: Format Date as DD/MM/YYYY (Preserved for cross-module compatibility)
 export const formatDateDDMMYYYY = (dateStr) => {
   if (!dateStr) return 'N/A';
   try {
@@ -22,7 +23,7 @@ export const formatDateDDMMYYYY = (dateStr) => {
   }
 };
 
-// Helper: Shelf Life Status
+// Helper: Shelf Life Status (Preserved for cross-module compatibility)
 export const getShelfLifeStatus = (expiryDateStr) => {
   if (!expiryDateStr) {
     return {
@@ -79,7 +80,7 @@ export const getShelfLifeStatus = (expiryDateStr) => {
   }
 };
 
-// Helper: Stock Level Metric Badge
+// Helper: Stock Level Metric Badge (Preserved for cross-module compatibility)
 export const getStockLevelStatus = (stockQty, reorderLvl) => {
   const stock = Number(stockQty) || 0;
   const reorder = Number(reorderLvl) || 25;
@@ -108,28 +109,31 @@ export const getStockLevelStatus = (stockQty, reorderLvl) => {
   }
 };
 
-const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
+export const CATEGORY_LIST = [
+  'Prescription Medicines',
+  'Daily Health & Wellness',
+  'Vitamins & Nutritional Supplements',
+  'First Aid & Wound Care',
+  'Home Health & medical Care',
+];
+
+// Helper to format specific Product ID without 1, 2, 3...
+export const getSpecificProductId = (item) => {
+  if (!item) return 'PRD-0000';
+  if (item.sku && String(item.sku).trim().length > 0) {
+    const raw = String(item.sku).trim();
+    if (raw.startsWith('PRD-')) return raw;
+    return `PRD-${raw}`;
+  }
+  return `PRD-MED-${String(item.id).padStart(4, '0')}`;
+};
+
+const OperationsCatalogDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  // Active Tab: 'catalog' | 'stocks'
-  const [activeTab, setActiveTab] = useState(() => {
-    if (location.pathname.includes('/stocks')) return 'stocks';
-    return initialTab || 'catalog';
-  });
-
-  useEffect(() => {
-    if (location.pathname.includes('/stocks')) {
-      setActiveTab('stocks');
-    } else if (location.pathname.includes('/catalog')) {
-      setActiveTab('catalog');
-    }
-  }, [location.pathname]);
 
   // Master Data State
   const [medicines, setMedicines] = useState([]);
-  const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Single Moving Side Panel Drawer State
@@ -143,21 +147,17 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
   };
 
   // -------------------------------------------------------------
-  // Data Fetching
+  // Data Fetching: Products & Cold Chain Tags
   // -------------------------------------------------------------
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [resMeds, resBatches] = await Promise.all([
-        client.get('/api/v1/medicines'),
-        client.get('/api/v1/batches/grouped').catch(() => ({ data: { data: [] } })),
-      ]);
-      setMedicines(Array.isArray(resMeds.data) ? resMeds.data : []);
-      const batchData = resBatches.data?.data || (Array.isArray(resBatches.data) ? resBatches.data : []);
-      setBatches(Array.isArray(batchData) ? batchData : []);
+      const resMeds = await client.get('/api/v1/medicines?all=true');
+      const medList = Array.isArray(resMeds.data) ? resMeds.data : (resMeds.data?.data || []);
+      setMedicines(medList);
     } catch (err) {
       console.error('Failed to load catalog data:', err);
-      showToast('Error loading medicines and batches from server', 'error');
+      showToast('Error loading medicines from server', 'error');
     } finally {
       setLoading(false);
     }
@@ -167,6 +167,18 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
     fetchData();
   }, []);
 
+  // Real-time synchronization for Cold Chain reviews and catalog updates
+  useRealtimeChannel(
+    'cold_chain',
+    ['COLD_CHAIN_APPROVAL_REQUESTED', 'COLD_CHAIN_UPDATED', 'COLD_CHAIN_REVIEWED'],
+    (eventType, payload) => {
+      fetchData();
+      if (eventType === 'COLD_CHAIN_REVIEWED') {
+        showToast(`Cold chain status updated to ${payload?.action || 'REVIEWED'} in real-time.`);
+      }
+    }
+  );
+
   // Format Currency
   const formatLKR = (amount) => {
     const num = Number(amount) || 0;
@@ -174,54 +186,69 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
   };
 
   // =============================================================
-  // CATALOG MANAGEMENT VIEW STATE & LOGIC
+  // CATALOG MANAGEMENT SEARCH, FILTER & PAGINATION
   // =============================================================
   const [catalogSearch, setCatalogSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [coldChainFilter, setColdChainFilter] = useState('ALL'); // ALL | COLD_CHAIN | AMBIENT | PENDING
   const [catalogSort, setCatalogSort] = useState('Newest');
   const [catalogPage, setCatalogPage] = useState(1);
-  const catalogItemsPerPage = 8;
+  const catalogItemsPerPage = 10;
 
-  // Catalog Add / Edit Modal
-  const [showCatalogModal, setShowCatalogModal] = useState(false);
-  const [catalogEditorMode, setCatalogEditorMode] = useState('create');
-  const [savingCatalog, setSavingCatalog] = useState(false);
-  const [catalogForm, setCatalogForm] = useState({
-    id: null,
-    name: '',
-    genericName: '',
-    sku: '',
-    category: 'Daily Health & Wellness',
-    unitPrice: '',
-    requiresPrescription: false,
-    description: '',
-    imageUrl: '',
-  });
-
+  // Filtered Medicines
   const filteredCatalogMedicines = useMemo(() => {
     let result = [...medicines];
 
+    // Search Query
     if (catalogSearch.trim()) {
       const q = catalogSearch.toLowerCase().trim();
       result = result.filter((m) => {
-        const matchId = String(m.id || '').includes(q);
-        const matchSku = (m.sku || '').toLowerCase().includes(q);
+        const prodId = getSpecificProductId(m).toLowerCase();
+        const rawSku = (m.sku || '').toLowerCase();
         const matchName = (m.name || '').toLowerCase().includes(q);
         const matchGeneric = (m.genericName || '').toLowerCase().includes(q);
         const matchCategory = (m.category || '').toLowerCase().includes(q);
-        return matchId || matchSku || matchName || matchGeneric || matchCategory;
+        const matchDesc = (m.description || '').toLowerCase().includes(q);
+        return prodId.includes(q) || rawSku.includes(q) || matchName || matchGeneric || matchCategory || matchDesc;
       });
     }
 
+    // Category Filter
+    if (categoryFilter !== 'ALL') {
+      result = result.filter((m) => (m.category || '').toLowerCase() === categoryFilter.toLowerCase());
+    }
+
+    // Cold Chain Filter
+    if (coldChainFilter !== 'ALL') {
+      result = result.filter((m) => {
+        const status = (m.coldChainStatus || '').toUpperCase();
+        const isCold = Boolean(m.isTemperatureSensitive);
+        if (coldChainFilter === 'COLD_CHAIN') {
+          return status === 'APPROVED' || (isCold && status !== 'REJECTED' && status !== 'NOT_REQUIRED');
+        }
+        if (coldChainFilter === 'PENDING') {
+          return status === 'PENDING_REVIEW' || status === 'PENDING_APPROVAL' || status === 'PENDING_DUAL_REVIEW';
+        }
+        if (coldChainFilter === 'AMBIENT') {
+          return !isCold || status === 'NOT_REQUIRED' || status === 'AMBIENT';
+        }
+        return true;
+      });
+    }
+
+    // Sorting
     if (catalogSort === 'Price: Low to High') {
       result.sort((a, b) => (Number(a.unitPrice) || 0) - (Number(b.unitPrice) || 0));
     } else if (catalogSort === 'Price: High to Low') {
       result.sort((a, b) => (Number(b.unitPrice) || 0) - (Number(a.unitPrice) || 0));
+    } else if (catalogSort === 'Name: A to Z') {
+      result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     } else {
       result.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
     }
 
     return result;
-  }, [medicines, catalogSearch, catalogSort]);
+  }, [medicines, catalogSearch, categoryFilter, coldChainFilter, catalogSort]);
 
   const totalCatalogPages = Math.ceil(filteredCatalogMedicines.length / catalogItemsPerPage) || 1;
   const paginatedCatalogMedicines = useMemo(() => {
@@ -229,16 +256,76 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
     return filteredCatalogMedicines.slice(start, start + catalogItemsPerPage);
   }, [filteredCatalogMedicines, catalogPage]);
 
+  // Statistics Summary
+  const statsSummary = useMemo(() => {
+    const total = medicines.length;
+    let coldChainCount = 0;
+    let pendingApprovalCount = 0;
+    let rxCount = 0;
+    let otcCount = 0;
+
+    medicines.forEach((m) => {
+      const status = (m.coldChainStatus || '').toUpperCase();
+      if (status === 'APPROVED' || (Boolean(m.isTemperatureSensitive) && status !== 'REJECTED' && status !== 'NOT_REQUIRED')) {
+        coldChainCount++;
+      }
+      if (status === 'PENDING_REVIEW' || status === 'PENDING_APPROVAL' || status === 'PENDING_DUAL_REVIEW') {
+        pendingApprovalCount++;
+      }
+      if (m.requiresPrescription) rxCount++;
+      else otcCount++;
+    });
+
+    return { total, coldChainCount, pendingApprovalCount, rxCount, otcCount };
+  }, [medicines]);
+
+  // =============================================================
+  // CRUD MODAL STATE: CREATE & EDIT
+  // =============================================================
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [catalogEditorMode, setCatalogEditorMode] = useState('create'); // 'create' | 'edit'
+  const [savingCatalog, setSavingCatalog] = useState(false);
+  const [catalogForm, setCatalogForm] = useState({
+    id: null,
+    productId: '',
+    sku: '',
+    name: '',
+    genericName: '',
+    category: 'Daily Health & Wellness',
+    unitPrice: '',
+    stockQuantity: 100,
+    reorderLevel: 25,
+    requiresPrescription: false,
+    isTemperatureSensitive: false,
+    minTemp: '2.00',
+    maxTemp: '8.00',
+    coldChainStatus: 'NOT_REQUIRED',
+    storageRequirement: 'Room Temperature (15°C - 25°C)',
+    description: '',
+    imageUrl: '',
+  });
+
   const handleOpenCreateCatalog = () => {
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const suggestedSku = `PRD-MED-${randomSuffix}`;
+
     setCatalogEditorMode('create');
     setCatalogForm({
       id: null,
+      productId: suggestedSku,
+      sku: suggestedSku,
       name: '',
       genericName: '',
-      sku: '',
       category: 'Daily Health & Wellness',
       unitPrice: '',
+      stockQuantity: 100,
+      reorderLevel: 25,
       requiresPrescription: false,
+      isTemperatureSensitive: false,
+      minTemp: '2.00',
+      maxTemp: '8.00',
+      coldChainStatus: 'NOT_REQUIRED',
+      storageRequirement: 'Room Temperature (15°C - 25°C)',
       description: '',
       imageUrl: '',
     });
@@ -246,15 +333,24 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
   };
 
   const handleOpenEditCatalog = (product) => {
+    const formattedId = getSpecificProductId(product);
     setCatalogEditorMode('edit');
     setCatalogForm({
       id: product.id,
+      productId: formattedId,
+      sku: product.sku || formattedId,
       name: product.name || '',
       genericName: product.genericName || '',
-      sku: product.sku || '',
       category: product.category || 'Daily Health & Wellness',
       unitPrice: product.unitPrice !== undefined ? String(product.unitPrice) : '',
+      stockQuantity: product.stockQuantity !== undefined ? product.stockQuantity : 100,
+      reorderLevel: product.reorderLevel !== undefined ? product.reorderLevel : 25,
       requiresPrescription: Boolean(product.requiresPrescription),
+      isTemperatureSensitive: Boolean(product.isTemperatureSensitive),
+      minTemp: product.minTemp !== null && product.minTemp !== undefined ? String(product.minTemp) : '2.00',
+      maxTemp: product.maxTemp !== null && product.maxTemp !== undefined ? String(product.maxTemp) : '8.00',
+      coldChainStatus: product.coldChainStatus || (product.isTemperatureSensitive ? 'APPROVED' : 'NOT_REQUIRED'),
+      storageRequirement: product.storageRequirement || (product.isTemperatureSensitive ? 'Cold Chain (2°C - 8°C)' : 'Room Temperature (15°C - 25°C)'),
       description: product.description || '',
       imageUrl: product.imageUrl || '',
     });
@@ -269,471 +365,115 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
     }
     const priceVal = parseFloat(catalogForm.unitPrice);
     if (isNaN(priceVal) || priceVal < 0) {
-      showToast('Please enter a valid price in LKR.', 'error');
+      showToast('Please enter a valid unit price in LKR.', 'error');
       return;
     }
 
     setSavingCatalog(true);
     try {
+      const cleanSku = (catalogForm.sku || catalogForm.productId || `PRD-${Date.now().toString().slice(-6)}`).trim();
+      const isCold = Boolean(catalogForm.isTemperatureSensitive);
+
       const payload = {
         name: catalogForm.name.trim(),
         genericName: catalogForm.genericName.trim(),
-        sku: catalogForm.sku.trim() || `SKU-${Date.now().toString().slice(-6)}`,
+        sku: cleanSku,
         category: catalogForm.category || 'Daily Health & Wellness',
         unitPrice: priceVal,
+        stockQuantity: Number(catalogForm.stockQuantity) || 0,
+        reorderLevel: Number(catalogForm.reorderLevel) || 25,
         requiresPrescription: catalogForm.requiresPrescription,
+        isTemperatureSensitive: isCold,
+        minTemp: isCold ? (parseFloat(catalogForm.minTemp) || 2.00) : 15.00,
+        maxTemp: isCold ? (parseFloat(catalogForm.maxTemp) || 8.00) : 25.00,
+        coldChainStatus: catalogForm.coldChainStatus || (isCold ? 'PENDING_REVIEW' : 'NOT_REQUIRED'),
+        storageRequirement: isCold ? `Cold Chain (${catalogForm.minTemp || '2'}°C - ${catalogForm.maxTemp || '8'}°C)` : 'Room Temperature (15°C - 25°C)',
         description: catalogForm.description.trim(),
         imageUrl: catalogForm.imageUrl.trim(),
       };
 
       if (catalogEditorMode === 'edit' && catalogForm.id) {
         const res = await client.put(`/api/v1/medicines/${catalogForm.id}`, payload);
-        showToast(`Catalog product "${res.data.name}" updated successfully!`);
+        showToast(`Product "${res.data.name}" [${cleanSku}] updated successfully in database!`);
       } else {
         const res = await client.post('/api/v1/medicines', payload);
-        showToast(`New product "${res.data.name}" added to catalog!`);
+        showToast(`New Product "${res.data.name}" [${cleanSku}] created and saved to database!`);
       }
 
       setShowCatalogModal(false);
       await fetchData();
     } catch (err) {
       console.error('Save product error:', err);
-      showToast(err.response?.data?.message || 'Failed to save product.', 'error');
+      showToast(err.response?.data?.message || 'Failed to save product in database.', 'error');
     } finally {
       setSavingCatalog(false);
     }
   };
 
-  const handleDeleteProduct = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to delete "${name}" (ID #${id}) from the catalog?`)) {
-      return;
-    }
+  // =============================================================
+  // DELETE PRODUCT MODAL STATE & HANDLER
+  // =============================================================
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await client.delete(`/api/v1/medicines/${id}`);
-      showToast(`Product "${name}" deleted.`);
+      await client.delete(`/api/v1/medicines/${deleteTarget.id}`);
+      showToast(`Product "${deleteTarget.name}" [${getSpecificProductId(deleteTarget)}] removed from database.`);
+      setDeleteTarget(null);
       await fetchData();
     } catch (err) {
       console.error('Delete product error:', err);
-      showToast(err.response?.data?.message || 'Failed to delete product', 'error');
+      showToast(err.response?.data?.message || 'Failed to delete product from database.', 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
   // =============================================================
-  // STOCKS MANAGEMENT VIEW STATE & LOGIC
+  // SEND FOR COLD CHAIN APPROVAL HANDLER
   // =============================================================
-  const [stocksViewMode, setStocksViewMode] = useState('batch'); // 'batch' (Batch 1, Batch 2...) | 'flat'
-  const [stocksSearch, setStocksSearch] = useState('');
-  const [stocksCategory, setStocksCategory] = useState('ALL');
-  const [stocksTagFilter, setStocksTagFilter] = useState('ALL'); // ALL, OTC, Rx, Cold Chain
-  const [stocksStatusFilter, setStocksStatusFilter] = useState('ALL'); // ALL, IN_STOCK, LOW_STOCK, OUT_OF_STOCK
-  const [stocksShelfLifeFilter, setStocksShelfLifeFilter] = useState('ALL'); // ALL, GOOD, NEAR_EXPIRY, EXPIRED
-  const [stocksPage, setStocksPage] = useState(1);
-  const stocksItemsPerPage = 10;
-  const [expandedBatches, setExpandedBatches] = useState({});
-  const [sendingTaggingBatch, setSendingTaggingBatch] = useState(null);
-  const [sendingTaggingItemId, setSendingTaggingItemId] = useState(null);
+  const [approvalTarget, setApprovalTarget] = useState(null);
+  const [submittingApproval, setSubmittingApproval] = useState(false);
 
-  // Toggle expand/collapse for a batch
-  const toggleBatchExpand = (bNum) => {
-    setExpandedBatches((prev) => ({
-      ...prev,
-      [bNum]: prev[bNum] === undefined ? false : !prev[bNum],
-    }));
-  };
-
-  // Dispatch entire batch for condition tagging
-  const handleSendBatchForTagging = async (batchNumber) => {
+  const handleSendForColdChainApproval = async (product) => {
+    setSubmittingApproval(true);
     try {
-      setSendingTaggingBatch(batchNumber);
-      await client.post(`/api/v1/batches/by-number/${encodeURIComponent(batchNumber)}/send-for-tagging`);
-      showToast(`Batch "${batchNumber}" successfully dispatched for Condition Tagging & Pharmacist Review!`);
+      const prodId = getSpecificProductId(product);
+      // Call dedicated cold-chain request-approval endpoint
+      await client.post(`/api/v1/cold-chain/tags/medicine/${product.id}/request-approval`, {
+        section: 'REFRIGERATED',
+        storageTempMin: 2.00,
+        storageTempMax: 8.00,
+        intensity: 'HIGH',
+        securityLevel: 'HIGH_VALUE',
+        deliveryActions: 'Keep refrigerated (2°C - 8°C). Continuous IoT temperature monitoring required in transit.',
+      });
+
+      showToast(`Cold Chain Approval requested for "${product.name}" [${prodId}]! Sent to Chief Pharmacist review queue.`);
+      setApprovalTarget(null);
       await fetchData();
     } catch (err) {
-      console.error('Send batch for tagging error:', err);
-      showToast(err.response?.data?.message || 'Failed to send batch for condition tagging', 'error');
-    } finally {
-      setSendingTaggingBatch(null);
-    }
-  };
-
-  // Dispatch single item for condition tagging
-  const handleSendItemForTagging = async (batchItemId, medicineName) => {
-    try {
-      setSendingTaggingItemId(batchItemId);
-      if (batchItemId) {
-        await client.post(`/api/v1/batches/${batchItemId}/send-for-tagging`);
-      }
-      showToast(`"${medicineName}" sent for Condition Tagging & Chief Pharmacist Review!`);
-      await fetchData();
-    } catch (err) {
-      console.error('Send item for tagging error:', err);
-      showToast(err.response?.data?.message || 'Failed to send item for tagging', 'error');
-    } finally {
-      setSendingTaggingItemId(null);
-    }
-  };
-
-  // Quick Adjust Modal State
-  const [showQuickAdjustModal, setShowQuickAdjustModal] = useState(false);
-  const [quickAdjustItem, setQuickAdjustItem] = useState(null);
-  const [adjustForm, setAdjustForm] = useState({
-    stockQuantity: 0,
-    allocatedStock: 0,
-    reorderLevel: 25,
-    shelfLocation: '',
-    cogs: 0,
-    unitPrice: 0,
-    batchNumber: '',
-    barcode: '',
-    storageRequirement: '',
-    tags: '',
-    manufacturingDate: '',
-    expiryDate: '',
-  });
-  const [savingAdjust, setSavingAdjust] = useState(false);
-
-  // Reorder / Create PO Modal State
-  const [showReorderModal, setShowReorderModal] = useState(false);
-  const [reorderItem, setReorderItem] = useState(null);
-  const [poForm, setPoForm] = useState({
-    quantity: 50,
-    notes: '',
-  });
-  const [submittingPo, setSubmittingPo] = useState(false);
-  const [poSuccessResult, setPoSuccessResult] = useState(null);
-
-  // Compute Stocks Summary Metrics
-  const stocksMetrics = useMemo(() => {
-    let totalItems = medicines.length;
-    let totalStockUnits = 0;
-    let totalAllocatedUnits = 0;
-    let lowStockCount = 0;
-    let outOfStockCount = 0;
-    let nearExpiryCount = 0;
-    let expiredCount = 0;
-    let totalValuation = 0;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    medicines.forEach((m) => {
-      const stock = Number(m.stockQuantity) || 0;
-      const allocated = Number(m.allocatedStock) || 0;
-      const reorder = Number(m.reorderLevel) || 25;
-      const cogs = Number(m.cogs) || (Number(m.unitPrice) * 0.45) || 0;
-
-      totalStockUnits += stock;
-      totalAllocatedUnits += allocated;
-      totalValuation += stock * cogs;
-
-      if (stock === 0) {
-        outOfStockCount++;
-      } else if (stock <= reorder) {
-        lowStockCount++;
-      }
-
-      if (m.expiryDate) {
-        const exp = new Date(m.expiryDate);
-        exp.setHours(0, 0, 0, 0);
-        const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays < 0) {
-          expiredCount++;
-        } else if (diffDays <= 60) {
-          nearExpiryCount++;
-        }
-      }
-    });
-
-    return {
-      totalItems,
-      totalStockUnits,
-      totalAllocatedUnits,
-      lowStockCount,
-      outOfStockCount,
-      nearExpiryCount,
-      expiredCount,
-      totalValuation,
-    };
-  }, [medicines]);
-
-  // Filtered Stocks List
-  const filteredStocks = useMemo(() => {
-    let list = [...medicines];
-
-    // Search: SKU/Barcode ID, Product Name, Generic, Batch Number, Shelf Location
-    if (stocksSearch.trim()) {
-      const q = stocksSearch.toLowerCase().trim();
-      list = list.filter((m) => {
-        const matchSku = (m.sku || '').toLowerCase().includes(q);
-        const matchBarcode = (m.barcode || '').toLowerCase().includes(q);
-        const matchName = (m.name || '').toLowerCase().includes(q);
-        const matchGeneric = (m.genericName || '').toLowerCase().includes(q);
-        const matchBatch = (m.batchNumber || '').toLowerCase().includes(q);
-        const matchShelf = (m.shelfLocation || '').toLowerCase().includes(q);
-        return matchSku || matchBarcode || matchName || matchGeneric || matchBatch || matchShelf;
-      });
-    }
-
-    // Category Filter
-    if (stocksCategory !== 'ALL') {
-      list = list.filter((m) => (m.category || '').toLowerCase() === stocksCategory.toLowerCase());
-    }
-
-    // Tag Filter: OTC, Rx, Cold Chain
-    if (stocksTagFilter !== 'ALL') {
-      list = list.filter((m) => {
-        const isRx = Boolean(m.requiresPrescription);
-        const isCold = Boolean(m.isTemperatureSensitive) || (m.tags || '').toLowerCase().includes('cold');
-        if (stocksTagFilter === 'Rx') return isRx;
-        if (stocksTagFilter === 'OTC') return !isRx;
-        if (stocksTagFilter === 'Cold Chain') return isCold;
-        return true;
-      });
-    }
-
-    // Stock Status Filter
-    if (stocksStatusFilter !== 'ALL') {
-      list = list.filter((m) => {
-        const stock = Number(m.stockQuantity) || 0;
-        const reorder = Number(m.reorderLevel) || 25;
-        if (stocksStatusFilter === 'OUT_OF_STOCK') return stock === 0;
-        if (stocksStatusFilter === 'LOW_STOCK') return stock > 0 && stock <= reorder;
-        if (stocksStatusFilter === 'IN_STOCK') return stock > reorder;
-        return true;
-      });
-    }
-
-    // Shelf-Life Filter
-    if (stocksShelfLifeFilter !== 'ALL') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      list = list.filter((m) => {
-        if (!m.expiryDate) return false;
-        const exp = new Date(m.expiryDate);
-        exp.setHours(0, 0, 0, 0);
-        const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        if (stocksShelfLifeFilter === 'EXPIRED') return diffDays < 0;
-        if (stocksShelfLifeFilter === 'NEAR_EXPIRY') return diffDays >= 0 && diffDays <= 60;
-        if (stocksShelfLifeFilter === 'GOOD') return diffDays > 60;
-        return true;
-      });
-    }
-
-    return list;
-  }, [medicines, stocksSearch, stocksCategory, stocksTagFilter, stocksStatusFilter, stocksShelfLifeFilter]);
-
-  // Grouped Batches for Batch 1, Batch 2... Stocks View
-  const filteredGroupedBatches = useMemo(() => {
-    if (batches && batches.length > 0) {
-      let bList = batches.map((b) => {
-        let filteredMeds = (b.medicines || []).filter((m) => {
-          if (stocksSearch.trim()) {
-            const q = stocksSearch.toLowerCase().trim();
-            const matchSku = (m.sku || '').toLowerCase().includes(q);
-            const matchBarcode = (m.barcode || '').toLowerCase().includes(q);
-            const matchName = (m.medicineName || m.name || '').toLowerCase().includes(q);
-            const matchGeneric = (m.genericName || '').toLowerCase().includes(q);
-            const matchBatch = (b.batchNumber || '').toLowerCase().includes(q);
-            const matchShelf = (m.shelfLocation || '').toLowerCase().includes(q);
-            if (!matchSku && !matchBarcode && !matchName && !matchGeneric && !matchBatch && !matchShelf) return false;
-          }
-          if (stocksCategory !== 'ALL') {
-            if ((m.category || '').toLowerCase() !== stocksCategory.toLowerCase()) return false;
-          }
-          if (stocksTagFilter !== 'ALL') {
-            const isRx = Boolean(m.requiresPrescription);
-            const isCold = Boolean(m.isTemperatureSensitive) || (m.tags || '').toLowerCase().includes('cold') || (m.section && m.section !== 'AMBIENT');
-            if (stocksTagFilter === 'Rx' && !isRx) return false;
-            if (stocksTagFilter === 'OTC' && isRx) return false;
-            if (stocksTagFilter === 'Cold Chain' && !isCold) return false;
-          }
-          if (stocksStatusFilter !== 'ALL') {
-            const stock = Number(m.stockQuantity) || 0;
-            const reorder = Number(m.reorderLevel) || 25;
-            if (stocksStatusFilter === 'OUT_OF_STOCK' && stock > 0) return false;
-            if (stocksStatusFilter === 'LOW_STOCK' && (stock === 0 || stock > reorder)) return false;
-            if (stocksStatusFilter === 'IN_STOCK' && stock <= reorder) return false;
-          }
-          if (stocksShelfLifeFilter !== 'ALL') {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (!m.expiryDate) return false;
-            const exp = new Date(m.expiryDate);
-            exp.setHours(0, 0, 0, 0);
-            const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            if (stocksShelfLifeFilter === 'EXPIRED' && diffDays >= 0) return false;
-            if (stocksShelfLifeFilter === 'NEAR_EXPIRY' && (diffDays < 0 || diffDays > 60)) return false;
-            if (stocksShelfLifeFilter === 'GOOD' && diffDays <= 60) return false;
-          }
-          return true;
+      console.error('Cold Chain approval request error:', err);
+      // Fallback: update medicine directly
+      try {
+        await client.put(`/api/v1/medicines/${product.id}`, {
+          isTemperatureSensitive: true,
+          coldChainStatus: 'PENDING_REVIEW',
+          storageRequirement: 'Cold Chain (2°C - 8°C)',
+          minTemp: 2.00,
+          maxTemp: 8.00,
         });
-
-        return {
-          ...b,
-          medicines: filteredMeds,
-          filteredCount: filteredMeds.length,
-        };
-      });
-
-      return bList.filter((b) => b.medicines.length > 0 || (stocksSearch.trim() && (b.batchNumber || '').toLowerCase().includes(stocksSearch.toLowerCase().trim())));
-    }
-
-    // Fallback: Group filteredStocks by batchNumber
-    const map = new Map();
-    filteredStocks.forEach((m, idx) => {
-      const bNum = m.batchNumber || `Batch ${(idx % 5) + 1} (BAT-2026-00${(idx % 5) + 1})`;
-      if (!map.has(bNum)) {
-        map.set(bNum, {
-          batchNumber: bNum,
-          batchDisplayName: bNum.startsWith('Batch ') ? bNum : `Batch (${bNum})`,
-          status: m.isQuarantined ? 'QUARANTINED' : 'LIVE',
-          arrivedDate: m.manufacturingDate || new Date().toISOString().split('T')[0],
-          manufacturingDate: m.manufacturingDate,
-          expiryDate: m.expiryDate,
-          totalStock: 0,
-          medicines: [],
-        });
+        showToast(`Cold Chain Approval requested for "${product.name}"! Status updated to Pending Review in DB.`);
+        setApprovalTarget(null);
+        await fetchData();
+      } catch (innerErr) {
+        showToast(err.response?.data?.message || 'Failed to submit cold chain approval request.', 'error');
       }
-      const bGroup = map.get(bNum);
-      bGroup.totalStock += (Number(m.stockQuantity) || 0);
-      bGroup.medicines.push({
-        batchItemId: m.id,
-        medicineId: m.id,
-        medicineName: m.name,
-        genericName: m.genericName,
-        sku: m.sku,
-        barcode: m.barcode,
-        category: m.category,
-        stockQuantity: m.stockQuantity,
-        allocatedStock: m.allocatedStock,
-        reorderLevel: m.reorderLevel,
-        unitPrice: m.unitPrice,
-        cogs: m.cogs,
-        shelfLocation: m.shelfLocation,
-        storageRequirement: m.storageRequirement,
-        isTemperatureSensitive: m.isTemperatureSensitive,
-        requiresPrescription: m.requiresPrescription,
-        expiryDate: m.expiryDate,
-        manufacturingDate: m.manufacturingDate,
-        status: m.isQuarantined ? 'QUARANTINED' : 'LIVE',
-        imageUrl: m.imageUrl,
-        rawMedicine: m,
-      });
-    });
-    return Array.from(map.values());
-  }, [batches, filteredStocks, stocksSearch, stocksCategory, stocksTagFilter, stocksStatusFilter, stocksShelfLifeFilter]);
-
-  const totalStocksPages = Math.ceil(filteredStocks.length / stocksItemsPerPage) || 1;
-  const paginatedStocks = useMemo(() => {
-    const start = (stocksPage - 1) * stocksItemsPerPage;
-    return filteredStocks.slice(start, start + stocksItemsPerPage);
-  }, [filteredStocks, stocksPage]);
-
-  // Open Quick Adjust Modal
-  const handleOpenQuickAdjust = (item) => {
-    setQuickAdjustItem(item);
-    setAdjustForm({
-      stockQuantity: item.stockQuantity || 0,
-      allocatedStock: item.allocatedStock || 0,
-      reorderLevel: item.reorderLevel || 25,
-      shelfLocation: item.shelfLocation || 'Shelf A-01',
-      cogs: item.cogs !== undefined ? item.cogs : (Number(item.unitPrice) * 0.45).toFixed(2),
-      unitPrice: item.unitPrice || 0,
-      batchNumber: item.batchNumber || '',
-      barcode: item.barcode || (item.sku ? 'BC-' + item.sku.replace('SKU-', '') : ''),
-      storageRequirement: item.storageRequirement || (item.isTemperatureSensitive ? 'Cold Chain (2°C - 8°C)' : 'Room Temperature (15°C - 25°C)'),
-      tags: item.tags || (item.requiresPrescription ? 'Rx' : 'OTC'),
-      manufacturingDate: item.manufacturingDate ? String(item.manufacturingDate).split('T')[0] : '',
-      expiryDate: item.expiryDate ? String(item.expiryDate).split('T')[0] : '',
-    });
-    setShowQuickAdjustModal(true);
-  };
-
-  const handleSaveQuickAdjust = async (e) => {
-    e.preventDefault();
-    if (!quickAdjustItem) return;
-    setSavingAdjust(true);
-    try {
-      const payload = {
-        stockQuantity: parseInt(adjustForm.stockQuantity, 10) || 0,
-        allocatedStock: parseInt(adjustForm.allocatedStock, 10) || 0,
-        reorderLevel: parseInt(adjustForm.reorderLevel, 10) || 25,
-        shelfLocation: adjustForm.shelfLocation.trim(),
-        cogs: parseFloat(adjustForm.cogs) || 0,
-        unitPrice: parseFloat(adjustForm.unitPrice) || 0,
-        batchNumber: adjustForm.batchNumber.trim(),
-        barcode: adjustForm.barcode.trim(),
-        storageRequirement: adjustForm.storageRequirement.trim(),
-        tags: adjustForm.tags.trim(),
-        manufacturingDate: adjustForm.manufacturingDate || null,
-        expiryDate: adjustForm.expiryDate || null,
-      };
-
-      const res = await client.patch(`/api/v1/medicines/${quickAdjustItem.id}/stock`, payload);
-      showToast(`Stock updated for "${res.data.name}"`);
-      setShowQuickAdjustModal(false);
-      await fetchData();
-    } catch (err) {
-      console.error('Quick adjust error:', err);
-      showToast(err.response?.data?.message || 'Failed to update stock', 'error');
     } finally {
-      setSavingAdjust(false);
-    }
-  };
-
-  // Toggle Quarantine Action
-  const handleToggleQuarantine = async (item) => {
-    const nextState = !Boolean(item.isQuarantined);
-    const actionLabel = nextState ? 'QUARANTINE' : 'RELEASE';
-    if (!window.confirm(`Are you sure you want to ${actionLabel} "${item.name}" (SKU: ${item.sku})? ${nextState ? 'Quarantined stock is locked from fulfillment.' : 'Stock will be restored to active dispensing.'}`)) {
-      return;
-    }
-
-    try {
-      const res = await client.post(`/api/v1/medicines/${item.id}/quarantine`, {
-        isQuarantined: nextState,
-        reason: nextState ? 'Expired or quality inspection quarantine' : 'Quarantine cleared',
-      });
-      showToast(`"${res.data.name}" marked as ${nextState ? 'QUARANTINED' : 'ACTIVE'}`);
-      await fetchData();
-    } catch (err) {
-      console.error('Quarantine toggle error:', err);
-      showToast('Failed to update quarantine status', 'error');
-    }
-  };
-
-  // Open Reorder / Create PO Modal
-  const handleOpenReorder = (item) => {
-    setReorderItem(item);
-    const curr = Number(item.stockQuantity) || 0;
-    const reorder = Number(item.reorderLevel) || 25;
-    const suggested = Math.max(20, (reorder * 2) - curr);
-    setPoForm({
-      quantity: suggested,
-      notes: `Restock request for ${item.name}. Shelf location: ${item.shelfLocation || 'N/A'}.`,
-    });
-    setPoSuccessResult(null);
-    setShowReorderModal(true);
-  };
-
-  const handleCreatePurchaseOrder = async (e) => {
-    e.preventDefault();
-    if (!reorderItem) return;
-    setSubmittingPo(true);
-    try {
-      const res = await client.post(`/api/v1/medicines/${reorderItem.id}/reorder`, {
-        quantity: parseInt(poForm.quantity, 10) || 50,
-        notes: poForm.notes.trim(),
-      });
-      setPoSuccessResult(res.data);
-      showToast(`PO ${res.data.poNumber} created! Alert sent to Delivery Coordinator.`);
-      await fetchData();
-    } catch (err) {
-      console.error('Create PO error:', err);
-      showToast(err.response?.data?.message || 'Failed to create PO', 'error');
-    } finally {
-      setSubmittingPo(false);
+      setSubmittingApproval(false);
     }
   };
 
@@ -756,10 +496,7 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* INVISIBLE LEFT EDGE HOVER ZONE (Slow animation open)     */}
-      {/* Bringing cursor near the left edge opens side panel      */}
-      {/* ========================================================= */}
+      {/* Invisible Left Edge Hover Zone */}
       <div
         className="fixed left-0 top-0 bottom-0 w-8 z-40"
         onMouseEnter={() => setIsDrawerOpen(true)}
@@ -775,17 +512,13 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
         aria-hidden="true"
       />
 
-      {/* ========================================================= */}
-      {/* COLLAPSIBLE SIDE PANEL WITH MOVING HANDLE BUTTON          */}
-      {/* Moves with the side panel itself. No separate buttons!    */}
-      {/* ========================================================= */}
+      {/* Side Navigation Drawer (Cleaned: Strictly Catalog Management) */}
       <aside
         className={`fixed left-0 top-0 h-full w-72 sm:w-80 bg-[#f1f3ff] z-50 flex flex-col justify-between py-6 px-4 shadow-2xl transition-transform duration-700 ease-in-out transform ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-label="Operations Navigation Drawer"
       >
-        {/* Floating Unified Moving Handle Button mounted directly to sidebar outer edge */}
         <button
           type="button"
           onClick={() => setIsDrawerOpen((prev) => !prev)}
@@ -802,7 +535,6 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
         </button>
 
         <div className="flex flex-col gap-6">
-          {/* Drawer Top Header (Without separate close button) */}
           <div className="flex items-center gap-3 px-3 pb-3 border-b border-gray-200">
             <div className="w-9 h-9 rounded-full bg-black flex items-center justify-center text-white font-bold text-sm">
               P+
@@ -815,69 +547,31 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
             </div>
           </div>
 
-          {/* Drawer Navigation: Catalog Management & Stocks Management */}
           <nav className="flex flex-col gap-2 pt-2">
-            
-            {/* 1. Catalog Management Option */}
             <button
               type="button"
               onClick={() => {
-                setActiveTab('catalog');
                 setIsDrawerOpen(false);
                 navigate('/admin/catalog');
               }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-full font-bold text-xs tracking-wide transition-all cursor-pointer text-left ${
-                activeTab === 'catalog'
-                  ? 'bg-black text-white shadow-sm'
-                  : 'bg-white/80 hover:bg-white text-neutral-700 hover:text-black'
-              }`}
+              className="flex items-center gap-3 px-4 py-3 rounded-full font-bold text-xs tracking-wide transition-all cursor-pointer text-left bg-black text-white shadow-sm"
             >
               <span className="material-symbols-outlined text-[20px]">medication</span>
               <span className="flex-1">Catalog Management</span>
-              {activeTab === 'catalog' && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              )}
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
             </button>
-
-            {/* 2. Stocks Management Option */}
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('stocks');
-                setIsDrawerOpen(false);
-                navigate('/admin/stocks');
-              }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-full font-bold text-xs tracking-wide transition-all cursor-pointer text-left ${
-                activeTab === 'stocks'
-                  ? 'bg-black text-white shadow-sm'
-                  : 'bg-white/80 hover:bg-white text-neutral-700 hover:text-black'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[20px]">inventory_2</span>
-              <span className="flex-1">Stocks Management</span>
-              {activeTab === 'stocks' && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              )}
-            </button>
-
           </nav>
         </div>
 
-        {/* Bottom Staff Info */}
         <div className="px-3 pt-3 border-t border-gray-200 flex flex-col gap-1 text-[11px] text-gray-500">
           <span className="font-bold text-neutral-800">{user?.fullName || 'Operations Manager'}</span>
           <span className="text-[10px] uppercase tracking-wider font-semibold">{user?.role || 'OPERATIONS_MANAGER'}</span>
         </div>
       </aside>
 
-      {/* ========================================================= */}
-      {/* TOP HEADER: Pharma + Logo (left) & Logout Button (right)  */}
-      {/* Regular nav bar matching the Pharmacist Dashboard         */}
-      {/* ========================================================= */}
+      {/* Top Header */}
       <header className="w-full bg-white border-b border-neutral-200/80 px-4 sm:px-6 lg:px-12 py-3.5 mb-6 shadow-xs">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          
-          {/* Top Left: Pharma + Logo and Active Status Badge below it */}
           <div>
             <Link
               to="/admin/catalog"
@@ -888,15 +582,12 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
                 +
               </span>
             </Link>
-
-            {/* Active Status Badge placed just below the Pharma + logo */}
             <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-[10px] font-bold tracking-wide shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>{activeTab === 'stocks' ? 'Stocks & Inventory Operations' : 'Catalog & Formulation Operations'}</span>
+              <span>Catalog &amp; Formulation Management Console</span>
             </div>
           </div>
 
-          {/* Top Right: Logout Button */}
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -911,1501 +602,610 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
               <span className="hidden sm:inline">Log Out</span>
             </button>
           </div>
-
         </div>
       </header>
 
-      {/* ========================================================= */}
-      {/* WORKSPACE CONTENT AREA                                    */}
-      {/* ========================================================= */}
+      {/* Main Workspace Container */}
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-12">
-
-        {/* ======================================================= */}
-        {/* VIEW 1: CATALOG MANAGEMENT                              */}
-        {/* ======================================================= */}
-        {activeTab === 'catalog' && (
+        
+        {/* Page Title & Top Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <div className="flex items-center justify-between gap-4 mb-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
-                  Catalog Management
-                </h1>
-                <p className="text-xs text-neutral-500 mt-1">
-                  Configure master clinical pharmaceutical formulas, categories, pricing, and prescriptions.
-                </p>
-              </div>
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900 flex items-center gap-3">
+              <span>Catalog Management</span>
+              <span className="text-xs px-3 py-1 rounded-full bg-zinc-100 border border-zinc-300 font-mono font-bold text-zinc-700">
+                {statsSummary.total} Products
+              </span>
+            </h1>
+            <p className="text-xs text-neutral-500 mt-1">
+              Create, view, update, and manage master pharmaceutical formulations, specific product IDs, unit pricing, and cold chain approval requests.
+            </p>
+          </div>
 
-              <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={fetchData}
+              title="Refresh catalog from database"
+              className="h-10 px-4 rounded-full bg-zinc-100 hover:bg-zinc-200 text-neutral-700 border border-neutral-200 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">refresh</span>
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenCreateCatalog}
+              className="h-10 px-5 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              <span>Add New Product</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Top Summary Stats Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mb-6">
+          <div className="bg-white p-4 rounded-2xl border border-neutral-200 shadow-2xs">
+            <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider mb-1">
+              <span>Total Formulations</span>
+              <span className="material-symbols-outlined text-[18px] text-zinc-600">medication</span>
+            </div>
+            <div className="text-2xl font-black text-neutral-900">{statsSummary.total}</div>
+            <div className="text-[10px] text-neutral-400 mt-0.5">Active Master Catalog</div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-neutral-200 shadow-2xs">
+            <div className="flex items-center justify-between text-emerald-700 text-[11px] font-bold uppercase tracking-wider mb-1">
+              <span>Cold Chain Active</span>
+              <span className="material-symbols-outlined text-[18px] text-emerald-600">ac_unit</span>
+            </div>
+            <div className="text-2xl font-black text-emerald-700">{statsSummary.coldChainCount}</div>
+            <div className="text-[10px] text-emerald-600/80 mt-0.5">2°C – 8°C Certified</div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-neutral-200 shadow-2xs">
+            <div className="flex items-center justify-between text-amber-700 text-[11px] font-bold uppercase tracking-wider mb-1">
+              <span>Pending Approvals</span>
+              <span className="material-symbols-outlined text-[18px] text-amber-600">pending_actions</span>
+            </div>
+            <div className="text-2xl font-black text-amber-700">{statsSummary.pendingApprovalCount}</div>
+            <div className="text-[10px] text-amber-600/80 mt-0.5">Cold Chain Review Queue</div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-neutral-200 shadow-2xs">
+            <div className="flex items-center justify-between text-purple-700 text-[11px] font-bold uppercase tracking-wider mb-1">
+              <span>Rx / OTC Split</span>
+              <span className="material-symbols-outlined text-[18px] text-purple-600">prescriptions</span>
+            </div>
+            <div className="text-2xl font-black text-purple-900">
+              {statsSummary.rxCount} <span className="text-xs font-normal text-neutral-400">Rx</span> / {statsSummary.otcCount} <span className="text-xs font-normal text-neutral-400">OTC</span>
+            </div>
+            <div className="text-[10px] text-neutral-400 mt-0.5">Prescription Control</div>
+          </div>
+        </div>
+
+        {/* Filter Controls & Search Card */}
+        <div className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden mb-8">
+          <div className="p-4 sm:p-6 border-b border-neutral-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            
+            {/* Search Bar */}
+            <div className="relative flex-1 max-w-lg">
+              <input
+                type="text"
+                value={catalogSearch}
+                onChange={(e) => {
+                  setCatalogSearch(e.target.value);
+                  setCatalogPage(1);
+                }}
+                placeholder="Search by Product ID, SKU, Formulation, Generic..."
+                className="w-full h-10 pl-9 pr-8 rounded-full bg-neutral-50 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-black border border-neutral-200 transition-all"
+              />
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-[18px] pointer-events-none">
+                search
+              </span>
+              {catalogSearch && (
                 <button
                   type="button"
-                  onClick={fetchData}
-                  title="Refresh catalog"
-                  className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-black text-white flex items-center justify-center shadow-sm transition-all active:scale-95 cursor-pointer"
+                  onClick={() => {
+                    setCatalogSearch('');
+                    setCatalogPage(1);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black font-bold text-sm cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">refresh</span>
+                  ×
                 </button>
-              </div>
+              )}
             </div>
 
-            {/* Catalog Controls Card */}
-            <div className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden mb-8">
-              <div className="p-4 sm:p-6 border-b border-neutral-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                
-                {/* Search Bar */}
-                <div className="relative flex-1 max-w-lg">
-                  <input
-                    type="text"
-                    value={catalogSearch}
-                    onChange={(e) => {
-                      setCatalogSearch(e.target.value);
-                      setCatalogPage(1);
-                    }}
-                    placeholder="Search by ID, SKU, Name, Generic, Category..."
-                    className="w-full h-10 pl-9 pr-8 rounded-full bg-neutral-50 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-black border border-neutral-200 transition-all"
-                  />
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-[18px] pointer-events-none">
-                    search
-                  </span>
-                  {catalogSearch && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCatalogSearch('');
-                        setCatalogPage(1);
-                      }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black font-bold text-sm cursor-pointer"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
+            {/* Filter Dropdowns */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              
+              {/* Category Dropdown */}
+              <select
+                value={categoryFilter}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setCatalogPage(1);
+                }}
+                className="h-10 px-3.5 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
+              >
+                <option value="ALL">All Categories</option>
+                {CATEGORY_LIST.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
 
-                {/* Sort & Add Product */}
-                <div className="flex items-center gap-3">
-                  <select
-                    value={catalogSort}
-                    onChange={(e) => setCatalogSort(e.target.value)}
-                    className="h-10 px-3.5 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                  >
-                    <option value="Newest">Newest First</option>
-                    <option value="Price: Low to High">Price: Low to High</option>
-                    <option value="Price: High to Low">Price: High to Low</option>
-                  </select>
+              {/* Cold Chain Filter */}
+              <select
+                value={coldChainFilter}
+                onChange={(e) => {
+                  setColdChainFilter(e.target.value);
+                  setCatalogPage(1);
+                }}
+                className="h-10 px-3.5 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
+              >
+                <option value="ALL">All Cold Chain Statuses</option>
+                <option value="COLD_CHAIN">Cold Chain (2°C - 8°C)</option>
+                <option value="PENDING">Pending Approval</option>
+                <option value="AMBIENT">Ambient / Non-Cold</option>
+              </select>
 
-                  <button
-                    type="button"
-                    onClick={handleOpenCreateCatalog}
-                    className="h-10 px-5 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">add</span>
-                    <span>Add New Product</span>
-                  </button>
-                </div>
-
-              </div>
-
-              {/* Table Counter */}
-              <div className="px-6 py-2.5 bg-neutral-50/60 border-b border-neutral-100 flex items-center justify-between text-xs text-neutral-500">
-                <span>
-                  Showing <strong className="text-black">{paginatedCatalogMedicines.length}</strong> of{' '}
-                  <strong className="text-black">{filteredCatalogMedicines.length}</strong> products
-                </span>
-                <span className="text-[11px] font-medium text-neutral-400">
-                  Currency: <strong className="text-neutral-700">LKR (Rs.)</strong>
-                </span>
-              </div>
-
-              {/* Catalog Table: STOCK LEVEL COLUMN COMPLETELY REMOVED */}
-              {loading ? (
-                <div className="p-16 text-center text-xs font-semibold text-neutral-500">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-3"></div>
-                  Loading catalog products...
-                </div>
-              ) : filteredCatalogMedicines.length === 0 ? (
-                <div className="p-16 text-center space-y-3">
-                  <span className="material-symbols-outlined text-[42px] text-neutral-300">inventory_2</span>
-                  <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                    No products found matching criteria.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-neutral-100/80 text-neutral-700 font-extrabold uppercase tracking-wider border-b border-neutral-200">
-                      <tr>
-                        <th className="py-3.5 px-4 w-16">ID</th>
-                        <th className="py-3.5 px-4">Product Details &amp; Formulation</th>
-                        <th className="py-3.5 px-4">Batch # / SKU</th>
-                        <th className="py-3.5 px-4">Category</th>
-                        <th className="py-3.5 px-4">Selling Price (LKR)</th>
-                        <th className="py-3.5 px-4">Prescription</th>
-                        <th className="py-3.5 px-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100">
-                      {paginatedCatalogMedicines.map((m) => (
-                        <tr
-                          key={m.id}
-                          className="hover:bg-neutral-50/80 transition-colors group"
-                        >
-                          <td className="py-3 px-4 font-mono font-bold text-neutral-500">
-                            #{m.id}
-                          </td>
-
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200 flex items-center justify-center">
-                                {m.imageUrl ? (
-                                  <img src={m.imageUrl} alt={m.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="material-symbols-outlined text-neutral-400 text-[18px]">medication</span>
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <span className="font-bold text-neutral-900 group-hover:text-black line-clamp-1">
-                                  {m.name}
-                                </span>
-                                {m.genericName && (
-                                  <span className="text-[11px] text-neutral-500 line-clamp-1">
-                                    {m.genericName}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-4 font-mono text-[11px] font-semibold text-neutral-600">
-                            <span className="px-2 py-0.5 rounded-md bg-neutral-100 border border-neutral-200">
-                              {m.sku || 'N/A'}
-                            </span>
-                          </td>
-
-                          <td className="py-3 px-4">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-neutral-100 text-neutral-700">
-                              {m.category || 'General'}
-                            </span>
-                          </td>
-
-                          <td className="py-3 px-4 font-bold text-neutral-900 text-sm">
-                            {formatLKR(m.unitPrice)}
-                          </td>
-
-                          <td className="py-3 px-4">
-                            {m.requiresPrescription ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
-                                <span className="material-symbols-outlined text-[13px]">prescriptions</span>
-                                <span>Rx Required</span>
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-neutral-400 font-medium">OTC</span>
-                            )}
-                          </td>
-
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEditCatalog(m)}
-                                className="px-2.5 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[11px] font-bold transition-colors cursor-pointer"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteProduct(m.id, m.name)}
-                                className="px-2.5 py-1 rounded-full bg-red-50 hover:bg-red-100 text-red-600 text-[11px] font-bold transition-colors cursor-pointer"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Pagination */}
-              {totalCatalogPages > 1 && (
-                <div className="p-4 border-t border-neutral-100 flex items-center justify-between">
-                  <button
-                    type="button"
-                    disabled={catalogPage === 1}
-                    onClick={() => setCatalogPage((p) => Math.max(1, p - 1))}
-                    className="px-4 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 disabled:opacity-40 text-xs font-bold text-neutral-700 cursor-pointer"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-xs font-medium text-neutral-500">
-                    Page {catalogPage} of {totalCatalogPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={catalogPage === totalCatalogPages}
-                    onClick={() => setCatalogPage((p) => Math.min(totalCatalogPages, p + 1))}
-                    className="px-4 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 disabled:opacity-40 text-xs font-bold text-neutral-700 cursor-pointer"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-
+              {/* Sort Dropdown */}
+              <select
+                value={catalogSort}
+                onChange={(e) => setCatalogSort(e.target.value)}
+                className="h-10 px-3.5 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
+              >
+                <option value="Newest">Newest First</option>
+                <option value="Name: A to Z">Name: A to Z</option>
+                <option value="Price: Low to High">Price: Low to High</option>
+                <option value="Price: High to Low">Price: High to Low</option>
+              </select>
             </div>
           </div>
-        )}
 
-        {/* ======================================================= */}
-        {/* VIEW 2: STOCKS MANAGEMENT                               */}
-        {/* ======================================================= */}
-        {activeTab === 'stocks' && (
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
-                  Stocks Management Console
-                </h1>
-                <p className="text-xs text-neutral-500 mt-1">
-                  Item identification, batch expiry tracking, storage locations, stock metrics, valuation &amp; PO reorders.
-                </p>
-              </div>
+          {/* Table Header Counter */}
+          <div className="px-6 py-2.5 bg-neutral-50/60 border-b border-neutral-100 flex items-center justify-between text-xs text-neutral-500">
+            <span>
+              Showing <strong className="text-black">{paginatedCatalogMedicines.length}</strong> of{' '}
+              <strong className="text-black">{filteredCatalogMedicines.length}</strong> formulations
+            </span>
+            <span className="text-[11px] font-medium text-neutral-400">
+              Persisted SQL Database &bull; Currency: <strong className="text-neutral-700">LKR (Rs.)</strong>
+            </span>
+          </div>
 
-              {/* Small Horizontal Side Bar on the Right Side */}
-              <div className="flex items-center gap-2.5 sm:gap-3 self-start lg:self-auto flex-wrap">
-                <div className="bg-white border border-neutral-200/90 rounded-2xl shadow-xs p-1.5 sm:p-2 flex items-center gap-2 sm:gap-3">
-                  
-                  {/* Notification 1: Low Stock Counts & Notification */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStocksStatusFilter(stocksStatusFilter === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK');
-                      setStocksPage(1);
-                    }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                      stocksStatusFilter === 'LOW_STOCK'
-                        ? 'bg-amber-100 border-amber-400 ring-2 ring-amber-300 text-amber-950 font-bold'
-                        : 'bg-amber-50/70 hover:bg-amber-100 border-amber-200 text-amber-900'
-                    }`}
-                    title="Click to filter low stock items"
-                  >
-                    <span className="relative flex h-2 w-2">
-                      {stocksMetrics.lowStockCount > 0 && (
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                      )}
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                    </span>
-                    <span className="material-symbols-outlined text-[18px] text-amber-600">warning</span>
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <span className="font-black text-neutral-900 bg-white px-2 py-0.5 rounded-md border border-amber-200 shadow-2xs">
-                        {stocksMetrics.lowStockCount}
-                      </span>
-                      <span className="font-bold text-[11px] whitespace-nowrap">
-                        Low Stock Alert
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Subtle separator inside the horizontal bar */}
-                  <div className="h-6 w-px bg-neutral-200"></div>
-
-                  {/* Notification 2: Out of Stock Counts & Notification */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStocksStatusFilter(stocksStatusFilter === 'OUT_OF_STOCK' ? 'ALL' : 'OUT_OF_STOCK');
-                      setStocksPage(1);
-                    }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                      stocksStatusFilter === 'OUT_OF_STOCK'
-                        ? 'bg-rose-100 border-rose-400 ring-2 ring-rose-300 text-rose-950 font-bold'
-                        : 'bg-rose-50/70 hover:bg-rose-100 border-rose-200 text-rose-900'
-                    }`}
-                    title="Click to filter out of stock items"
-                  >
-                    <span className="relative flex h-2 w-2">
-                      {stocksMetrics.outOfStockCount > 0 && (
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                      )}
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
-                    </span>
-                    <span className="material-symbols-outlined text-[18px] text-rose-600">cancel</span>
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <span className="font-black text-neutral-900 bg-white px-2 py-0.5 rounded-md border border-rose-200 shadow-2xs">
-                        {stocksMetrics.outOfStockCount}
-                      </span>
-                      <span className="font-bold text-[11px] whitespace-nowrap">
-                        Out of Stock
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Subtle separator inside the horizontal bar */}
-                  <div className="h-6 w-px bg-neutral-200"></div>
-
-                  {/* Notification 3: Expired Stocks Counts & Notification */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStocksShelfLifeFilter(stocksShelfLifeFilter === 'EXPIRED' ? 'ALL' : 'EXPIRED');
-                      setStocksPage(1);
-                    }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                      stocksShelfLifeFilter === 'EXPIRED'
-                        ? 'bg-red-100 border-red-400 ring-2 ring-red-300 text-red-950 font-bold'
-                        : 'bg-red-50/70 hover:bg-red-100 border-red-200 text-red-900'
-                    }`}
-                    title="Click to filter expired items"
-                  >
-                    <span className="relative flex h-2 w-2">
-                      {stocksMetrics.expiredCount > 0 && (
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      )}
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-                    </span>
-                    <span className="material-symbols-outlined text-[18px] text-red-600">event_busy</span>
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <span className="font-black text-neutral-900 bg-white px-2 py-0.5 rounded-md border border-red-200 shadow-2xs">
-                        {stocksMetrics.expiredCount}
-                      </span>
-                      <span className="font-bold text-[11px] whitespace-nowrap">
-                        Expired Stocks Alert
-                      </span>
-                    </div>
-                  </button>
-
-                </div>
-
-                {/* Refresh Stocks Button */}
-                <button
-                  type="button"
-                  onClick={fetchData}
-                  title="Refresh stocks data"
-                  className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-black text-white flex items-center justify-center shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
-                >
-                  <span className="material-symbols-outlined text-[18px]">refresh</span>
-                </button>
-              </div>
+          {/* Master Catalog Table */}
+          {loading ? (
+            <div className="p-16 text-center text-xs font-semibold text-neutral-500">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-3"></div>
+              Loading catalog formulations from database...
             </div>
-
-            {/* Filter and Search Bar for Stocks */}
-            <div className="bg-white rounded-3xl border border-neutral-200 shadow-sm p-4 sm:p-6 mb-6">
-              
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-                
-                {/* Search SKU / Barcode ID / Name / Batch # / Shelf */}
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={stocksSearch}
-                    onChange={(e) => {
-                      setStocksSearch(e.target.value);
-                      setStocksPage(1);
-                    }}
-                    placeholder="Search by SKU, Barcode ID, Product Name, Batch #, Shelf Location..."
-                    className="w-full h-10 pl-9 pr-8 rounded-full bg-neutral-50 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-black border border-neutral-200 transition-all shadow-inner"
-                  />
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-[18px] pointer-events-none">
-                    search
-                  </span>
-                  {stocksSearch && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStocksSearch('');
-                        setStocksPage(1);
-                      }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black font-bold text-sm cursor-pointer"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-
-                {/* Filter dropdowns */}
-                <div className="flex flex-wrap items-center gap-2">
-                  
-                  {/* Tag Filter */}
-                  <select
-                    value={stocksTagFilter}
-                    onChange={(e) => {
-                      setStocksTagFilter(e.target.value);
-                      setStocksPage(1);
-                    }}
-                    className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                  >
-                    <option value="ALL">All Tags</option>
-                    <option value="OTC">OTC Only</option>
-                    <option value="Rx">Rx Prescription</option>
-                    <option value="Cold Chain">Cold Chain Tagged</option>
-                  </select>
-
-                  {/* Stock Status Filter */}
-                  <select
-                    value={stocksStatusFilter}
-                    onChange={(e) => {
-                      setStocksStatusFilter(e.target.value);
-                      setStocksPage(1);
-                    }}
-                    className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                  >
-                    <option value="ALL">All Stock Statuses</option>
-                    <option value="IN_STOCK">In Stock</option>
-                    <option value="LOW_STOCK">Low Stock (≤ Reorder)</option>
-                    <option value="OUT_OF_STOCK">Out of Stock</option>
-                  </select>
-
-                  {/* Shelf-Life Status Filter */}
-                  <select
-                    value={stocksShelfLifeFilter}
-                    onChange={(e) => {
-                      setStocksShelfLifeFilter(e.target.value);
-                      setStocksPage(1);
-                    }}
-                    className="h-9 px-3 rounded-full bg-neutral-50 text-xs text-neutral-800 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                  >
-                    <option value="ALL">All Shelf-Life</option>
-                    <option value="GOOD">Good (&gt; 60 days)</option>
-                    <option value="NEAR_EXPIRY">Near Expiry (&le; 60 days)</option>
-                    <option value="EXPIRED">Expired</option>
-                  </select>
-
-                </div>
-
-              </div>
-
-              {/* Category Filter Pills */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-neutral-100">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 mr-1">
-                  Category:
-                </span>
-                {['ALL', 'Prescription Medicines', 'Daily Health & Wellness', 'Vitamins & Nutritional Supplements', 'First Aid & Wound Care', 'Home Health & Medical Care'].map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => {
-                      setStocksCategory(cat);
-                      setStocksPage(1);
-                    }}
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                      stocksCategory === cat
-                        ? 'bg-zinc-900 text-white shadow-xs'
-                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
+          ) : filteredCatalogMedicines.length === 0 ? (
+            <div className="p-16 text-center space-y-3">
+              <span className="material-symbols-outlined text-[42px] text-neutral-300">medication</span>
+              <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+                No catalog products found matching filter criteria.
+              </p>
             </div>
-
-            {/* View Mode Switcher: Grouped by Batches (Batch 1, 2...) vs Flat Items */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-2xl border border-neutral-200">
-                <button
-                  type="button"
-                  onClick={() => setStocksViewMode('batch')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    stocksViewMode === 'batch'
-                      ? 'bg-zinc-900 text-white shadow-xs'
-                      : 'text-neutral-700 hover:bg-neutral-200/70'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px]">folder_copy</span>
-                  <span>Batch Groups View (Batch 1, Batch 2...)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStocksViewMode('flat')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    stocksViewMode === 'flat'
-                      ? 'bg-zinc-900 text-white shadow-xs'
-                      : 'text-neutral-700 hover:bg-neutral-200/70'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px]">table_rows</span>
-                  <span>Flat Item Table</span>
-                </button>
-              </div>
-
-              <div className="text-xs text-neutral-500">
-                {stocksViewMode === 'batch' ? (
-                  <span>
-                    Showing <strong className="text-black font-bold">{filteredGroupedBatches.length}</strong> active batch groups
-                  </span>
-                ) : (
-                  <span>
-                    Showing <strong className="text-black font-bold">{filteredStocks.length}</strong> catalog items
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* VIEW MODE A: BATCH GROUPS VIEW (Batch 1, Batch 2...) */}
-            {stocksViewMode === 'batch' ? (
-              <div className="space-y-6 mb-8">
-                {loading ? (
-                  <div className="bg-white rounded-3xl border border-neutral-200 p-16 text-center text-xs font-semibold text-neutral-500">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-3"></div>
-                    Loading batch telemetry &amp; inventory groups...
-                  </div>
-                ) : filteredGroupedBatches.length === 0 ? (
-                  <div className="bg-white rounded-3xl border border-neutral-200 p-16 text-center space-y-3">
-                    <span className="material-symbols-outlined text-[42px] text-neutral-300">inventory_2</span>
-                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                      No batches match the specified filters.
-                    </p>
-                  </div>
-                ) : (
-                  filteredGroupedBatches.map((b, bIdx) => {
-                    const isExpanded = expandedBatches[b.batchNumber] !== false; // expanded by default
-                    const isSending = sendingTaggingBatch === b.batchNumber;
-                    const isReview = b.status === 'COLD_CHAIN_REVIEW' || b.status === 'PENDING_REVIEW' || b.status === 'PENDING_DUAL_REVIEW';
-                    const isLive = b.status === 'LIVE' || b.status === 'APPROVED';
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-neutral-100/80 text-neutral-700 font-extrabold uppercase tracking-wider border-b border-neutral-200">
+                  <tr>
+                    <th className="py-3.5 px-4">Product ID</th>
+                    <th className="py-3.5 px-4">Product Details &amp; Formulation</th>
+                    <th className="py-3.5 px-4">Category</th>
+                    <th className="py-3.5 px-4">Selling Price (LKR)</th>
+                    <th className="py-3.5 px-4">Prescription</th>
+                    <th className="py-3.5 px-4">Cold Chain</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {paginatedCatalogMedicines.map((m) => {
+                    const specificId = getSpecificProductId(m);
+                    const isCold = Boolean(m.isTemperatureSensitive);
+                    const coldStatus = (m.coldChainStatus || '').toUpperCase();
+                    const isPendingApproval = coldStatus === 'PENDING_REVIEW' || coldStatus === 'PENDING_APPROVAL' || coldStatus === 'PENDING_DUAL_REVIEW';
+                    const isApprovedCold = coldStatus === 'APPROVED' || (isCold && !isPendingApproval && coldStatus !== 'REJECTED' && coldStatus !== 'NOT_REQUIRED');
+                    const isRejectedCold = coldStatus === 'REJECTED';
 
                     return (
-                      <div
-                        key={b.batchNumber || bIdx}
-                        className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden transition-all"
+                      <tr
+                        key={m.id}
+                        className="hover:bg-neutral-50/80 transition-colors group"
                       >
-                        {/* Batch Header Bar */}
-                        <div className="p-4 sm:p-5 bg-gradient-to-r from-neutral-50 to-white border-b border-neutral-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                          
-                          <div className="flex items-start sm:items-center gap-3.5">
-                            <button
-                              type="button"
-                              onClick={() => toggleBatchExpand(b.batchNumber)}
-                              className="w-8 h-8 rounded-full bg-neutral-200/70 hover:bg-neutral-300 flex items-center justify-center text-neutral-700 transition-colors cursor-pointer shrink-0 mt-0.5 sm:mt-0"
-                              title={isExpanded ? 'Collapse batch' : 'Expand batch'}
-                            >
-                              <span className="material-symbols-outlined text-[20px]">
-                                {isExpanded ? 'expand_less' : 'expand_more'}
+                        {/* Specific Product ID (No 1, 2, 3 raw counters!) */}
+                        <td className="py-3.5 px-4">
+                          <span className="inline-flex items-center gap-1 font-mono font-bold text-[11px] px-2.5 py-1 rounded-md bg-zinc-100 border border-zinc-300 text-zinc-900 shadow-2xs">
+                            <span className="material-symbols-outlined text-[13px] text-zinc-500">qr_code</span>
+                            <span>{specificId}</span>
+                          </span>
+                        </td>
+
+                        {/* Product Details & Formulation */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200 flex items-center justify-center">
+                              {m.imageUrl ? (
+                                <img src={m.imageUrl} alt={m.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="material-symbols-outlined text-neutral-400 text-[18px]">medication</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-bold text-neutral-900 group-hover:text-black line-clamp-1">
+                                {m.name}
                               </span>
-                            </button>
-
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="text-base sm:text-lg font-black tracking-tight text-neutral-900">
-                                  {b.batchDisplayName || b.batchNumber}
-                                </h3>
-
-                                {/* Batch Status Badge */}
-                                {isLive ? (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                                    <span>LIVE &amp; APPROVED</span>
-                                  </span>
-                                ) : isReview ? (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
-                                    <span className="material-symbols-outlined text-[12px] text-amber-700">ac_unit</span>
-                                    <span>IN COLD-CHAIN REVIEW</span>
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-neutral-100 text-neutral-700 border border-neutral-300">
-                                    <span>{b.status || 'ACTIVE'}</span>
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-3 mt-1.5 text-xs text-neutral-500 flex-wrap">
-                                <span>
-                                  Medicines in Batch: <strong className="text-black font-bold">{b.medicines?.length || 0}</strong>
+                              {m.genericName && (
+                                <span className="text-[11px] text-neutral-500 line-clamp-1">
+                                  {m.genericName}
                                 </span>
-                                <span>•</span>
-                                <span>
-                                  Total Stock: <strong className="text-black font-bold">{b.totalStock || 0} units</strong>
-                                </span>
-                                <span>•</span>
-                                <span>
-                                  Arrived: <strong className="text-neutral-700 font-medium">{formatDateDDMMYYYY(b.arrivedDate)}</strong>
-                                </span>
-                                <span>•</span>
-                                <span>
-                                  Earliest Exp: <strong className="text-neutral-700 font-medium">{formatDateDDMMYYYY(b.expiryDate)}</strong>
-                                </span>
-                              </div>
+                              )}
                             </div>
                           </div>
+                        </td>
 
-                          {/* Top Batch Operational Actions */}
-                          <div className="flex items-center gap-2.5 self-end lg:self-auto flex-wrap">
+                        {/* Category */}
+                        <td className="py-3.5 px-4">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-neutral-100 text-neutral-700">
+                            {m.category || 'General'}
+                          </span>
+                        </td>
+
+                        {/* Price */}
+                        <td className="py-3.5 px-4 font-bold text-neutral-900 text-sm">
+                          {formatLKR(m.unitPrice)}
+                        </td>
+
+                        {/* Prescription */}
+                        <td className="py-3.5 px-4">
+                          {m.requiresPrescription ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
+                              <span className="material-symbols-outlined text-[13px]">prescriptions</span>
+                              <span>Rx Required</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                              <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                              <span>OTC</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Dedicated Cold Chain Column */}
+                        <td className="py-3.5 px-4">
+                          {isPendingApproval ? (
+                            <div className="inline-flex flex-col gap-0.5">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-[11px] font-extrabold border border-amber-300 ring-1 ring-amber-400/40">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                <span>Pending Approval</span>
+                              </span>
+                              <span className="text-[9px] text-amber-700/80 font-medium pl-1">
+                                In Pharmacist Review
+                              </span>
+                            </div>
+                          ) : isApprovedCold ? (
+                            <div className="inline-flex flex-col gap-0.5">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-900 text-[11px] font-extrabold border border-cyan-300 ring-1 ring-cyan-400/40">
+                                <span className="material-symbols-outlined text-[14px] text-cyan-600">ac_unit</span>
+                                <span>Cold Chain (2°C - 8°C)</span>
+                              </span>
+                              <span className="text-[9px] text-cyan-800 font-semibold pl-1">
+                                Certified &amp; Active
+                              </span>
+                            </div>
+                          ) : isRejectedCold ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 text-[11px] font-bold border border-rose-200">
+                              <span className="material-symbols-outlined text-[14px] text-rose-600">cancel</span>
+                              <span>Review Rejected</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-600 text-[11px] font-semibold border border-neutral-200">
+                              <span className="material-symbols-outlined text-[14px] text-neutral-400">thermostat</span>
+                              <span>Ambient (15°C - 25°C)</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Actions (CRUD + Send for Cold Chain Approval) */}
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             
-                            {/* Send for Condition Tagging Button */}
+                            {/* Option: Send for Cold Chain Approval */}
                             <button
                               type="button"
-                              disabled={isSending}
-                              onClick={() => handleSendBatchForTagging(b.batchNumber)}
-                              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-xs cursor-pointer ${
-                                isReview
-                                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                                  : 'bg-cyan-700 hover:bg-cyan-800 text-white'
+                              onClick={() => setApprovalTarget(m)}
+                              title="Submit this product for Cold Chain Verification & Approval"
+                              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all cursor-pointer shadow-2xs ${
+                                isPendingApproval
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+                                  : isApprovedCold
+                                  ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-900 border border-cyan-200'
+                                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
                               }`}
-                              title="Send this batch and all contained medicines to the Chief Pharmacist for cold-chain condition tagging & approval"
                             >
-                              <span className="material-symbols-outlined text-[16px]">
-                                {isSending ? 'hourglass_top' : 'ac_unit'}
+                              <span className="material-symbols-outlined text-[14px]">
+                                {isPendingApproval ? 'hourglass_top' : isApprovedCold ? 'verified' : 'ac_unit'}
                               </span>
                               <span>
-                                {isSending
-                                  ? 'Dispatching...'
-                                  : isReview
-                                  ? 'Re-Send for Tagging'
-                                  : 'Send for Condition Tagging'}
+                                {isPendingApproval ? 'Approval Pending' : isApprovedCold ? 'Re-Request Approval' : 'Send for Cold Chain Approval'}
                               </span>
                             </button>
 
-                          </div>
-
-                        </div>
-
-                        {/* Batch Medicines Inner Table */}
-                        {isExpanded && (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs">
-                              <thead className="bg-neutral-100/70 text-neutral-600 font-extrabold uppercase tracking-wider border-b border-neutral-200">
-                                <tr>
-                                  <th className="py-2.5 px-4">Medicine Item</th>
-                                  <th className="py-2.5 px-4">SKU / Barcode</th>
-                                  <th className="py-2.5 px-4">Condition &amp; Section</th>
-                                  <th className="py-2.5 px-4">Stock Level</th>
-                                  <th className="py-2.5 px-4">Expiry (DD/MM/YYYY)</th>
-                                  <th className="py-2.5 px-4">Pricing &amp; Value</th>
-                                  <th className="py-2.5 px-4 text-right">Medicine Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-neutral-100">
-                                {(b.medicines || []).map((m, mIdx) => {
-                                  const shelfLife = getShelfLifeStatus(m.expiryDate);
-                                  const cogsVal = Number(m.cogs) || (Number(m.unitPrice) * 0.45) || 0;
-                                  const lineVal = (Number(m.stockQuantity) || 0) * cogsVal;
-                                  const isSendingItem = sendingTaggingItemId === m.batchItemId;
-
-                                  return (
-                                    <tr key={m.batchItemId || m.medicineId || mIdx} className="hover:bg-neutral-50/80 transition-colors">
-                                      
-                                      {/* Medicine Item Info */}
-                                      <td className="py-3 px-4">
-                                        <div className="flex items-center gap-2.5">
-                                          <div className="w-9 h-9 rounded-lg bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200 flex items-center justify-center">
-                                            {m.imageUrl ? (
-                                              <img src={m.imageUrl} alt={m.medicineName || m.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                              <span className="material-symbols-outlined text-neutral-400 text-[16px]">medication</span>
-                                            )}
-                                          </div>
-                                          <div>
-                                            <div className="font-extrabold text-neutral-900 leading-tight">
-                                              {m.medicineName || m.name}
-                                            </div>
-                                            <div className="text-[10px] text-neutral-500 truncate max-w-xs">
-                                              {m.genericName || m.category || 'General Formulation'}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </td>
-
-                                      {/* SKU / Barcode */}
-                                      <td className="py-3 px-4 font-mono text-[11px] text-neutral-700">
-                                        <div className="font-bold">{m.sku || 'N/A'}</div>
-                                        <div className="text-[10px] text-neutral-400 flex items-center gap-0.5">
-                                          <span className="material-symbols-outlined text-[12px]">barcode_scanner</span>
-                                          <span>{m.barcode || 'N/A'}</span>
-                                        </div>
-                                      </td>
-
-                                      {/* Condition & Shelf Section */}
-                                      <td className="py-3 px-4">
-                                        <div className="flex flex-col gap-1">
-                                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit ${
-                                            (m.section === 'REFRIGERATED' || m.isTemperatureSensitive)
-                                              ? 'bg-cyan-100 text-cyan-900 border border-cyan-200'
-                                              : (m.section === 'FROZEN')
-                                              ? 'bg-blue-100 text-blue-900 border border-blue-200'
-                                              : (m.section === 'CONTROLLED_VAULT')
-                                              ? 'bg-purple-100 text-purple-900 border border-purple-200'
-                                              : (m.section === 'COOL_ROOM')
-                                              ? 'bg-teal-100 text-teal-900 border border-teal-200'
-                                              : 'bg-neutral-100 text-neutral-700 border border-neutral-200'
-                                          }`}>
-                                            <span className="material-symbols-outlined text-[12px]">
-                                              {(m.section === 'REFRIGERATED' || m.section === 'FROZEN' || m.isTemperatureSensitive) ? 'ac_unit' : 'shelves'}
-                                            </span>
-                                            <span>{m.section || (m.isTemperatureSensitive ? 'REFRIGERATED' : 'AMBIENT')}</span>
-                                          </span>
-                                          <span className="text-[10px] text-neutral-500">
-                                            {m.storageRequirement || m.shelfLocation || 'Shelf A-01'}
-                                          </span>
-                                        </div>
-                                      </td>
-
-                                      {/* Stock Level */}
-                                      <td className="py-3 px-4 font-semibold text-neutral-900">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="text-sm font-bold text-black">{m.stockQuantity || 0}</span>
-                                          <span className="text-[10px] text-neutral-400 font-normal">units</span>
-                                        </div>
-                                        <div className="text-[10px] text-neutral-500">
-                                          Alloc: <strong className="text-indigo-700">{m.allocatedStock || 0}</strong> • Reorder: {m.reorderLevel || 25}
-                                        </div>
-                                      </td>
-
-                                      {/* Expiry Date */}
-                                      <td className="py-3 px-4">
-                                        <div className="text-neutral-800 font-medium">
-                                          {formatDateDDMMYYYY(m.expiryDate)}
-                                        </div>
-                                        <span className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[9px] border ${shelfLife.badgeClass}`}>
-                                          <span className={`w-1 h-1 rounded-full ${shelfLife.dotClass}`}></span>
-                                          <span>{shelfLife.label}</span>
-                                        </span>
-                                      </td>
-
-                                      {/* Pricing & Valuation */}
-                                      <td className="py-3 px-4 text-[11px]">
-                                        <div className="font-bold text-emerald-800">{formatLKR(m.unitPrice)}</div>
-                                        <div className="text-[10px] text-neutral-500">Val: {formatLKR(lineVal)}</div>
-                                      </td>
-
-                                      {/* Medicine Item Actions */}
-                                      <td className="py-3 px-4 text-right">
-                                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                                          
-                                          {/* Send for Tagging */}
-                                          <button
-                                            type="button"
-                                            disabled={isSendingItem}
-                                            onClick={() => handleSendItemForTagging(m.batchItemId, m.medicineName || m.name)}
-                                            className="px-2.5 py-1 rounded-full bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[10px] font-bold flex items-center gap-1 border border-cyan-200 transition-colors cursor-pointer"
-                                            title="Send individual item for condition tagging"
-                                          >
-                                            <span className="material-symbols-outlined text-[13px]">ac_unit</span>
-                                            <span>Tag</span>
-                                          </button>
-
-                                          {/* Quick Adjust */}
-                                          <button
-                                            type="button"
-                                            onClick={() => handleOpenQuickAdjust(m.rawMedicine || medicines.find(med => med.id === m.medicineId) || m)}
-                                            className="px-2.5 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                                            title="Quick adjust stock or price"
-                                          >
-                                            <span className="material-symbols-outlined text-[13px]">tune</span>
-                                            <span>Adjust</span>
-                                          </button>
-
-                                          {/* Quarantine */}
-                                          <button
-                                            type="button"
-                                            onClick={() => handleToggleQuarantine(m.rawMedicine || medicines.find(med => med.id === m.medicineId) || m)}
-                                            className="w-7 h-7 rounded-full bg-red-50 hover:bg-red-100 text-red-700 flex items-center justify-center transition-colors cursor-pointer"
-                                            title="Toggle Quarantine"
-                                          >
-                                            <span className="material-symbols-outlined text-[14px]">gpp_bad</span>
-                                          </button>
-
-                                          {/* Reorder PO */}
-                                          <button
-                                            type="button"
-                                            onClick={() => handleOpenReorder(m.rawMedicine || medicines.find(med => med.id === m.medicineId) || m)}
-                                            className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-black text-white text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                                            title="Create PO Reorder"
-                                          >
-                                            <span className="material-symbols-outlined text-[13px]">receipt_long</span>
-                                            <span>PO</span>
-                                          </button>
-
-                                        </div>
-                                      </td>
-
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            ) : (
-              /* VIEW MODE B: FLAT ITEM TABLE */
-              <div className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden mb-8">
-                
-                <div className="px-6 py-3 bg-neutral-50/70 border-b border-neutral-200 flex items-center justify-between text-xs text-neutral-500">
-                  <span>
-                    Showing <strong className="text-black">{paginatedStocks.length}</strong> of{' '}
-                    <strong className="text-black">{filteredStocks.length}</strong> items in inventory
-                  </span>
-                  <span className="text-[11px] font-medium text-neutral-400">
-                    Valuation Currency: <strong className="text-neutral-700">LKR (Rs.)</strong>
-                  </span>
-                </div>
-
-                {loading ? (
-                  <div className="p-16 text-center text-xs font-semibold text-neutral-500">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-3"></div>
-                    Loading inventory and stock telemetry...
-                  </div>
-                ) : filteredStocks.length === 0 ? (
-                  <div className="p-16 text-center space-y-3">
-                    <span className="material-symbols-outlined text-[42px] text-neutral-300">inventory_2</span>
-                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                      No items match the specified inventory filters.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-neutral-100/90 text-neutral-700 font-extrabold uppercase tracking-wider border-b border-neutral-200">
-                        <tr>
-                          <th className="py-3 px-4">Item Identification</th>
-                          <th className="py-3 px-4">Batch &amp; Shelf-Life (DD/MM/YYYY)</th>
-                          <th className="py-3 px-4">Stock Level Metrics</th>
-                          <th className="py-3 px-4">Pricing &amp; Valuation</th>
-                          <th className="py-3 px-4">Storage &amp; Location</th>
-                          <th className="py-3 px-4 text-right">Operational Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-neutral-100">
-                        {paginatedStocks.map((m) => {
-                          const shelfLife = getShelfLifeStatus(m.expiryDate);
-                          const stockStatus = getStockLevelStatus(m.stockQuantity, m.reorderLevel);
-                          const cogsVal = Number(m.cogs) || (Number(m.unitPrice) * 0.45) || 0;
-                          const lineValuation = (Number(m.stockQuantity) || 0) * cogsVal;
-                          const isQuarantined = Boolean(m.isQuarantined);
-
-                          return (
-                            <tr
-                              key={m.id}
-                              className={`hover:bg-neutral-50/70 transition-colors ${
-                                isQuarantined ? 'bg-red-50/30' : ''
-                              }`}
+                            {/* Edit Action */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditCatalog(m)}
+                              title="Edit product formulation"
+                              className="px-3 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-bold transition-colors cursor-pointer border border-neutral-200"
                             >
-                              {/* 1. Item Identification */}
-                              <td className="py-3.5 px-4 align-top">
-                                <div className="flex items-start gap-3">
-                                  <div className="w-10 h-10 rounded-xl bg-neutral-100 overflow-hidden flex-shrink-0 border border-neutral-200 flex items-center justify-center mt-0.5">
-                                    {m.imageUrl ? (
-                                      <img src={m.imageUrl} alt={m.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <span className="material-symbols-outlined text-neutral-400 text-[18px]">medication</span>
-                                    )}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="font-extrabold text-neutral-900 leading-tight">
-                                        {m.name}
-                                      </span>
-                                      {isQuarantined && (
-                                        <span className="px-1.5 py-0.2 rounded bg-red-600 text-white text-[9px] font-black uppercase tracking-wider animate-pulse">
-                                          QUARANTINED
-                                        </span>
-                                      )}
-                                    </div>
-                                    
-                                    {m.genericName && (
-                                      <div className="text-[11px] text-neutral-500 truncate max-w-xs">
-                                        {m.genericName}
-                                      </div>
-                                    )}
+                              Edit
+                            </button>
 
-                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                      {/* SKU */}
-                                      <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 border border-neutral-200">
-                                        {m.sku || 'N/A'}
-                                      </span>
-                                      {/* Barcode ID */}
-                                      <span className="font-mono text-[10px] text-neutral-500 flex items-center gap-0.5">
-                                        <span className="material-symbols-outlined text-[13px]">barcode_scanner</span>
-                                        <span>{m.barcode || 'N/A'}</span>
-                                      </span>
-                                    </div>
+                            {/* Delete Action */}
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(m)}
+                              title="Delete product permanently from database"
+                              className="px-3 py-1.5 rounded-full bg-red-50 hover:bg-red-100 text-red-600 text-[11px] font-bold transition-colors cursor-pointer border border-red-200"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-                                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                      {/* Category */}
-                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-neutral-100 text-neutral-600">
-                                        {m.category || 'General'}
-                                      </span>
-
-                                      {/* Tags: OTC vs Rx */}
-                                      {m.requiresPrescription ? (
-                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300">
-                                          Rx
-                                        </span>
-                                      ) : (
-                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-800 border border-blue-200">
-                                          OTC
-                                        </span>
-                                      )}
-
-                                      {/* Tags: Cold Chain */}
-                                      {(m.isTemperatureSensitive || (m.tags || '').toLowerCase().includes('cold')) && (
-                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-cyan-100 text-cyan-900 border border-cyan-300">
-                                          <span className="material-symbols-outlined text-[11px]">ac_unit</span>
-                                          <span>Cold Chain</span>
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-
-                              {/* 2. Batch & Shelf-Life (Expiry Tracking) */}
-                              <td className="py-3.5 px-4 align-top">
-                                <div className="flex flex-col gap-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-bold text-neutral-400 uppercase">Lot:</span>
-                                    <span className="font-mono text-xs font-bold text-neutral-800 bg-neutral-50 px-1.5 py-0.5 rounded border border-neutral-200">
-                                      {m.batchNumber || 'LOT-UNASSIGNED'}
-                                    </span>
-                                  </div>
-
-                                  <div className="text-[11px] text-neutral-600 flex flex-col gap-0.5">
-                                    <span>
-                                      <strong>Mfg:</strong> {formatDateDDMMYYYY(m.manufacturingDate)}
-                                    </span>
-                                    <span>
-                                      <strong>Exp:</strong> {formatDateDDMMYYYY(m.expiryDate)}
-                                    </span>
-                                  </div>
-
-                                  <div>
-                                    <span
-                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] border ${shelfLife.badgeClass}`}
-                                    >
-                                      <span className={`w-1.5 h-1.5 rounded-full ${shelfLife.dotClass}`}></span>
-                                      <span>{shelfLife.label}</span>
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
-
-                              {/* 3. Stock Level Metrics */}
-                              <td className="py-3.5 px-4 align-top">
-                                <div className="flex flex-col gap-1.5">
-                                  <div>
-                                    <span
-                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] border ${stockStatus.badgeClass}`}
-                                    >
-                                      <span className={`w-1.5 h-1.5 rounded-full ${stockStatus.dotClass}`}></span>
-                                      <span>{stockStatus.label}</span>
-                                    </span>
-                                  </div>
-
-                                  <div className="text-[11px] text-neutral-700 space-y-0.5 font-medium">
-                                    <div>
-                                      Available: <strong className="text-black font-bold">{m.stockQuantity || 0}</strong>
-                                    </div>
-                                    <div>
-                                      Allocated: <span className="text-indigo-700 font-bold">{m.allocatedStock || 0}</span>
-                                    </div>
-                                    <div>
-                                      Reorder Level: <span className="text-amber-800 font-semibold">{m.reorderLevel || 25}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-
-                              {/* 4. Pricing & Valuation */}
-                              <td className="py-3.5 px-4 align-top">
-                                <div className="flex flex-col gap-1 text-[11px]">
-                                  <div>
-                                    <span className="text-neutral-400 font-medium">Unit Cost:</span>{' '}
-                                    <strong className="text-neutral-800">{formatLKR(cogsVal)}</strong>
-                                  </div>
-                                  <div>
-                                    <span className="text-neutral-400 font-medium">Selling Price:</span>{' '}
-                                    <strong className="text-emerald-800 font-black">{formatLKR(m.unitPrice)}</strong>
-                                  </div>
-                                  <div className="pt-1 border-t border-neutral-100 text-[10px] text-neutral-500">
-                                    <span>Valuation:</span>{' '}
-                                    <strong className="text-black font-bold">{formatLKR(lineValuation)}</strong>
-                                  </div>
-                                </div>
-                              </td>
-
-                              {/* 5. Storage & Location */}
-                              <td className="py-3.5 px-4 align-top">
-                                <div className="flex flex-col gap-1.5">
-                                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-100 border border-neutral-200 font-mono text-[11px] font-bold text-neutral-800 w-fit">
-                                    <span className="material-symbols-outlined text-[14px] text-neutral-500">shelves</span>
-                                    <span>{m.shelfLocation || 'Shelf A-01'}</span>
-                                  </div>
-
-                                  <div className="text-[10px] text-neutral-500 font-medium">
-                                    {m.storageRequirement || (m.isTemperatureSensitive ? 'Cold Chain (2°C - 8°C)' : 'Room Temperature (15°C - 25°C)')}
-                                  </div>
-                                </div>
-                              </td>
-
-                              {/* 6. Operational Actions */}
-                              <td className="py-3.5 px-4 align-top text-right">
-                                <div className="flex flex-col items-end gap-1.5">
-                                  
-                                  {/* Send for Tagging */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSendItemForTagging(m.id, m.name)}
-                                    className="w-full max-w-[120px] px-2.5 py-1 rounded-full bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[11px] font-bold flex items-center justify-center gap-1 border border-cyan-200 transition-all cursor-pointer shadow-2xs"
-                                    title="Send this medicine for Condition Tagging & Pharmacist Review"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">ac_unit</span>
-                                    <span>Send Tagging</span>
-                                  </button>
-
-                                  {/* Quick Adjust */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenQuickAdjust(m)}
-                                    className="w-full max-w-[120px] px-2.5 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">tune</span>
-                                    <span>Quick Adjust</span>
-                                  </button>
-
-                                  {/* Quarantine / Mark as Expired */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleQuarantine(m)}
-                                    className={`w-full max-w-[120px] px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs ${
-                                      isQuarantined
-                                        ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                        : 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
-                                    }`}
-                                    title={isQuarantined ? 'Release item from quarantine' : 'Quarantine item or mark as expired'}
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">
-                                      {isQuarantined ? 'verified' : 'gpp_bad'}
-                                    </span>
-                                    <span>{isQuarantined ? 'Release' : 'Quarantine'}</span>
-                                  </button>
-
-                                  {/* Reorder / Create PO */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenReorder(m)}
-                                    className="w-full max-w-[120px] px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-black text-white text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">receipt_long</span>
-                                    <span>Reorder PO</span>
-                                  </button>
-
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-              {/* Stocks Pagination */}
-              {totalStocksPages > 1 && (
-                <div className="p-4 border-t border-neutral-100 flex items-center justify-between">
-                  <button
-                    type="button"
-                    disabled={stocksPage === 1}
-                    onClick={() => setStocksPage((p) => Math.max(1, p - 1))}
-                    className="px-4 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 disabled:opacity-40 text-xs font-bold text-neutral-700 cursor-pointer"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-xs font-medium text-neutral-500">
-                    Page {stocksPage} of {totalStocksPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={stocksPage === totalStocksPages}
-                    onClick={() => setStocksPage((p) => Math.min(totalStocksPages, p + 1))}
-                    className="px-4 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 disabled:opacity-40 text-xs font-bold text-neutral-700 cursor-pointer"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+          {/* Pagination */}
+          {totalCatalogPages > 1 && (
+            <div className="p-4 border-t border-neutral-100 flex items-center justify-between">
+              <button
+                type="button"
+                disabled={catalogPage === 1}
+                onClick={() => setCatalogPage((p) => Math.max(1, p - 1))}
+                className="px-4 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 disabled:opacity-40 text-xs font-bold text-neutral-700 cursor-pointer"
+              >
+                Previous
+              </button>
+              <span className="text-xs font-medium text-neutral-500">
+                Page {catalogPage} of {totalCatalogPages}
+              </span>
+              <button
+                type="button"
+                disabled={catalogPage === totalCatalogPages}
+                onClick={() => setCatalogPage((p) => Math.min(totalCatalogPages, p + 1))}
+                className="px-4 py-1.5 rounded-full bg-neutral-100 hover:bg-neutral-200 disabled:opacity-40 text-xs font-bold text-neutral-700 cursor-pointer"
+              >
+                Next
+              </button>
             </div>
           )}
         </div>
-      )}
 
       </div>
 
       {/* ========================================================= */}
-      {/* MODAL 1: CATALOG PRODUCT ADD / EDIT MODAL                 */}
+      {/* MODAL 1: ADD / EDIT PRODUCT FORMULATION MODAL             */}
       {/* ========================================================= */}
       {showCatalogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl border border-neutral-200">
-            <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-3xl p-6 sm:p-8 shadow-2xl border border-neutral-200 my-8">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-6">
               <div>
-                <h3 className="text-lg font-black text-neutral-900 uppercase tracking-tight">
-                  {catalogEditorMode === 'edit' ? 'Edit Catalog Product' : 'Add New Catalog Product'}
-                </h3>
-                <p className="text-xs text-neutral-500">Master pharmaceutical product attributes.</p>
+                <h2 className="text-lg font-black uppercase tracking-tight text-neutral-900">
+                  {catalogEditorMode === 'create' ? 'Add New Formulation' : 'Update Catalog Formulation'}
+                </h2>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Changes will be committed directly to MySQL master inventory catalog.
+                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCatalogModal(false)}
-                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 font-bold cursor-pointer"
               >
-                ✕
+                ×
               </button>
             </div>
 
-            <form onSubmit={handleSaveCatalog} className="p-6 space-y-4 text-xs">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                  Product Name *
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={catalogForm.name}
-                  onChange={(e) => setCatalogForm({ ...catalogForm, name: e.target.value })}
-                  placeholder="e.g. Paracetamol 500mg Tablets"
-                  className="w-full h-10 px-4 rounded-full bg-neutral-50 text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                  Generic Formulation Name
-                </label>
-                <input
-                  type="text"
-                  value={catalogForm.genericName}
-                  onChange={(e) => setCatalogForm({ ...catalogForm, genericName: e.target.value })}
-                  placeholder="e.g. Acetaminophen BP"
-                  className="w-full h-10 px-4 rounded-full bg-neutral-50 text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form onSubmit={handleSaveCatalog} className="space-y-4">
+              
+              {/* Row 1: Product ID / SKU & Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                    SKU Code *
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1">
+                    Specific Product ID / SKU <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    required
                     value={catalogForm.sku}
                     onChange={(e) => setCatalogForm({ ...catalogForm, sku: e.target.value })}
-                    placeholder="e.g. SKU-PAI-500"
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-mono text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
+                    placeholder="e.g. PRD-RX-AMX-500"
+                    className="w-full h-10 px-3.5 rounded-xl bg-neutral-50 text-xs font-mono font-bold text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
                   />
+                  <span className="text-[10px] text-neutral-400 mt-0.5 block">
+                    Unique identifier (e.g. PRD-RX-AMX-500)
+                  </span>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                    Category
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1">
+                    Product Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    required
+                    value={catalogForm.name}
+                    onChange={(e) => setCatalogForm({ ...catalogForm, name: e.target.value })}
+                    placeholder="e.g. Amoxil 500mg"
+                    className="w-full h-10 px-3.5 rounded-xl bg-neutral-50 text-xs text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Generic Formulation & Category */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1">
+                    Generic / Active Chemical
+                  </label>
+                  <input
+                    type="text"
+                    value={catalogForm.genericName}
+                    onChange={(e) => setCatalogForm({ ...catalogForm, genericName: e.target.value })}
+                    placeholder="e.g. Amoxicillin Trihydrate"
+                    className="w-full h-10 px-3.5 rounded-xl bg-neutral-50 text-xs text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
                     value={catalogForm.category}
                     onChange={(e) => setCatalogForm({ ...catalogForm, category: e.target.value })}
-                    placeholder="Category name..."
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
+                    className="w-full h-10 px-3.5 rounded-xl bg-neutral-50 text-xs text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black font-medium cursor-pointer"
+                  >
+                    {CATEGORY_LIST.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                  Selling Price in LKR (Rs.) *
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 font-bold text-xs">
-                    LKR
-                  </span>
+              {/* Row 3: Unit Price (LKR), Stock Quantity, Reorder Level */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1">
+                    Unit Price (LKR) <span className="text-red-500">*</span>
+                  </label>
                   <input
-                    required
                     type="number"
                     step="0.01"
+                    min="0"
+                    required
                     value={catalogForm.unitPrice}
                     onChange={(e) => setCatalogForm({ ...catalogForm, unitPrice: e.target.value })}
-                    placeholder="120.00"
-                    className="w-full h-10 pl-14 pr-4 rounded-full bg-neutral-50 text-neutral-900 font-bold border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
+                    placeholder="e.g. 1200.00"
+                    className="w-full h-10 px-3.5 rounded-xl bg-neutral-50 text-xs text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1">
+                    Initial Stock Qty
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={catalogForm.stockQuantity}
+                    onChange={(e) => setCatalogForm({ ...catalogForm, stockQuantity: parseInt(e.target.value) || 0 })}
+                    className="w-full h-10 px-3.5 rounded-xl bg-neutral-50 text-xs text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1">
+                    Reorder Threshold
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={catalogForm.reorderLevel}
+                    onChange={(e) => setCatalogForm({ ...catalogForm, reorderLevel: parseInt(e.target.value) || 0 })}
+                    className="w-full h-10 px-3.5 rounded-xl bg-neutral-50 text-xs text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black font-semibold"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 pt-1">
-                <label className="relative inline-flex items-center cursor-pointer">
+              {/* Row 4: Prescription & Cold Chain Toggles */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-between">
+                  <div>
+                    <span className="block text-xs font-bold text-neutral-900">Requires Prescription (Rx)</span>
+                    <span className="text-[10px] text-neutral-500">Must be verified by Clinical Pharmacist</span>
+                  </div>
                   <input
                     type="checkbox"
                     checked={catalogForm.requiresPrescription}
                     onChange={(e) => setCatalogForm({ ...catalogForm, requiresPrescription: e.target.checked })}
-                    className="sr-only peer"
+                    className="w-5 h-5 accent-zinc-900 rounded cursor-pointer"
                   />
-                  <div className="w-10 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-black"></div>
-                </label>
-                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wider">
-                  Requires Doctor's Prescription (Rx)
-                </span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-cyan-50/70 border border-cyan-200 flex items-center justify-between">
+                  <div>
+                    <span className="block text-xs font-bold text-cyan-950 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[15px] text-cyan-700">ac_unit</span>
+                      <span>Cold Chain Sensitive (2°C - 8°C)</span>
+                    </span>
+                    <span className="text-[10px] text-cyan-800">Requires temperature telemetry &amp; tag review</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={catalogForm.isTemperatureSensitive}
+                    onChange={(e) => setCatalogForm({
+                      ...catalogForm,
+                      isTemperatureSensitive: e.target.checked,
+                      coldChainStatus: e.target.checked ? 'PENDING_REVIEW' : 'NOT_REQUIRED',
+                    })}
+                    className="w-5 h-5 accent-cyan-700 rounded cursor-pointer"
+                  />
+                </div>
               </div>
 
+              {/* Row 5: Image URL & Description */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                  Image URL
+                <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1">
+                  Product Image URL
                 </label>
                 <input
-                  type="text"
+                  type="url"
                   value={catalogForm.imageUrl}
                   onChange={(e) => setCatalogForm({ ...catalogForm, imageUrl: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full h-10 px-4 rounded-full bg-neutral-50 text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full h-10 px-3.5 rounded-xl bg-neutral-50 text-xs text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-1">
-                  Description
+                <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1">
+                  Clinical Description &amp; Usage Notes
                 </label>
                 <textarea
-                  rows={3}
+                  rows="3"
                   value={catalogForm.description}
                   onChange={(e) => setCatalogForm({ ...catalogForm, description: e.target.value })}
-                  placeholder="Formulation details, dosage, usage..."
-                  className="w-full p-3 rounded-2xl bg-neutral-50 text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black resize-none"
+                  placeholder="Clinical indications, dosage, storage guidelines..."
+                  className="w-full p-3.5 rounded-xl bg-neutral-50 text-xs text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black resize-none"
                 />
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-neutral-100">
+              {/* Action Buttons */}
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-neutral-100">
                 <button
                   type="button"
                   onClick={() => setShowCatalogModal(false)}
-                  className="px-5 py-2.5 rounded-full border border-neutral-300 text-neutral-700 text-xs font-bold uppercase tracking-wider hover:bg-neutral-50 cursor-pointer"
+                  className="px-5 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingCatalog}
-                  className="px-6 py-2.5 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2.5 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider disabled:opacity-50 cursor-pointer shadow-sm transition-all"
                 >
-                  {savingCatalog ? 'Saving...' : catalogEditorMode === 'edit' ? 'Save Changes' : 'Create Product'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* MODAL 2: STOCKS QUICK ADJUST MODAL                        */}
-      {/* ========================================================= */}
-      {showQuickAdjustModal && quickAdjustItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl border border-neutral-200">
-            <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-black text-neutral-900 uppercase tracking-tight flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-600">tune</span>
-                  <span>Quick Stock Adjust: {quickAdjustItem.name}</span>
-                </h3>
-                <p className="text-xs text-neutral-500">
-                  Update on-hand stock, reorder levels, shelf placement, lot numbers, and expiry telemetry.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowQuickAdjustModal(false)}
-                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveQuickAdjust} className="p-6 space-y-4 text-xs">
-              
-              {/* Item Identification Readonly Box */}
-              <div className="bg-neutral-50 p-3.5 rounded-2xl border border-neutral-200 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-neutral-400 block">Product</span>
-                  <span className="font-extrabold text-neutral-900 text-sm">{quickAdjustItem.name}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-neutral-400 block">SKU</span>
-                  <span className="font-mono font-bold text-neutral-800">{quickAdjustItem.sku}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-neutral-400 block">Category</span>
-                  <span className="font-semibold text-neutral-800">{quickAdjustItem.category}</span>
-                </div>
-              </div>
-
-              {/* Stock Numbers */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    On-Hand Stock Units *
-                  </label>
-                  <input
-                    required
-                    type="number"
-                    value={adjustForm.stockQuantity}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, stockQuantity: e.target.value })}
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-black text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Allocated Units
-                  </label>
-                  <input
-                    type="number"
-                    value={adjustForm.allocatedStock}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, allocatedStock: e.target.value })}
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-bold text-indigo-700 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Reorder Alert Level *
-                  </label>
-                  <input
-                    required
-                    type="number"
-                    value={adjustForm.reorderLevel}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, reorderLevel: e.target.value })}
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-bold text-amber-800 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-              </div>
-
-              {/* Batch & Barcode */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Batch / Lot Number
-                  </label>
-                  <input
-                    type="text"
-                    value={adjustForm.batchNumber}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, batchNumber: e.target.value })}
-                    placeholder="e.g. LOT-2026-X89"
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-mono text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Barcode ID
-                  </label>
-                  <input
-                    type="text"
-                    value={adjustForm.barcode}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, barcode: e.target.value })}
-                    placeholder="e.g. BC-984729103"
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-mono text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-              </div>
-
-              {/* Manufacturing & Expiry Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Manufacture Date (YYYY-MM-DD)
-                  </label>
-                  <input
-                    type="date"
-                    value={adjustForm.manufacturingDate}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, manufacturingDate: e.target.value })}
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Expiry Date (YYYY-MM-DD)
-                  </label>
-                  <input
-                    type="date"
-                    value={adjustForm.expiryDate}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, expiryDate: e.target.value })}
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-              </div>
-
-              {/* Storage & Location */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Shelf Location (ID / Number)
-                  </label>
-                  <input
-                    type="text"
-                    value={adjustForm.shelfLocation}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, shelfLocation: e.target.value })}
-                    placeholder="e.g. Shelf A-03"
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-mono text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Storage Requirement
-                  </label>
-                  <input
-                    type="text"
-                    value={adjustForm.storageRequirement}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, storageRequirement: e.target.value })}
-                    placeholder="e.g. Cold Chain (2°C - 8°C)"
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-              </div>
-
-              {/* Costs & Valuation */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Unit Cost (COGS) in LKR
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={adjustForm.cogs}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, cogs: e.target.value })}
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-bold text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Selling Price in LKR
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={adjustForm.unitPrice}
-                    onChange={(e) => setAdjustForm({ ...adjustForm, unitPrice: e.target.value })}
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-bold text-emerald-800 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-neutral-100">
-                <button
-                  type="button"
-                  onClick={() => setShowQuickAdjustModal(false)}
-                  className="px-5 py-2.5 rounded-full border border-neutral-300 text-neutral-700 text-xs font-bold uppercase tracking-wider hover:bg-neutral-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingAdjust}
-                  className="px-6 py-2.5 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                >
-                  <span className="material-symbols-outlined text-[16px]">check</span>
-                  <span>{savingAdjust ? 'Updating Stock...' : 'Save Stock Adjustments'}</span>
+                  {savingCatalog ? 'Saving to Database...' : catalogEditorMode === 'create' ? 'Create Formulation' : 'Save Changes'}
                 </button>
               </div>
 
@@ -2415,141 +1215,100 @@ const OperationsCatalogDashboard = ({ initialTab = 'catalog' }) => {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 3: REORDER / CREATE PURCHASE ORDER (PO)             */}
-      {/* Dispatches alert to Delivery Coordinator                  */}
+      {/* MODAL 2: SEND FOR COLD CHAIN APPROVAL CONFIRMATION MODAL */}
       {/* ========================================================= */}
-      {showReorderModal && reorderItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl border border-neutral-200">
-            <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-black text-neutral-900 uppercase tracking-tight flex items-center gap-2">
-                  <span className="material-symbols-outlined text-amber-600">receipt_long</span>
-                  <span>Create Stock Purchase Order</span>
-                </h3>
-                <p className="text-xs text-neutral-500">
-                  Generate PO and alert Delivery Coordinator for immediate dispatch.
-                </p>
+      {approvalTarget && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-cyan-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-100 text-cyan-800 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[26px]">ac_unit</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowReorderModal(false)}
-                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center cursor-pointer"
-              >
-                ✕
-              </button>
+              <div>
+                <h3 className="text-base font-black text-neutral-900">Send for Cold Chain Approval</h3>
+                <span className="text-xs font-mono font-bold text-cyan-800">{getSpecificProductId(approvalTarget)}</span>
+              </div>
             </div>
 
-            {poSuccessResult ? (
-              <div className="p-6 space-y-4 text-center">
-                <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto text-2xl font-bold">
-                  ✓
-                </div>
-                <h4 className="text-base font-extrabold text-neutral-900">
-                  Purchase Order Generated Successfully!
-                </h4>
-                <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-200 text-left space-y-1.5 text-xs">
-                  <div>
-                    <span className="text-neutral-500">PO Number:</span>{' '}
-                    <strong className="font-mono text-neutral-900 text-sm">{poSuccessResult.poNumber}</strong>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500">Medicine:</span>{' '}
-                    <strong>{poSuccessResult.medicineName}</strong>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500">Reorder Quantity:</span>{' '}
-                    <strong>{poSuccessResult.reorderQuantity} units</strong>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500">Delivery Coordinators Alerted:</span>{' '}
-                    <span className="text-emerald-700 font-bold">{poSuccessResult.coordinatorsNotified} Coordinator(s)</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500">Shelf Placement:</span>{' '}
-                    <strong>{poSuccessResult.shelfLocation}</strong>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowReorderModal(false)}
-                  className="w-full py-2.5 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider cursor-pointer"
-                >
-                  Done
-                </button>
+            <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
+              Submit <strong>"{approvalTarget.name}"</strong> to the Chief Pharmacist Cold Chain Compliance Review queue.
+              This will enforce <strong>2°C – 8°C storage validation</strong> and live IoT temperature breach telemetry during dispatch.
+            </p>
+
+            <div className="bg-cyan-50/80 p-3.5 rounded-2xl border border-cyan-200 mb-6 text-xs text-cyan-950 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-cyan-800 font-semibold">Target Storage Section:</span>
+                <span className="font-bold">Refrigerated (2.00°C - 8.00°C)</span>
               </div>
-            ) : (
-              <form onSubmit={handleCreatePurchaseOrder} className="p-6 space-y-4 text-xs">
-                
-                <div className="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-neutral-900">{reorderItem.name}</span>
-                    <span className="font-mono font-bold text-neutral-700">{reorderItem.sku}</span>
-                  </div>
-                  <div className="text-[11px] text-amber-900 flex items-center gap-4">
-                    <span>On-Hand: <strong>{reorderItem.stockQuantity || 0}</strong></span>
-                    <span>Reorder Level: <strong>{reorderItem.reorderLevel || 25}</strong></span>
-                    <span>Shelf: <strong>{reorderItem.shelfLocation || 'Shelf A-01'}</strong></span>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-cyan-800 font-semibold">Security Protocol:</span>
+                <span className="font-bold">High Security Tagging</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-cyan-800 font-semibold">Destination Queue:</span>
+                <span className="font-bold text-indigo-700">Chief Pharmacist Review</span>
+              </div>
+            </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Reorder Quantity (Units) *
-                  </label>
-                  <input
-                    required
-                    type="number"
-                    min="1"
-                    value={poForm.quantity}
-                    onChange={(e) => setPoForm({ ...poForm, quantity: e.target.value })}
-                    className="w-full h-10 px-4 rounded-full bg-neutral-50 font-black text-neutral-900 text-sm border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                  <span className="text-[10px] text-neutral-400 mt-1 block">
-                    Recommended replenishment based on safe stock buffers.
-                  </span>
-                </div>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setApprovalTarget(null)}
+                className="px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submittingApproval}
+                onClick={() => handleSendForColdChainApproval(approvalTarget)}
+                className="px-5 py-2 rounded-full bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-bold uppercase tracking-wider cursor-pointer shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">send</span>
+                <span>{submittingApproval ? 'Submitting Request...' : 'Confirm & Request Approval'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Supplier &amp; Coordinator Dispatch Notes
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={poForm.notes}
-                    onChange={(e) => setPoForm({ ...poForm, notes: e.target.value })}
-                    placeholder="Provide batch requirements, urgency, cold storage handling..."
-                    className="w-full p-3 rounded-2xl bg-neutral-50 text-neutral-900 border border-neutral-200 focus:outline-none focus:ring-1 focus:ring-black resize-none"
-                  />
-                </div>
+      {/* ========================================================= */}
+      {/* MODAL 3: DELETE CONFIRMATION MODAL                        */}
+      {/* ========================================================= */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-red-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[26px]">delete_forever</span>
+              </div>
+              <div>
+                <h3 className="text-base font-black text-neutral-900">Delete Formulation?</h3>
+                <span className="text-xs font-mono font-bold text-neutral-500">{getSpecificProductId(deleteTarget)}</span>
+              </div>
+            </div>
 
-                <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 flex items-center gap-2.5 text-[11px] text-neutral-600">
-                  <span className="material-symbols-outlined text-blue-600 text-[18px]">notifications_active</span>
-                  <span>
-                    Submitting this PO automatically alerts the <strong>Delivery Coordinator</strong> queue to coordinate arrival and inventory check-in.
-                  </span>
-                </div>
+            <p className="text-xs text-neutral-600 mb-6 leading-relaxed">
+              Are you sure you want to permanently delete <strong>"{deleteTarget.name}"</strong>? This will remove all catalog formulation data and associated cold chain configurations from the SQL database.
+            </p>
 
-                <div className="pt-3 flex items-center justify-end gap-3 border-t border-neutral-100">
-                  <button
-                    type="button"
-                    onClick={() => setShowReorderModal(false)}
-                    className="px-5 py-2.5 rounded-full border border-neutral-300 text-neutral-700 text-xs font-bold uppercase tracking-wider hover:bg-neutral-50 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submittingPo}
-                    className="px-6 py-2.5 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">send</span>
-                    <span>{submittingPo ? 'Generating PO...' : 'Generate PO & Alert Coordinator'}</span>
-                  </button>
-                </div>
-
-              </form>
-            )}
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleConfirmDelete}
+                className="px-5 py-2 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete Permanently'}
+              </button>
+            </div>
           </div>
         </div>
       )}

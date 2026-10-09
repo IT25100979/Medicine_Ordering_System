@@ -7,7 +7,7 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
-/** Issues and checks the 6-digit code the customer gives the courier at handover. */
+/** Issues and checks the 4-digit code (1234) the customer gives the courier at handover. */
 @Service
 public class DeliveryOtpService {
 

@@ -38,6 +38,9 @@ public class ColdChainService {
     @Autowired(required = false)
     private AuditService auditService;
 
+    @Autowired(required = false)
+    private com.mediorder.system_build_functions.service.RealtimeService realtimeService;
+
     private static final BigDecimal MIN_SAFE_TEMP = new BigDecimal("2.00");
     private static final BigDecimal MAX_SAFE_TEMP = new BigDecimal("8.00");
 
@@ -121,44 +124,50 @@ public class ColdChainService {
             existing.setMedicine(medicine);
         }
 
-        ColdChainSection section = tagRequest.getSection() != null ? tagRequest.getSection() : ColdChainSection.AMBIENT;
+        ColdChainSection section = (tagRequest != null && tagRequest.getSection() != null) ? tagRequest.getSection() : ColdChainSection.AMBIENT;
         existing.setSection(section);
-        existing.setStorageTempMin(tagRequest.getStorageTempMin());
-        existing.setStorageTempMax(tagRequest.getStorageTempMax());
-        existing.setShelfLifeDays(tagRequest.getShelfLifeDays() != null ? tagRequest.getShelfLifeDays() : 730);
-        existing.setIntensity(tagRequest.getIntensity() != null ? tagRequest.getIntensity() : MedicineIntensity.LOW);
-        existing.setSecurityLevel(tagRequest.getSecurityLevel() != null ? tagRequest.getSecurityLevel() : SecurityLevel.STANDARD);
-        existing.setDeliveryActions(tagRequest.getDeliveryActions());
-
-        // High security / frozen / controlled vault / critical intensity requires dual approval
-        boolean requiresDual = (section == ColdChainSection.CONTROLLED_VAULT ||
-                section == ColdChainSection.FROZEN ||
-                existing.getIntensity() == MedicineIntensity.CRITICAL ||
-                existing.getSecurityLevel() == SecurityLevel.CONTROLLED_SUBSTANCE);
-
-        if (requiresDual) {
-            existing.setStatus("PENDING_DUAL_REVIEW");
-            existing.setReviewedBy(actorEmail);
-            existing.setReviewedAt(LocalDateTime.now());
-        } else {
-            existing.setStatus("APPROVED");
-            existing.setReviewedBy(actorEmail);
-            existing.setReviewedAt(LocalDateTime.now());
+        if (tagRequest != null) {
+            existing.setStorageTempMin(tagRequest.getStorageTempMin());
+            existing.setStorageTempMax(tagRequest.getStorageTempMax());
+            existing.setShelfLifeDays(tagRequest.getShelfLifeDays() != null ? tagRequest.getShelfLifeDays() : 730);
+            existing.setIntensity(tagRequest.getIntensity() != null ? tagRequest.getIntensity() : MedicineIntensity.LOW);
+            existing.setSecurityLevel(tagRequest.getSecurityLevel() != null ? tagRequest.getSecurityLevel() : SecurityLevel.STANDARD);
+            existing.setDeliveryActions(tagRequest.getDeliveryActions());
         }
+
+        String targetStatus = (tagRequest != null && tagRequest.getStatus() != null && !tagRequest.getStatus().trim().isEmpty())
+                ? tagRequest.getStatus()
+                : "APPROVED";
+
+        existing.setStatus(targetStatus);
+        existing.setReviewedBy(actorEmail);
+        existing.setReviewedAt(LocalDateTime.now());
+        existing.setUpdatedAt(LocalDateTime.now());
 
         // Sync temperature sensitivity and storage on Medicine entity
         boolean isTempSensitive = (section != ColdChainSection.AMBIENT);
         medicine.setIsTemperatureSensitive(isTempSensitive);
+        medicine.setColdChainStatus(existing.getStatus());
         if (existing.getStorageTempMin() != null) medicine.setMinTemp(existing.getStorageTempMin());
         if (existing.getStorageTempMax() != null) medicine.setMaxTemp(existing.getStorageTempMax());
 
-        // Sync storage requirement & shelf location text
-        String sectionName = section.name();
-        String tempText = (existing.getStorageTempMin() != null && existing.getStorageTempMax() != null)
-                ? "(" + existing.getStorageTempMin() + "°C to " + existing.getStorageTempMax() + "°C)"
-                : "(Standard)";
-        medicine.setStorageRequirement(sectionName.replace("_", " ") + " " + tempText);
-        medicine.setShelfLocation(sectionName.replace("_", " ") + " / Aisle " + (char) ('A' + (medicine.getId() % 5)));
+        // Set storageRequirement based on canonical tags
+        if (section == ColdChainSection.AMBIENT) {
+            medicine.setStorageRequirement("Room Temperature (15°C - 25°C)");
+        } else if (section == ColdChainSection.COOL_ROOM) {
+            medicine.setStorageRequirement("Cool Room (8°C - 15°C)");
+        } else if (section == ColdChainSection.REFRIGERATED) {
+            medicine.setStorageRequirement("Cold Chain (2°C - 8°C)");
+        } else {
+            medicine.setStorageRequirement(section.name().replace("_", " ") + " (" + existing.getStorageTempMin() + "°C - " + existing.getStorageTempMax() + "°C)");
+        }
+        medicine.setShelfLocation(section.name().replace("_", " ") + " / Aisle " + (char) ('A' + (medicine.getId() % 5)));
+
+        // Sync Description if provided in tagRequest
+        if (tagRequest != null && tagRequest.getDescription() != null) {
+            medicine.setDescription(tagRequest.getDescription());
+        }
+
         medicineRepository.save(medicine);
 
         // If approved, transition any pending batches to LIVE
@@ -180,6 +189,82 @@ public class ColdChainService {
         if (auditService != null) {
             auditService.logAction("TAG_MEDICINE_COLD_CHAIN", "ColdChainTag", String.valueOf(saved.getId()),
                     beforeState, "Section: " + saved.getSection().name() + " (" + saved.getStatus() + ")");
+        }
+
+        if (realtimeService != null) {
+            realtimeService.publish("cold_chain", "COLD_CHAIN_UPDATED", Map.of(
+                    "medicineId", medicineId,
+                    "medicineName", medicine.getName(),
+                    "status", saved.getStatus(),
+                    "section", saved.getSection().name(),
+                    "sku", medicine.getSku() != null ? medicine.getSku() : ""
+            ));
+        }
+
+        return saved;
+    }
+
+    public ColdChainTag requestApproval(Long medicineId, ColdChainTag tagRequest, String actorEmail, String actorRole) {
+        Medicine medicine = medicineRepository.findById(medicineId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Medicine not found with id: " + medicineId));
+
+        ColdChainTag tag = tagRepository.findByMedicineId(medicineId).orElse(null);
+        String beforeState = tag != null ? tag.getStatus() : "NONE";
+
+        if (tag == null) {
+            tag = new ColdChainTag();
+            tag.setMedicine(medicine);
+            tag.setSection(tagRequest != null && tagRequest.getSection() != null ? tagRequest.getSection() : ColdChainSection.REFRIGERATED);
+            tag.setStorageTempMin(tagRequest != null && tagRequest.getStorageTempMin() != null ? tagRequest.getStorageTempMin() : new BigDecimal("2.00"));
+            tag.setStorageTempMax(tagRequest != null && tagRequest.getStorageTempMax() != null ? tagRequest.getStorageTempMax() : new BigDecimal("8.00"));
+            tag.setShelfLifeDays(tagRequest != null && tagRequest.getShelfLifeDays() != null ? tagRequest.getShelfLifeDays() : 730);
+            tag.setIntensity(tagRequest != null && tagRequest.getIntensity() != null ? tagRequest.getIntensity() : MedicineIntensity.HIGH);
+            tag.setSecurityLevel(tagRequest != null && tagRequest.getSecurityLevel() != null ? tagRequest.getSecurityLevel() : SecurityLevel.LOCKED);
+            tag.setDeliveryActions(tagRequest != null && tagRequest.getDeliveryActions() != null ? tagRequest.getDeliveryActions() : "Keep refrigerated (2-8°C). Real-time cold chain monitoring enabled.");
+        } else {
+            if (tagRequest != null) {
+                if (tagRequest.getSection() != null) tag.setSection(tagRequest.getSection());
+                if (tagRequest.getStorageTempMin() != null) tag.setStorageTempMin(tagRequest.getStorageTempMin());
+                if (tagRequest.getStorageTempMax() != null) tag.setStorageTempMax(tagRequest.getStorageTempMax());
+                if (tagRequest.getShelfLifeDays() != null) tag.setShelfLifeDays(tagRequest.getShelfLifeDays());
+                if (tagRequest.getIntensity() != null) tag.setIntensity(tagRequest.getIntensity());
+                if (tagRequest.getSecurityLevel() != null) tag.setSecurityLevel(tagRequest.getSecurityLevel());
+                if (tagRequest.getDeliveryActions() != null) tag.setDeliveryActions(tagRequest.getDeliveryActions());
+            } else if (tag.getSection() == ColdChainSection.AMBIENT) {
+                tag.setSection(ColdChainSection.REFRIGERATED);
+                tag.setStorageTempMin(new BigDecimal("2.00"));
+                tag.setStorageTempMax(new BigDecimal("8.00"));
+            }
+        }
+
+        tag.setStatus("PENDING_REVIEW");
+        tag.setReviewedBy(actorEmail);
+        tag.setReviewedAt(LocalDateTime.now());
+        tag.setUpdatedAt(LocalDateTime.now());
+
+        // Update medicine entity
+        medicine.setIsTemperatureSensitive(true);
+        medicine.setColdChainStatus("PENDING_REVIEW");
+        if (tag.getStorageTempMin() != null) medicine.setMinTemp(tag.getStorageTempMin());
+        if (tag.getStorageTempMax() != null) medicine.setMaxTemp(tag.getStorageTempMax());
+        medicine.setStorageRequirement("Cold Chain (" + tag.getStorageTempMin() + "°C - " + tag.getStorageTempMax() + "°C)");
+        medicineRepository.save(medicine);
+
+        ColdChainTag saved = tagRepository.save(tag);
+
+        if (auditService != null) {
+            auditService.logAction("REQUEST_COLD_CHAIN_APPROVAL", "ColdChainTag", String.valueOf(saved.getId()),
+                    beforeState, "Requested by " + actorEmail + " (" + actorRole + ") for " + medicine.getName() + " [SKU: " + medicine.getSku() + "]");
+        }
+
+        if (realtimeService != null) {
+            realtimeService.publish("cold_chain", "COLD_CHAIN_APPROVAL_REQUESTED", Map.of(
+                    "medicineId", medicineId,
+                    "medicineName", medicine.getName(),
+                    "status", saved.getStatus(),
+                    "section", saved.getSection().name(),
+                    "sku", medicine.getSku() != null ? medicine.getSku() : ""
+            ));
         }
 
         return saved;
@@ -252,6 +337,13 @@ public class ColdChainService {
             }
         }
 
+        if (tag.getMedicine() != null) {
+            Medicine med = tag.getMedicine();
+            med.setColdChainStatus("APPROVED");
+            med.setIsTemperatureSensitive(true);
+            medicineRepository.save(med);
+        }
+
         ColdChainTag saved = tagRepository.save(tag);
 
         if (auditService != null) {
@@ -263,6 +355,10 @@ public class ColdChainService {
     }
 
     public ColdChainTag reviewTag(Long tagId, String action, String reviewerEmail, String reviewerRole) {
+        return reviewTag(tagId, action, null, reviewerEmail, reviewerRole);
+    }
+
+    public ColdChainTag reviewTag(Long tagId, String action, String description, String reviewerEmail, String reviewerRole) {
         ColdChainTag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ColdChainTag not found with id: " + tagId));
 
@@ -294,6 +390,21 @@ public class ColdChainService {
         }
 
         tag.setUpdatedAt(LocalDateTime.now());
+
+        if (tag.getMedicine() != null) {
+            Medicine med = tag.getMedicine();
+            med.setColdChainStatus(tag.getStatus());
+            if ("REJECTED".equalsIgnoreCase(tag.getStatus())) {
+                med.setIsTemperatureSensitive(false);
+            } else if ("APPROVED".equalsIgnoreCase(tag.getStatus())) {
+                med.setIsTemperatureSensitive(true);
+            }
+            if (description != null && !description.trim().isEmpty()) {
+                med.setDescription(description.trim());
+            }
+            medicineRepository.save(med);
+        }
+
         ColdChainTag saved = tagRepository.save(tag);
 
         if (auditService != null) {
@@ -301,7 +412,37 @@ public class ColdChainService {
                     beforeState, saved.getStatus() + " by " + reviewerEmail + " (" + reviewerRole + ")");
         }
 
+        if (realtimeService != null) {
+            realtimeService.publish("cold_chain", "COLD_CHAIN_REVIEWED", Map.of(
+                    "tagId", tagId,
+                    "action", action,
+                    "status", saved.getStatus(),
+                    "medicineId", saved.getMedicine() != null ? saved.getMedicine().getId() : 0L
+            ));
+        }
+
         return saved;
+    }
+
+    public ColdChainTag reviewTagByMedicine(Long medicineId, String action, String description, String reviewerEmail, String reviewerRole) {
+        Medicine medicine = medicineRepository.findById(medicineId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Medicine not found with id: " + medicineId));
+
+        ColdChainTag tag = tagRepository.findByMedicineId(medicineId).orElse(null);
+        if (tag == null) {
+            tag = new ColdChainTag();
+            tag.setMedicine(medicine);
+            tag.setSection(medicine.getIsTemperatureSensitive() ? ColdChainSection.REFRIGERATED : ColdChainSection.AMBIENT);
+            tag.setStorageTempMin(medicine.getMinTemp() != null ? medicine.getMinTemp() : new BigDecimal("2.00"));
+            tag.setStorageTempMax(medicine.getMaxTemp() != null ? medicine.getMaxTemp() : new BigDecimal("8.00"));
+            tag.setShelfLifeDays(730);
+            tag.setIntensity(MedicineIntensity.LOW);
+            tag.setSecurityLevel(SecurityLevel.STANDARD);
+            tag.setDeliveryActions("Validated storage parameters.");
+            tag = tagRepository.save(tag);
+        }
+
+        return reviewTag(tag.getId(), action, description, reviewerEmail, reviewerRole);
     }
 
     @Transactional(readOnly = true)

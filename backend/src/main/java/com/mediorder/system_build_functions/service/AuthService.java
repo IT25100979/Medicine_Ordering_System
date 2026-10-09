@@ -110,8 +110,8 @@ public class AuthService {
 
             if (user.getStatus() == UserStatus.PENDING_APPROVAL) {
                 throw new AccessDeniedException("Your account is pending administrator approval.");
-            } else if (user.getStatus() == UserStatus.SUSPENDED) {
-                throw new AccessDeniedException("Your account has been suspended.");
+            } else if (user.getStatus() == UserStatus.SUSPENDED || user.getStatus() == UserStatus.BANNED) {
+                throw new AccessDeniedException("Your account has been suspended or banned.");
             }
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -129,7 +129,7 @@ public class AuthService {
         } catch (DisabledException ex) {
             throw new AccessDeniedException("Your account is pending administrator approval.");
         } catch (LockedException ex) {
-            throw new AccessDeniedException("Your account has been suspended.");
+            throw new AccessDeniedException("Your account has been suspended or banned.");
         }
     }
 
@@ -151,8 +151,8 @@ public class AuthService {
 
             if (user.getStatus() == UserStatus.PENDING_APPROVAL) {
                 throw new AccessDeniedException("Admin account is pending IT / System Admin approval.");
-            } else if (user.getStatus() == UserStatus.SUSPENDED) {
-                throw new AccessDeniedException("Admin account has been suspended.");
+            } else if (user.getStatus() == UserStatus.SUSPENDED || user.getStatus() == UserStatus.BANNED) {
+                throw new AccessDeniedException("Admin account has been suspended or banned.");
             }
 
             SecurityContextHolder.getContext().setAuthentication(authentication);

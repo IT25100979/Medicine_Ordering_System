@@ -114,9 +114,9 @@ const CartPage = () => {
         specialInstructions: deliveryNotes.trim() || null,
         deliveryFee: subtotal > 0 ? deliveryFee : 0,
         items: cartItems.map((item) => ({
-          medicineId: Number(item.medicineId) || null,
+          medicineId: item.medicineId ? Number(item.medicineId) : (item.id && !String(item.id).startsWith('guest_') ? Number(item.id) : null),
           name: item.name || 'Pharmaceutical Item',
-          quantity: item.quantity,
+          quantity: item.quantity || 1,
           unitPrice: Number(item.unitPrice ?? item.price ?? 0),
         })),
       });

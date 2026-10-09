@@ -32,7 +32,7 @@ public class CustomerDeliveryController {
 
     /** Customer confirms the order with the selected courier partner -> PENDING delivery for approval. */
     @PostMapping
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CustomerDeliveryResponse>> requestDelivery(
             @Valid @RequestBody CustomerDeliveryRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
@@ -40,13 +40,13 @@ public class CustomerDeliveryController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<CustomerDeliveryResponse>>> myDeliveries() {
         return ResponseEntity.ok(ApiResponse.success("Your deliveries", customerDeliveryService.getMyDeliveries()));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CustomerDeliveryResponse>> myDelivery(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("Delivery details", customerDeliveryService.getMyDelivery(id)));
     }

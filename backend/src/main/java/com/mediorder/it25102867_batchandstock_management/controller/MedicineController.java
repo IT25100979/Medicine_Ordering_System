@@ -42,7 +42,7 @@ public class MedicineController {
     }
 
     @GetMapping("/stats")
-    @PreAuthorize("hasRole('OPERATIONS_MANAGER')")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<Map<String, Object>> getCatalogStats() {
         return ResponseEntity.ok(medicineService.getCatalogStats());
     }
@@ -53,21 +53,21 @@ public class MedicineController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('OPERATIONS_MANAGER')")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<Medicine> createMedicine(@RequestBody Medicine medicine) {
         Medicine created = medicineService.createMedicine(medicine);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('OPERATIONS_MANAGER')")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<Medicine> updateMedicine(@PathVariable Long id, @RequestBody Medicine medicine) {
         Medicine updated = medicineService.updateMedicine(id, medicine);
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('OPERATIONS_MANAGER')")
+    @PreAuthorize("hasAnyRole('OPERATIONS_MANAGER', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<Map<String, String>> deleteMedicine(@PathVariable Long id) {
         medicineService.deleteMedicine(id);
         return ResponseEntity.ok(Map.of("message", "Medicine with ID " + id + " has been successfully removed from the catalog."));

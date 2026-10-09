@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import client from '../api/client';
+import client, { errorMessage } from '../api/client';
+import { deliveryApi } from '../api/deliveryApi';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { CLINICAL_FALLBACK_IMAGES, CATALOG_ITEMS } from './CatalogPage';
@@ -46,13 +47,15 @@ const ProductDetailPage = () => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState('form'); // 'form' | 'submitting' | 'confirmed'
   const [confirmedOrderId, setConfirmedOrderId] = useState('');
+  const [placedDelivery, setPlacedDelivery] = useState(null);
 
   // Checkout Form Fields
   const [shippingForm, setShippingForm] = useState({
-    fullName: user?.fullName || 'Alex Johnson',
-    address: '42 Medical Center Blvd, Suite 400',
-    city: 'San Francisco, CA 94107',
-    phone: '+1 (555) 234-8901',
+    fullName: user?.fullName || 'Kasun Fernando',
+    address: '142 Galle Road, Colombo 03',
+    city: 'Colombo 03',
+    phone: user?.contactNumber || '0771234567',
+    preferredCourier: 'DHL',
     paymentMethod: 'card', // 'card' | 'cod' | 'wallet'
     cardNumber: '•••• •••• •••• 4242',
     cardExpiry: '12/28',
@@ -209,14 +212,39 @@ const ProductDetailPage = () => {
     setShowCheckoutModal(true);
   };
 
-  const handleConfirmOrder = (e) => {
+  const handleConfirmOrder = async (e) => {
     e.preventDefault();
     setCheckoutStep('submitting');
-    setTimeout(() => {
-      const orderRef = `ORD-${Math.floor(100000 + Math.random() * 900000)}-US`;
-      setConfirmedOrderId(orderRef);
+    try {
+      const address = (shippingForm.address || '').trim() || '142 Galle Road, Colombo 03';
+      const phone = (shippingForm.phone || '').trim() || user?.contactNumber || '0771234567';
+      const courier = shippingForm.preferredCourier || 'DHL';
+
+      const delivery = await deliveryApi.placeOrder({
+        preferredCourier: courier,
+        deliveryAddress: address,
+        customerPhone: phone,
+        specialInstructions: `Express checkout: ${quantity}x ${product.name}`,
+        deliveryFee: 0,
+        items: [
+          {
+            medicineId: Number(product.id) || null,
+            name: product.name,
+            quantity: quantity,
+            unitPrice: unitPrice,
+          }
+        ]
+      });
+
+      setPlacedDelivery(delivery);
+      setConfirmedOrderId(`DEL-${delivery.id}`);
       setCheckoutStep('confirmed');
-    }, 1200);
+      showToast(`Order placed & sent to Delivery Management in real-time!`);
+    } catch (err) {
+      console.error('Express checkout order placement failed:', err);
+      showToast(errorMessage(err, 'Failed to place order.'), 'error');
+      setCheckoutStep('form');
+    }
   };
 
   return (
@@ -1006,6 +1034,20 @@ const ProductDetailPage = () => {
                       className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-xs border border-brand-border focus:outline-none focus:ring-1 focus:ring-black"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 uppercase mb-1">Courier Partner</label>
+                    <select
+                      value={shippingForm.preferredCourier}
+                      onChange={(e) => setShippingForm({ ...shippingForm, preferredCourier: e.target.value })}
+                      className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-xs border border-brand-border focus:outline-none focus:ring-1 focus:ring-black font-semibold"
+                    >
+                      <option value="DHL">DHL (Express Delivery)</option>
+                      <option value="Koombiyo">Koombiyo</option>
+                      <option value="Lanka Delivery">Lanka Delivery</option>
+                      <option value="In Company Delivery">In Company Delivery</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Payment Selection */}
@@ -1122,13 +1164,16 @@ const ProductDetailPage = () => {
                 </div>
                 <div>
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                    Payment Succeeded • Dispatched
+                    Payment Successful • Delivery Placed
                   </span>
                   <h3 className="text-xl font-black text-brand-charcoal uppercase tracking-tight mt-3">
                     Thank You for Your Order!
                   </h3>
                   <p className="text-xs text-zinc-600 mt-1">
-                    Your order reference is <strong className="text-black font-mono">{confirmedOrderId}</strong>
+                    Your delivery reference is <strong className="text-emerald-800 font-mono">#{confirmedOrderId}</strong>
+                    {placedDelivery?.orderId && (
+                      <span className="ml-2 text-zinc-500">(Order #{placedDelivery.orderId})</span>
+                    )}
                   </p>
                 </div>
 
@@ -1142,12 +1187,16 @@ const ProductDetailPage = () => {
                     <span className="font-bold text-black">{shippingForm.address}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-zinc-500">Courier Partner:</span>
+                    <span className="font-bold text-indigo-700">{placedDelivery?.preferredCourier || shippingForm.preferredCourier}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-zinc-500">Amount Charged:</span>
                     <span className="font-black text-black">LKR {totalPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-emerald-800 font-semibold pt-1 border-t border-brand-border">
-                    <span>Estimated Arrival:</span>
-                    <span>Tomorrow by 2:00 PM (Insulated Express)</span>
+                    <span>Status:</span>
+                    <span className="font-bold">Sent to Delivery Management in Real-Time</span>
                   </div>
                 </div>
 
@@ -1156,21 +1205,21 @@ const ProductDetailPage = () => {
                     type="button"
                     onClick={() => {
                       setShowCheckoutModal(false);
-                      navigate('/catalog');
+                      navigate('/profile?tab=orders');
                     }}
                     className="flex-1 py-3 rounded-full bg-black text-white text-xs font-bold uppercase tracking-wider hover:bg-zinc-800"
                   >
-                    Continue Browsing
+                    View in Order History
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setShowCheckoutModal(false);
-                      navigate('/modules/delivery');
+                      navigate('/my-deliveries');
                     }}
-                    className="flex-1 py-3 rounded-full border border-zinc-300 text-black text-xs font-bold uppercase tracking-wider hover:bg-zinc-100"
+                    className="flex-1 py-3 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider shadow-sm"
                   >
-                    Track Dispatch
+                    Track Delivery Live
                   </button>
                 </div>
               </div>

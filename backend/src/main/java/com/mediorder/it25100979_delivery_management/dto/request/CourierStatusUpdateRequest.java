@@ -17,7 +17,7 @@ public class CourierStatusUpdateRequest {
     @Pattern(regexp = "(?i)IN_TRANSIT|FAILED|DELIVERED", message = "Courier status must be IN_TRANSIT, FAILED or DELIVERED")
     private String status;
 
-    @Pattern(regexp = ValidationPatterns.OTP, message = "OTP must be exactly 6 digits")
+    @Pattern(regexp = ValidationPatterns.OTP, message = "OTP must be exactly 4 digits")
     private String otp;
 
     @Size(max = 500, message = "Failure reason must be at most 500 characters")

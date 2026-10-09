@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
     @Index(name = "idx_tag_section", columnList = "section"),
     @Index(name = "idx_tag_status", columnList = "status")
 })
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties(value = {"hibernateLazyInitializer", "handler"}, ignoreUnknown = true)
 public class ColdChainTag {
 
     @Id
@@ -62,6 +63,12 @@ public class ColdChainTag {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Transient
+    private String description;
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public ColdChainTag() {}
 
