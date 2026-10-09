@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { isValidPhone, PHONE_HINT } from '../utils/validation';
 import client from '../api/client';
 
 const ProfilePage = () => {
@@ -187,6 +188,10 @@ const ProfilePage = () => {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    if (contactNumber && !isValidPhone(contactNumber)) {
+      setProfileMsg({ type: 'error', text: PHONE_HINT });
+      return;
+    }
     setSavingProfile(true);
     setProfileMsg({ type: '', text: '' });
     try {
@@ -236,6 +241,10 @@ const ProfilePage = () => {
 
   const handleAddAddress = (e) => {
     e.preventDefault();
+    if (newAddr.phone && !isValidPhone(newAddr.phone)) {
+      alert(PHONE_HINT);
+      return;
+    }
     const addr = {
       ...newAddr,
       id: Date.now(),

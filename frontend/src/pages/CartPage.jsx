@@ -6,9 +6,9 @@ import { CLINICAL_FALLBACK_IMAGES } from './CatalogPage';
 import { deliveryApi, COURIER_PARTNERS_FALLBACK } from '../api/deliveryApi';
 import client, { errorMessage, unwrap } from '../api/client';
 import useFeatureStatus from '../hooks/useFeatureStatus';
+import { isValidPhone, PHONE_HINT } from '../utils/validation';
 import FeaturePausedBanner from '../components/FeaturePausedBanner';
 
-const PHONE_PATTERN = /^[0-9+ -]{7,15}$/;
 
 /** Default saved address from the Profile page (stored in localStorage), formatted as one line. */
 const defaultSavedAddress = () => {
@@ -70,6 +70,8 @@ const CartPage = () => {
 
   // Prescription-only items need one of the customer's APPROVED prescriptions (checked again by the server)
   const [rxMedicineIds, setRxMedicineIds] = useState(new Set());
+  const [stockById, setStockById] = useState({});
+  const [cartError, setCartError] = useState('');
   const [approvedPrescriptions, setApprovedPrescriptions] = useState([]);
   const [prescriptionId, setPrescriptionId] = useState('');
 
@@ -79,6 +81,9 @@ const CartPage = () => {
         const list = unwrap(res);
         const meds = Array.isArray(list) ? list : (list?.content || []);
         setRxMedicineIds(new Set(meds.filter((m) => m.requiresPrescription).map((m) => Number(m.id))));
+        setStockById(Object.fromEntries(meds.map((m) => [
+          Number(m.id), Math.max(0, Number(m.stockQuantity || 0) - Number(m.allocatedStock || 0)),
+        ])));
       })
       .catch(() => {});
   }, []);
@@ -106,6 +111,21 @@ const CartPage = () => {
     : (deliveryZone?.deliveryFee !== undefined ? Number(deliveryZone.deliveryFee) : 5.00);
   const total = subtotal > 0 ? subtotal + deliveryFee : 0;
 
+  // Change a cart line, never above what is really in stock (the server checks this too)
+  const changeQuantity = async (item, next) => {
+    setCartError('');
+    const available = stockById[Number(item.medicineId)];
+    if (next > item.quantity && available !== undefined && next > available) {
+      setCartError(`Only ${available} unit(s) of ${item.name} are in stock.`);
+      return;
+    }
+    try {
+      await updateQuantity(item.id, next);
+    } catch (err) {
+      setCartError(errorMessage(err, 'Could not update the quantity.'));
+    }
+  };
+
   const handleDeleteItem = (itemId) => {
     if (removeItem) {
       removeItem(itemId);
@@ -120,7 +140,7 @@ const CartPage = () => {
     const errors = {};
     if (!preferredCourier) errors.courier = 'Please choose a delivery partner.';
     if (deliveryAddress.trim().length < 5) errors.address = 'Enter your full delivery address (at least 5 characters).';
-    if (!PHONE_PATTERN.test(contactPhone.trim())) errors.phone = 'Enter a valid phone number (7-15 digits).';
+    if (!isValidPhone(contactPhone)) errors.phone = PHONE_HINT;
     if (deliveryNotes.length > 1000) errors.notes = 'Instructions must be at most 1000 characters.';
     if (cartItems.length === 0) errors.cart = 'Your cart is empty.';
     if (needsPrescription && !prescriptionId) errors.prescription = 'Choose an approved prescription for the prescription-only items.';
@@ -291,6 +311,11 @@ const CartPage = () => {
           
           {/* Left 2 Cols: Cart Items */}
           <div className="lg:col-span-2 space-y-4">
+            {cartError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold" role="alert">
+                {cartError}
+              </div>
+            )}
             {cartItems.length > 0 ? (
               cartItems.map((item) => {
                 const itemImg = item.imageUrl || CLINICAL_FALLBACK_IMAGES[item.category] || CLINICAL_FALLBACK_IMAGES['General'] || '';
@@ -341,7 +366,7 @@ const CartPage = () => {
                         <button
                           type="button"
                           aria-label="Decrease quantity"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => changeQuantity(item, item.quantity - 1)}
                           className="w-8 h-8 flex items-center justify-center hover:bg-neutral-200 text-neutral-700 font-bold transition-colors active:scale-95"
                         >
                           -
@@ -352,7 +377,8 @@ const CartPage = () => {
                         <button
                           type="button"
                           aria-label="Increase quantity"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => changeQuantity(item, item.quantity + 1)}
+                          disabled={stockById[Number(item.medicineId)] !== undefined && item.quantity >= stockById[Number(item.medicineId)]}
                           className="w-8 h-8 flex items-center justify-center hover:bg-neutral-200 text-neutral-700 font-bold transition-colors active:scale-95"
                         >
                           +

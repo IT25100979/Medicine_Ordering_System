@@ -148,11 +148,11 @@ public class GlobalDataInitializer implements CommandLineRunner {
         }
 
         // Strictly seed only users from manualCodeEdits.md
-        seedUser("customer1@gmail.com", "customer1", Role.CUSTOMER, "555-010-0001", "admin123");
-        seedUser("systemadmin1@gmail.com", "systemadmin1", Role.SYSTEM_ADMIN, "555-010-0002", "admin123");
-        seedUser("operationsmanager1@gmail.com", "operationsmanager1", Role.OPERATIONS_MANAGER, "555-010-0003", "admin123");
-        seedUser("pharmacist1@gmail.com", "pharmacist1", Role.CHIEF_PHARMACIST, "555-010-0004", "admin123");
-        seedUser("deliverycoordinator1@gmail.com", "deliverycoordinator1", Role.DELIVERY_COORDINATOR, "555-010-0005", "admin123");
+        seedUser("customer1@gmail.com", "customer1", Role.CUSTOMER, "0771000001", "admin123");
+        seedUser("systemadmin1@gmail.com", "systemadmin1", Role.SYSTEM_ADMIN, "0771000002", "admin123");
+        seedUser("operationsmanager1@gmail.com", "operationsmanager1", Role.OPERATIONS_MANAGER, "0771000003", "admin123");
+        seedUser("pharmacist1@gmail.com", "pharmacist1", Role.CHIEF_PHARMACIST, "0771000004", "admin123");
+        seedUser("deliverycoordinator1@gmail.com", "deliverycoordinator1", Role.DELIVERY_COORDINATOR, "0771000005", "admin123");
     }
 
     private void seedUser(String email, String fullName, Role role, String phone, String rawPassword) {
@@ -243,7 +243,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 .shelfLocation("Ambient Storage / Bay A-01")
                 .batchNumber("BAT-2026-001")
                 .barcode("BC-RX-AMX-500")
-                .imageUrl("https://images.unsplash.com/photo-1584308666744-24d5e4708709?auto=format&fit=crop&q=80&w=400")
+                .imageUrl("/products/amoxil.svg")
                 .description("Broad-spectrum antibiotic used to treat various bacterial infections.")
                 .rating(new BigDecimal("4.9"))
                 .reviewsCount(142)
@@ -271,7 +271,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 .shelfLocation("Ambient Storage / Bay A-02")
                 .batchNumber("BAT-2026-001")
                 .barcode("BC-HW-PND-EXT")
-                .imageUrl("https://images.unsplash.com/photo-1550572017-edb799988b48?auto=format&fit=crop&q=80&w=400")
+                .imageUrl("/products/panadol.svg")
                 .description("Fast, effective temporary relief of pain, headaches, and discomfort.")
                 .rating(new BigDecimal("4.8"))
                 .reviewsCount(210)
@@ -299,7 +299,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 .shelfLocation("Cool Room Storage / Bay B-01")
                 .batchNumber("BAT-2026-001")
                 .barcode("BC-FA-DTL-250")
-                .imageUrl("https://images.unsplash.com/photo-1603555543794-df7a76044bf9?auto=format&fit=crop&q=80&w=400")
+                .imageUrl("/products/dettol.svg")
                 .description("Antiseptic disinfectant liquid for first aid, wound cleaning, and personal hygiene.")
                 .rating(new BigDecimal("4.9"))
                 .reviewsCount(178)
@@ -327,7 +327,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 .shelfLocation("Ambient Storage / Bay A-03")
                 .batchNumber("BAT-2026-001")
                 .barcode("BC-VS-CEN-ADV")
-                .imageUrl("https://images.unsplash.com/photo-1594995855018-8f8373b30e44?auto=format&fit=crop&q=80&w=400")
+                .imageUrl("/products/centrum.svg")
                 .description("Comprehensive daily multivitamin tailored to support adult health and immunity.")
                 .rating(new BigDecimal("4.9"))
                 .reviewsCount(195)
@@ -355,7 +355,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 .shelfLocation("Ambient Storage / Bay A-04")
                 .batchNumber("BAT-2026-001")
                 .barcode("BC-HH-OMR-M3")
-                .imageUrl("https://images.unsplash.com/photo-1527613426496-22878f001716?auto=format&fit=crop&q=80&w=400")
+                .imageUrl("/products/omron.svg")
                 .description("Clinically validated upper arm blood pressure monitor for accurate home tracking.")
                 .rating(new BigDecimal("5.0"))
                 .reviewsCount(88)
@@ -383,7 +383,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 .shelfLocation("Refrigerated Cold Chain / Bay C-01")
                 .batchNumber("BAT-2026-002")
                 .barcode("BC-RX-LPT-020")
-                .imageUrl("https://images.unsplash.com/photo-1471864190281-a93a3070b6de?auto=format&fit=crop&q=80&w=400")
+                .imageUrl("/products/lipitor.svg")
                 .description("Cholesterol-lowering medication used to reduce the risk of heart disease.")
                 .rating(new BigDecimal("4.8"))
                 .reviewsCount(92)
@@ -411,7 +411,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 .shelfLocation("Ambient Storage / Bay A-05")
                 .batchNumber("BAT-2026-002")
                 .barcode("BC-FA-HNS-040")
-                .imageUrl("https://images.pexels.com/photos/4096053/pexels-photo-4096053.jpeg?auto=compress&cs=tinysrgb&w=400")
+                .imageUrl("/products/hansaplast.svg")
                 .description("Breathable and durable fabric plasters for protecting minor cuts and scrapes.")
                 .rating(new BigDecimal("4.7"))
                 .reviewsCount(140)
@@ -439,7 +439,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 .shelfLocation("Cool Room Storage / Bay B-02")
                 .batchNumber("BAT-2026-002")
                 .barcode("BC-VS-SSC-120")
-                .imageUrl("https://images.unsplash.com/photo-1550572620-176840d046c8?auto=format&fit=crop&q=80&w=400")
+                .imageUrl("/products/sevenseas.svg")
                 .description("Traditional Omega-3 rich fish oil supplement to support heart, brain, and joint health.")
                 .rating(new BigDecimal("4.9"))
                 .reviewsCount(165)

@@ -1,5 +1,7 @@
 package com.mediorder.system_build_functions.dto;
 
+import com.mediorder.system_build_functions.validation.ValidPhone;
+
 import com.mediorder.system_build_functions.model.Role;
 import com.mediorder.system_build_functions.model.UserStatus;
 import jakarta.validation.constraints.Email;
@@ -25,6 +27,7 @@ public class AdminUserCreateRequest {
 
     private UserStatus status = UserStatus.ACTIVE;
 
+    @ValidPhone
     private String phoneNumber;
 
     private String avatarUrl;

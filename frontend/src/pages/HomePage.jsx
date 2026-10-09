@@ -12,7 +12,7 @@ export const HOMEPAGE_PRODUCTS = [
     sku: 'RX-AMX-500',
     category: 'Prescription Medicines',
     price: 850,
-    imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5e4708709?auto=format&fit=crop&q=80&w=400',
+    imageUrl: '/products/amoxil.svg',
     description: 'Broad-spectrum antibiotic used to treat various bacterial infections.',
     badge: 'Rx Required',
     requiresPrescription: true,
@@ -24,7 +24,7 @@ export const HOMEPAGE_PRODUCTS = [
     sku: 'HW-PND-EXT',
     category: 'Daily Health & Wellness',
     price: 120,
-    imageUrl: 'https://images.unsplash.com/photo-1550572017-edb799988b48?auto=format&fit=crop&q=80&w=400',
+    imageUrl: '/products/panadol.svg',
     description: 'Fast, effective temporary relief of pain, headaches, and discomfort.',
     badge: 'Fast Relief',
     requiresPrescription: false,
@@ -36,7 +36,7 @@ export const HOMEPAGE_PRODUCTS = [
     sku: 'FA-DTL-250',
     category: 'First Aid & Health Care',
     price: 450,
-    imageUrl: 'https://images.unsplash.com/photo-1603555543794-df7a76044bf9?auto=format&fit=crop&q=80&w=400',
+    imageUrl: '/products/dettol.svg',
     description: 'Antiseptic disinfectant liquid for first aid, wound cleaning, and personal hygiene.',
     badge: 'First Aid',
     requiresPrescription: false,
@@ -48,7 +48,7 @@ export const HOMEPAGE_PRODUCTS = [
     sku: 'VS-CEN-ADV',
     category: 'Vitamins & Nutritional Supplements',
     price: 3500,
-    imageUrl: 'https://images.unsplash.com/photo-1594995855018-8f8373b30e44?auto=format&fit=crop&q=80&w=400',
+    imageUrl: '/products/centrum.svg',
     description: 'Comprehensive daily multivitamin tailored to support adult health and immunity.',
     badge: 'Complete Multi',
     requiresPrescription: false,
@@ -60,7 +60,7 @@ export const HOMEPAGE_PRODUCTS = [
     sku: 'HH-OMR-M3',
     category: 'Home Health & medical Care',
     price: 18500,
-    imageUrl: 'https://images.unsplash.com/photo-1527613426496-22878f001716?auto=format&fit=crop&q=80&w=400',
+    imageUrl: '/products/omron.svg',
     description: 'Clinically validated upper arm blood pressure monitor for accurate home tracking.',
     badge: 'Clinical Device',
     requiresPrescription: false,
@@ -72,7 +72,7 @@ export const HOMEPAGE_PRODUCTS = [
     sku: 'RX-LPT-020',
     category: 'Prescription Medicines',
     price: 1200,
-    imageUrl: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?auto=format&fit=crop&q=80&w=400',
+    imageUrl: '/products/lipitor.svg',
     description: 'Cholesterol-lowering medication used to reduce the risk of heart disease.',
     badge: 'Rx Required',
     requiresPrescription: true,
@@ -84,7 +84,7 @@ export const HOMEPAGE_PRODUCTS = [
     sku: 'FA-HNS-040',
     category: 'First Aid & Health Care',
     price: 250,
-    imageUrl: 'https://images.pexels.com/photos/4096053/pexels-photo-4096053.jpeg?auto=compress&cs=tinysrgb&w=400',
+    imageUrl: '/products/hansaplast.svg',
     description: 'Breathable and durable fabric plasters for protecting minor cuts and scrapes.',
     badge: 'Wound Care',
     requiresPrescription: false,
@@ -96,7 +96,7 @@ export const HOMEPAGE_PRODUCTS = [
     sku: 'VS-SSC-120',
     category: 'Vitamins & Nutritional Supplements',
     price: 2800,
-    imageUrl: 'https://images.unsplash.com/photo-1550572620-176840d046c8?auto=format&fit=crop&q=80&w=400',
+    imageUrl: '/products/sevenseas.svg',
     description: 'Traditional Omega-3 rich fish oil supplement to support heart, brain, and joint health.',
     badge: 'Omega-3',
     requiresPrescription: false,
@@ -743,7 +743,7 @@ const HomePage = () => {
                       alt={p.name}
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = 'https://images.unsplash.com/photo-1584308666744-24d5e4708709?auto=format&fit=crop&q=80&w=400';
+                        e.target.src = '/products/amoxil.svg';
                       }}
                       className="h-28 w-auto object-contain drop-shadow group-hover:scale-105 transition-transform duration-300"
                     />

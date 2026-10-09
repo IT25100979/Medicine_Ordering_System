@@ -1,5 +1,7 @@
 package com.mediorder.it25100979_delivery_management.dto.request;
 
+import com.mediorder.system_build_functions.validation.ValidPhone;
+
 import com.mediorder.it25100979_delivery_management.validation.ValidCourier;
 import com.mediorder.it25100979_delivery_management.validation.ValidationPatterns;
 import jakarta.validation.Valid;
@@ -29,7 +31,7 @@ public class CustomerDeliveryRequest {
     private String deliveryAddress;
 
     @NotBlank(message = "Contact phone number is required")
-    @Pattern(regexp = ValidationPatterns.PHONE, message = "Phone number must be 7-15 digits (spaces, + and - allowed)")
+    @ValidPhone
     private String customerPhone;
 
     @Size(max = 1000, message = "Special instructions must be at most 1000 characters")

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../../api/client';
+import { isValidPhone, PHONE_HINT } from '../../utils/validation';
 import { useAuth } from '../../context/AuthContext';
 
 const DEPARTMENTS = [
@@ -151,6 +152,10 @@ const SystemAdminConsolePage = () => {
     }
     if (!isEditingUser && !userForm.password) {
       setFeedback({ type: 'error', text: 'Initial password is required for new profiles' });
+      return;
+    }
+    if (userForm.phoneNumber && !isValidPhone(userForm.phoneNumber)) {
+      setFeedback({ type: 'error', text: PHONE_HINT });
       return;
     }
 

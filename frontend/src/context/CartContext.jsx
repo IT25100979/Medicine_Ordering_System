@@ -288,6 +288,7 @@ export const CartProvider = ({ children }) => {
     } catch (err) {
       console.error('Error updating item quantity in DB:', err);
       await fetchCart();
+      throw err; // let the page show why (e.g. not enough stock)
     }
   };
 

@@ -42,6 +42,7 @@ import { useAuth } from '../../context/AuthContext';
 import useRealtimeChannel, { DELIVERY_EVENT_TYPES } from '../../hooks/useRealtimeChannel';
 import useFeatureStatus from '../../hooks/useFeatureStatus';
 import FeaturePausedBanner from '../../components/FeaturePausedBanner';
+import { isValidPhone, PHONE_HINT } from '../../utils/validation';
 import NotificationBell from '../../components/NotificationBell';
 
 const COURIER_OPTIONS = [
@@ -215,6 +216,10 @@ const DeliveryPage = () => {
   // Submit New Delivery (POST /api/deliveries)
   const handleCreateDelivery = async (e) => {
     e.preventDefault();
+    if (!isValidPhone(newDeliveryForm.customerPhone)) {
+      setDeliveryFeedback({ type: 'error', message: PHONE_HINT });
+      return;
+    }
     setCreatingDelivery(true);
     setDeliveryFeedback({ type: '', message: '' });
 

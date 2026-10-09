@@ -34,7 +34,7 @@ public class UserController {
 
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
-            @RequestBody ProfileUpdateRequest request,
+            @jakarta.validation.Valid @RequestBody ProfileUpdateRequest request,
             Authentication authentication) {
         if (authentication == null) {
             return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized"));
@@ -75,7 +75,7 @@ public class UserController {
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable Long id,
-            @RequestBody AdminUserUpdateRequest request,
+            @jakarta.validation.Valid @RequestBody AdminUserUpdateRequest request,
             Authentication authentication) {
         String adminEmail = authentication != null ? authentication.getName() : "admin@mediorder.com";
         UserResponse updated = userService.updateUser(id, request, adminEmail);

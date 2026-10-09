@@ -1,7 +1,10 @@
 package com.mediorder.system_build_functions.dto;
 
+import com.mediorder.system_build_functions.validation.ValidPhone;
+
 public class ProfileUpdateRequest {
     private String fullName;
+    @ValidPhone
     private String contactNumber;
     private String avatarUrl;
 

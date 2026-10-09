@@ -1,10 +1,10 @@
 # Data for user db
 
-customer1	customer1@gmail.com	555-010-0001	Customer	admin123
-systemadmin1	systemadmin1@gmail.com	555-010-0002	System Admin	admin123
-operationsmanager1	operationsmanager1@gmail.com	555-010-0003	Operations Manager	admin123
-pharmacist1	pharmacist1@gmail.com	555-010-0004	Pharmacist	admin123
-deliverycoordinator1	deliverycoordinator1@gmail.com	555-010-0005	Delivery Coordinator	admin123
+customer1	customer1@gmail.com	0771000001	Customer	admin123
+systemadmin1	systemadmin1@gmail.com	0771000002	System Admin	admin123
+operationsmanager1	operationsmanager1@gmail.com	0771000003	Operations Manager	admin123
+pharmacist1	pharmacist1@gmail.com	0771000004	Pharmacist	admin123
+deliverycoordinator1	deliverycoordinator1@gmail.com	0771000005	Delivery Coordinator	admin123
 
 
 # Data for catalog and stock batch

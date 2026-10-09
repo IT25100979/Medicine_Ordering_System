@@ -22,6 +22,44 @@ public class CartService {
     @Autowired(required = false)
     private RealtimeService realtimeService;
 
+    /** Batch & Stock module: used to stop customers adding more than is actually in stock. */
+    @Autowired(required = false)
+    private com.mediorder.it25102867_batchandstock_management.repository.MedicineRepository medicineRepository;
+
+    static final int MAX_QUANTITY_PER_ITEM = 100;
+
+    /** Used when merging a guest cart at login: never fail the login, just cap the quantity. */
+    private int clampToStock(Long medicineId, int quantity) {
+        int capped = Math.min(quantity, MAX_QUANTITY_PER_ITEM);
+        if (medicineId == null || medicineRepository == null) {
+            return capped;
+        }
+        return medicineRepository.findById(medicineId)
+                .map(m -> Math.max(1, Math.min(capped,
+                        (m.getStockQuantity() != null ? m.getStockQuantity() : 0) - (m.getAllocatedStock() != null ? m.getAllocatedStock() : 0))))
+                .orElse(capped);
+    }
+
+    /** Quantity must be 1..100 and never more than the stock that is not already reserved. */
+    private void assertWithinStock(Long medicineId, int requestedTotal) {
+        if (requestedTotal > MAX_QUANTITY_PER_ITEM) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "You can order at most " + MAX_QUANTITY_PER_ITEM + " units of one item.");
+        }
+        if (medicineId == null || medicineRepository == null) {
+            return;
+        }
+        medicineRepository.findById(medicineId).ifPresent(medicine -> {
+            int stock = medicine.getStockQuantity() != null ? medicine.getStockQuantity() : 0;
+            int allocated = medicine.getAllocatedStock() != null ? medicine.getAllocatedStock() : 0;
+            int available = Math.max(0, stock - allocated);
+            if (requestedTotal > available) {
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
+                        "Only " + available + " unit(s) of " + medicine.getName() + " are in stock.");
+            }
+        });
+    }
+
     @Transactional(readOnly = true)
     public List<CartItem> getCart(String sessionId, Long userId) {
         if (userId != null || sessionId != null) {
@@ -42,6 +80,9 @@ public class CartService {
         } else if (item.getSessionId() != null && item.getMedicineId() != null) {
             existing = cartItemRepository.findBySessionIdAndMedicineId(item.getSessionId(), item.getMedicineId());
         }
+
+        int alreadyInCart = existing.map(CartItem::getQuantity).orElse(0);
+        assertWithinStock(item.getMedicineId(), alreadyInCart + item.getQuantity());
 
         CartItem result;
         if (existing.isPresent()) {
@@ -64,7 +105,8 @@ public class CartService {
 
     public CartItem updateQuantity(Long itemId, int quantity) {
         CartItem item = cartItemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Cart item not found with id: " + itemId));
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Cart item not found with id: " + itemId));
 
         String sessionId = item.getSessionId();
         Long userId = item.getUserId();
@@ -75,6 +117,7 @@ public class CartService {
             return null;
         }
 
+        assertWithinStock(item.getMedicineId(), quantity);
         item.setQuantity(quantity);
         item.setUpdatedAt(LocalDateTime.now());
         CartItem saved = cartItemRepository.save(item);
@@ -113,7 +156,7 @@ public class CartService {
                 Optional<CartItem> userItemOpt = cartItemRepository.findByUserIdAndMedicineId(userId, sItem.getMedicineId());
                 if (userItemOpt.isPresent()) {
                     CartItem userItem = userItemOpt.get();
-                    userItem.setQuantity(userItem.getQuantity() + sItem.getQuantity());
+                    userItem.setQuantity(clampToStock(userItem.getMedicineId(), userItem.getQuantity() + sItem.getQuantity()));
                     userItem.setUpdatedAt(LocalDateTime.now());
                     cartItemRepository.save(userItem);
                     cartItemRepository.delete(sItem);

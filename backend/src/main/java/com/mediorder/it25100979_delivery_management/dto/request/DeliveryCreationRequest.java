@@ -1,5 +1,7 @@
 package com.mediorder.it25100979_delivery_management.dto.request;
 
+import com.mediorder.system_build_functions.validation.ValidPhone;
+
 import com.mediorder.it25100979_delivery_management.validation.ValidCourier;
 import com.mediorder.it25100979_delivery_management.validation.ValidationPatterns;
 import jakarta.validation.constraints.Email;
@@ -23,7 +25,7 @@ public class DeliveryCreationRequest {
     private String orderAddress;
 
     @NotBlank(message = "Customer phone is required")
-    @Pattern(regexp = ValidationPatterns.PHONE, message = "Phone number must be 7-15 digits (spaces, + and - allowed)")
+    @ValidPhone
     private String customerPhone;
 
     @Email(message = "Customer email is not valid")
