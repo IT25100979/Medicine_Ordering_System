@@ -32,6 +32,19 @@ stateDiagram-v2
 `enums/DeliveryStatus.java`, and every status change goes through
 `service/DeliveryLifecycleManager.transition(...)`, so a step can never be skipped.
 
+### Three ways an order reaches Delivery Management
+
+| Source | Who | What happens |
+|---|---|---|
+| Cart checkout | Customer | Picks a delivery partner and address → Order + PENDING delivery. Stock is **reserved** (FEFO) and deducted on delivery. |
+| Prescription | Customer uploads (with address/phone/partner) → pharmacist approves → pharmacist **Dispense** | Pharmacist picks the medicines from the catalog. Stock is **deducted immediately**, then Order + PENDING delivery are created. |
+| Refill subscription | Pharmacist **Refill now** (pharmacist dashboard → Refills) | Same as prescription dispensing, then the next refill date moves forward. |
+
+All three end up in the same approval queue, and the same state machine applies. Delivery fees always come
+from the active delivery zone covering the address; uncovered addresses are refused. If a delivery is
+rejected or terminated, reserved stock is released and deducted stock goes back on the shelf. A prescription
+can be used for one order only (unless that order was rejected or terminated).
+
 ## 2. Design pattern: Observer
 
 When a delivery changes, several unrelated things must happen: record the timeline,
@@ -129,6 +142,9 @@ validation/    @ValidCourier + CourierCompanyValidator, shared regex patterns
 | Public | `GET /api/v1/customer/deliveries/courier-partners` | Partners shown at checkout |
 | Customer | `POST /api/v1/customer/deliveries` | Confirm order with chosen partner → Order + PENDING delivery |
 | Customer | `GET /api/v1/customer/deliveries[/{id}]` | Track own deliveries (OTP shown only while with the courier) |
+| Pharmacist | `POST /api/v1/pharmacy/prescriptions/{id}/dispense` | Pick medicines for an approved prescription → order + delivery |
+| Pharmacist | `POST /api/v1/pharmacy/subscriptions/{id}/refill` | Send the next refill → order + delivery |
+| Pharmacist | `GET /api/v1/pharmacy/prescriptions/dispensed` | Which prescriptions already have an order |
 | Coordinator | `GET /api/v1/deliveries?status=` | Delivery Management list |
 | Coordinator | `PUT /api/v1/deliveries/{id}/approve` · `/reject` | Approval step |
 | Coordinator | `PUT /api/v1/deliveries/assign` | Assign courier (defaults to customer's choice), issues OTP |

@@ -107,6 +107,15 @@ export const AuthProvider = ({ children }) => {
     return { ...authData, pendingApproval: true, message: response.data?.message };
   };
 
+  // Refresh the stored user after a profile edit (name / phone) so the whole app shows it
+  const updateUser = (updated) => {
+    setUser((prev) => {
+      const next = { ...prev, ...updated };
+      localStorage.setItem('user', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -126,6 +135,7 @@ export const AuthProvider = ({ children }) => {
         demoLogin,
         register,
         logout,
+        updateUser,
       }}
     >
       {children}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import Navbar from './components/Navbar';
@@ -18,8 +18,6 @@ import PharmacistPrescriptionDashboard from './pages/PharmacistPrescriptionDashb
 
 // Module Pages
 import PrescriptionPage from './pages/modules/PrescriptionPage';
-import InventoryPage from './pages/modules/InventoryPage';
-import OrderProcessingPage from './pages/modules/OrderProcessingPage';
 import ColdChainPage from './pages/modules/ColdChainPage';
 import SubscriptionsPage from './pages/modules/SubscriptionsPage';
 import DeliveryPage from './pages/modules/DeliveryPage';
@@ -107,10 +105,8 @@ const App = () => {
               <Route path="/prescription" element={<ProtectedRoute loginPath="/login"><PrescriptionPage /></ProtectedRoute>} />
               <Route path="/modules/prescription" element={<ProtectedRoute loginPath="/login"><PrescriptionPage /></ProtectedRoute>} />
               <Route path="/modules/prescriptions" element={<ProtectedRoute loginPath="/login"><PrescriptionPage /></ProtectedRoute>} />
-              <Route path="/modules/inventory" element={
-                <ProtectedRoute allowedRoles={STOCK_ROLES}><InventoryPage /></ProtectedRoute>
-              } />
-              <Route path="/modules/orders" element={<ProtectedRoute><OrderProcessingPage /></ProtectedRoute>} />
+              <Route path="/modules/inventory" element={<Navigate to="/admin/stocks" replace />} />
+              <Route path="/modules/orders" element={<Navigate to="/profile" replace />} />
               <Route path="/modules/cold-chain" element={
                 <ProtectedRoute allowedRoles={STOCK_ROLES}><ColdChainPage /></ProtectedRoute>
               } />

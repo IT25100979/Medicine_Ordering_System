@@ -367,13 +367,6 @@ const SystemAdminConsolePage = () => {
     { id: 'subscriptions', label: '4. Refill Subscriptions', subtitle: 'Chronic Care & Refill Engine', icon: 'fa-arrows-rotate' },
   ];
 
-  // Coming Soon Modules
-  const comingSoonModules = [
-    { label: 'Server Telemetry & JVM Cluster', desc: 'Real-time multi-node cluster metrics' },
-    { label: 'Crash & Error AI Telemetry', desc: 'Predictive exception diagnosis & telemetry' },
-    { label: 'Fleet Telemetry & GIS Drone Routing', desc: 'Live GIS geofencing & courier dispatch AI' },
-    { label: 'Cold Storage Deep Archives', desc: 'Regulatory cold chain archival storage' },
-  ];
 
   return (
     <div className="pt-28 pb-20 px-4 sm:px-6 lg:px-10 max-w-[1600px] mx-auto min-h-screen">
@@ -468,26 +461,6 @@ const SystemAdminConsolePage = () => {
             ))}
           </div>
 
-          {/* Coming Soon Modules Box */}
-          <div className="bg-neutral-50 rounded-3xl p-5 border border-dashed border-neutral-300 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-wider text-neutral-500">Upcoming Modules</span>
-              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                Coming Soon
-              </span>
-            </div>
-            <div className="space-y-2">
-              {comingSoonModules.map((mod, idx) => (
-                <div key={idx} className="p-3 bg-white rounded-xl border border-neutral-200/80 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-neutral-700">{mod.label}</span>
-                    <span className="text-[9px] font-bold text-neutral-400">v2.1</span>
-                  </div>
-                  <p className="text-[10px] text-neutral-400 mt-0.5">{mod.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Module Content Area */}
