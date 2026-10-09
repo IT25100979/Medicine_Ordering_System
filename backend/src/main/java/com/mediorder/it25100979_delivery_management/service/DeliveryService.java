@@ -14,6 +14,8 @@ import com.mediorder.it25100979_delivery_management.exception.InvalidOtpExceptio
 import com.mediorder.it25100979_delivery_management.mapper.DeliveryMapper;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryRepository;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryTimelineRepository;
+import com.mediorder.system_build_functions.service.FeatureFlagService;
+import com.mediorder.system_build_functions.service.FeatureKeys;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,15 +40,23 @@ public class DeliveryService {
     private final DeliveryTimelineRepository timelineRepository;
     private final DeliveryLifecycleManager lifecycle;
     private final DeliveryOtpService otpService;
+    private final FeatureFlagService featureFlagService;
 
     public DeliveryService(DeliveryRepository deliveryRepository,
                            DeliveryTimelineRepository timelineRepository,
                            DeliveryLifecycleManager lifecycle,
-                           DeliveryOtpService otpService) {
+                           DeliveryOtpService otpService,
+                           FeatureFlagService featureFlagService) {
         this.deliveryRepository = deliveryRepository;
         this.timelineRepository = timelineRepository;
         this.lifecycle = lifecycle;
         this.otpService = otpService;
+        this.featureFlagService = featureFlagService;
+    }
+
+    /** System Admin "DELIVERY" kill switch blocks dispatching work (viewing still works). */
+    private void assertDeliveryEnabled() {
+        featureFlagService.assertFeatureEnabled(FeatureKeys.DELIVERY, "Delivery dispatching");
     }
 
     // ------------------------------------------------------------------ queries
@@ -104,6 +114,7 @@ public class DeliveryService {
     }
 
     public DeliveryResponse approveDelivery(Long id, DeliveryApprovalRequest request) {
+        assertDeliveryEnabled();
         Delivery delivery = lifecycle.load(id);
         delivery.setApprovedBy(lifecycle.currentActor().name());
         delivery.setApprovedAt(LocalDateTime.now());
@@ -132,6 +143,7 @@ public class DeliveryService {
      * Issues the customer's handover OTP.
      */
     public List<DeliveryResponse> assignDeliveries(AssignDeliveryRequest request) {
+        assertDeliveryEnabled();
         List<Long> ids = request.resolveDeliveryIds();
         if (ids.isEmpty()) {
             throw new IllegalArgumentException("At least one deliveryId must be provided for assignment");
@@ -267,6 +279,7 @@ public class DeliveryService {
      */
     @Transactional(noRollbackFor = InvalidOtpException.class)
     public CourierDeliveryResponse updateCourierStatus(Long id, CourierStatusUpdateRequest request) {
+        assertDeliveryEnabled();
         Delivery delivery = lifecycle.load(id);
         DeliveryStatus target = DeliveryStatus.from(request.getStatus());
 

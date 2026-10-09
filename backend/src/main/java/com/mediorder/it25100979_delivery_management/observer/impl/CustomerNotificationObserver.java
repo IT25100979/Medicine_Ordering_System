@@ -12,6 +12,9 @@ import com.mediorder.system_build_functions.repository.NotificationRepository;
 import com.mediorder.system_build_functions.repository.UserRepository;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.EnumSet;
@@ -22,7 +25,7 @@ import java.util.Set;
  * delivery coordinators hear about new requests, customers hear about progress on their delivery.
  */
 @Component
-@Order(5)
+@Order(6)
 public class CustomerNotificationObserver implements DeliveryObserver {
 
     private static final Set<DeliveryEventType> CUSTOMER_EVENTS = EnumSet.of(
@@ -37,10 +40,15 @@ public class CustomerNotificationObserver implements DeliveryObserver {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    /** After-commit callbacks have no usable transaction, so writes there need a brand-new one. */
+    private final TransactionTemplate newTransaction;
 
-    public CustomerNotificationObserver(NotificationRepository notificationRepository, UserRepository userRepository) {
+    public CustomerNotificationObserver(NotificationRepository notificationRepository, UserRepository userRepository,
+                                        PlatformTransactionManager transactionManager) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.newTransaction = new TransactionTemplate(transactionManager);
+        this.newTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @Override
@@ -56,9 +64,10 @@ public class CustomerNotificationObserver implements DeliveryObserver {
         if (event.type() == DeliveryEventType.DELIVERY_REQUESTED) {
             String text = reference + " from " + delivery.getCustomerName()
                     + " is waiting for approval (preferred courier: " + delivery.getPreferredCourier() + ").";
-            AfterCommit.run(() -> userRepository.findByRole(Role.DELIVERY_COORDINATOR)
-                    .forEach(coordinator -> notificationRepository.save(
-                            notification(coordinator, "New delivery request", text))));
+            AfterCommit.run(() -> newTransaction.executeWithoutResult(status ->
+                    userRepository.findByRole(Role.DELIVERY_COORDINATOR)
+                            .forEach(coordinator -> notificationRepository.save(
+                                    notification(coordinator, "New delivery request", text)))));
             return;
         }
 
@@ -68,8 +77,9 @@ public class CustomerNotificationObserver implements DeliveryObserver {
         }
         String title = reference + " - " + event.newStatus().getLabel();
         String text = event.message() != null ? event.message() : title;
-        AfterCommit.run(() -> userRepository.findById(customerId)
-                .ifPresent(customer -> notificationRepository.save(notification(customer, title, text))));
+        AfterCommit.run(() -> newTransaction.executeWithoutResult(status ->
+                userRepository.findById(customerId)
+                        .ifPresent(customer -> notificationRepository.save(notification(customer, title, text)))));
     }
 
     private Notification notification(com.mediorder.system_build_functions.model.User recipient, String title, String message) {

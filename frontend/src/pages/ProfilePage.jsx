@@ -127,8 +127,20 @@ const ProfilePage = () => {
         .finally(() => setLoadingOrders(false));
     } else if (activeTab === 'subscriptions') {
       setLoadingSubs(true);
-      client.get('/api/v1/subscriptions')
-        .then(res => setSubscriptions(res.data?.data || res.data || []))
+      client.get('/api/v1/subscriptions/my')
+        .then(res => {
+          const list = res.data?.data || [];
+          // adapt the API's subscription view to the card fields used below
+          setSubscriptions(list.map(sub => ({
+            id: `SUB-${sub.id}`,
+            medicineName: (sub.items || []).map(i => i.name).join(', ') || 'Refill plan',
+            interval: `Every ${sub.frequencyDays} days`,
+            quantity: (sub.items || []).reduce((n, i) => n + (i.quantity || 0), 0),
+            status: sub.status,
+            nextRefillDate: sub.status === 'ACTIVE' ? sub.nextRefillDate : '—',
+            price: (sub.items || []).reduce((n, i) => n + Number(i.unitPrice || 0) * (i.quantity || 0), 0),
+          })));
+        })
         .catch(() => {
           setSubscriptions([
             {
@@ -692,6 +704,10 @@ const ProfilePage = () => {
                 <h2 className="text-lg font-black uppercase tracking-tight text-neutral-900">Recurring Medication Refills</h2>
                 <p className="text-xs text-neutral-500 mt-0.5">Automated pharmacy dispatches delivered straight to your door on schedule.</p>
               </div>
+
+              <Link to="/modules/subscriptions" className="inline-block text-xs font-bold text-emerald-800 hover:underline">
+                Manage subscriptions (new, pause, resume, cancel) →
+              </Link>
 
               {loadingSubs ? (
                 <div className="text-center py-10 text-xs font-bold text-neutral-400">Loading subscriptions...</div>

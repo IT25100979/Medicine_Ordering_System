@@ -73,6 +73,7 @@ classDiagram
     DeliverySubject <|.. DeliveryEventPublisher
     DeliveryObserver <|.. DeliveryTimelineObserver
     DeliveryObserver <|.. OrderStatusSyncObserver
+    DeliveryObserver <|.. StockReservationObserver
     DeliveryObserver <|.. DeliveryAuditObserver
     DeliveryObserver <|.. DeliveryRealtimeObserver
     DeliveryObserver <|.. CustomerNotificationObserver
@@ -89,6 +90,7 @@ classDiagram
 | Event (state passed) | `event/DeliveryLifecycleEvent`, `event/DeliveryEventType` | What happened, before/after status, who did it |
 | Concrete observer | `observer/impl/DeliveryTimelineObserver` | Saves a row in `delivery_events` (critical: runs in the same transaction) |
 | Concrete observer | `observer/impl/OrderStatusSyncObserver` | Updates the linked order in the Order module (critical) |
+| Concrete observer | `observer/impl/StockReservationObserver` | Delivered → deducts the stock reserved at checkout; rejected/terminated → returns it (critical) |
 | Concrete observer | `observer/impl/DeliveryAuditObserver` | Writes to the system audit log (after commit) |
 | Concrete observer | `observer/impl/DeliveryRealtimeObserver` | Pushes Server-Sent Events to the Delivery page and the customer's tracking page (after commit) |
 | Concrete observer | `observer/impl/CustomerNotificationObserver` | In-app notifications to coordinators (new request) and customers (progress), after commit |
@@ -114,7 +116,7 @@ event/         DeliveryLifecycleEvent, DeliveryEventType
 exception/     DeliveryNotFoundException (404), InvalidDeliveryStateException (409), InvalidOtpException (400), DeliveryExceptionHandler
 mapper/        DeliveryMapper (entity -> DTO per audience)
 observer/      DeliverySubject, DeliveryObserver, DeliveryEventPublisher, AfterCommit
-observer/impl/ the five concrete observers
+observer/impl/ the six concrete observers
 repository/    DeliveryRepository, DeliveryTimelineRepository, DeliveryZoneRepository
 service/       DeliveryService, CustomerDeliveryService, DeliveryLifecycleManager, DeliveryOtpService, DeliveryZoneService
 validation/    @ValidCourier + CourierCompanyValidator, shared regex patterns

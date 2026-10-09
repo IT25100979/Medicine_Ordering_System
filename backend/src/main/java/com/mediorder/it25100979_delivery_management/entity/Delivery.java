@@ -63,6 +63,10 @@ public class Delivery {
     @Column(name = "order_total", precision = 12, scale = 2)
     private BigDecimal orderTotal;
 
+    /** Approved prescription that authorises prescription-only items in this order. */
+    @Column(name = "prescription_id")
+    private Long prescriptionId;
+
     @Column(name = "special_instructions", columnDefinition = "TEXT")
     private String specialInstructions;
 

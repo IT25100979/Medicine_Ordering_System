@@ -52,6 +52,11 @@ public class BackgroundJobRunner {
                     int reserved = batch.getQtyReserved() != null ? batch.getQtyReserved() : 0;
                     batch.setQtyReserved(Math.max(0, reserved - res.getQuantity()));
                     inventoryBatchRepository.save(batch);
+                    var medicine = batch.getMedicine();
+                    if (medicine != null) {
+                        int allocated = medicine.getAllocatedStock() != null ? medicine.getAllocatedStock() : 0;
+                        medicine.setAllocatedStock(Math.max(0, allocated - res.getQuantity()));
+                    }
                 }
                 stockReservationRepository.save(res);
                 auditService.log(null, "system", "SYSTEM", "EXPIRE_RESERVATION", "StockReservation",

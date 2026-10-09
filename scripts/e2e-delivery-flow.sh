@@ -41,7 +41,7 @@ check "courier partners listed publicly" 4 "$PARTNERS"
 RESP=$(curl -s -X POST "$B/api/v1/customer/deliveries" -H "Authorization: Bearer $CUST" -H 'Content-Type: application/json' -d '{
   "preferredCourier":"Koombiyo","deliveryAddress":"12 Flower Road, Colombo 07","customerPhone":"0771234567",
   "specialInstructions":"Call on arrival","deliveryFee":500,
-  "items":[{"medicineId":1,"name":"Amoxil 500mg","quantity":2,"unitPrice":1},{"name":"Gift note","quantity":1,"unitPrice":50}]}')
+  "items":[{"medicineId":2,"name":"Panadol Extra","quantity":2,"unitPrice":1},{"name":"Gift note","quantity":1,"unitPrice":50}]}')
 ID=$(echo "$RESP" | json "['data']['id']")
 check "delivery created as PENDING" PENDING "$(echo "$RESP" | json "['data']['status']")"
 check "preferred courier stored" Koombiyo "$(echo "$RESP" | json "['data']['preferredCourier']")"

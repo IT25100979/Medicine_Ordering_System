@@ -40,6 +40,9 @@ import { errorMessage } from '../../api/client';
 import { deliveryApi } from '../../api/deliveryApi';
 import { useAuth } from '../../context/AuthContext';
 import useRealtimeChannel, { DELIVERY_EVENT_TYPES } from '../../hooks/useRealtimeChannel';
+import useFeatureStatus from '../../hooks/useFeatureStatus';
+import FeaturePausedBanner from '../../components/FeaturePausedBanner';
+import NotificationBell from '../../components/NotificationBell';
 
 const COURIER_OPTIONS = [
   'DHL',
@@ -55,6 +58,8 @@ const ROUTE_OPTIONS = [
 const DeliveryPage = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+
+  const { status: featureStatus } = useFeatureStatus();
 
   // Tab state: 'management' | 'courier' | 'routes' (No stacked "all sections" layout)
   const [activeTab, setActiveTab] = useState('management');
@@ -597,6 +602,7 @@ const DeliveryPage = () => {
                 {user.fullName} ({user.role})
               </span>
             )}
+            <NotificationBell />
             <button
               type="button"
               onClick={() => {
@@ -673,6 +679,8 @@ const DeliveryPage = () => {
             </button>
           </div>
         )}
+
+        <FeaturePausedBanner title="Delivery dispatching" info={featureStatus.DELIVERY} />
 
         {/* Live notice: a customer just confirmed an order */}
         {liveNotice && (
@@ -1018,6 +1026,11 @@ const DeliveryPage = () => {
                               )}
                               {delivery.itemsSummary && (
                                 <p className="text-neutral-800 text-[11px] font-semibold line-clamp-2">{delivery.itemsSummary}</p>
+                              )}
+                              {delivery.prescriptionId && (
+                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold">
+                                  Rx #{delivery.prescriptionId} approved
+                                </span>
                               )}
                               <p className="text-neutral-600 text-[11px] line-clamp-2">
                                 {delivery.specialInstructions || 'Standard Handling'}

@@ -41,6 +41,8 @@ class DeliveryServiceTest {
     private DeliveryTimelineRepository timelineRepository;
     @Mock
     private CurrentUserProvider currentUserProvider;
+    @Mock
+    private com.mediorder.system_build_functions.service.FeatureFlagService featureFlagService;
 
     private RecordingObserver observer;
     private DeliveryOtpService otpService;
@@ -52,7 +54,7 @@ class DeliveryServiceTest {
         otpService = new DeliveryOtpService();
         DeliveryEventPublisher publisher = new DeliveryEventPublisher(List.of(observer));
         DeliveryLifecycleManager lifecycle = new DeliveryLifecycleManager(deliveryRepository, publisher, currentUserProvider);
-        deliveryService = new DeliveryService(deliveryRepository, timelineRepository, lifecycle, otpService);
+        deliveryService = new DeliveryService(deliveryRepository, timelineRepository, lifecycle, otpService, featureFlagService);
 
         User coordinator = User.builder().id(5L).fullName("deliverycoordinator1")
                 .email("deliverycoordinator1@gmail.com").role(Role.DELIVERY_COORDINATOR).build();
@@ -127,6 +129,18 @@ class DeliveryServiceTest {
     void approve_twiceIsRejectedByStateMachine() {
         stored(1L, DeliveryStatus.APPROVED);
         assertThrows(InvalidDeliveryStateException.class, () -> deliveryService.approveDelivery(1L, null));
+        assertTrue(observer.events.isEmpty());
+    }
+
+    @Test
+    void assign_blockedWhenDeliveryKillSwitchIsOff() {
+        stored(1L, DeliveryStatus.APPROVED);
+        org.mockito.Mockito.doThrow(new IllegalStateException("Service Unavailable: Delivery dispatching is currently disabled."))
+                .when(featureFlagService).assertFeatureEnabled(org.mockito.ArgumentMatchers.eq("DELIVERY"), org.mockito.ArgumentMatchers.anyString());
+        AssignDeliveryRequest req = new AssignDeliveryRequest();
+        req.setDeliveryId(1L);
+
+        assertThrows(IllegalStateException.class, () -> deliveryService.assignDeliveries(req));
         assertTrue(observer.events.isEmpty());
     }
 

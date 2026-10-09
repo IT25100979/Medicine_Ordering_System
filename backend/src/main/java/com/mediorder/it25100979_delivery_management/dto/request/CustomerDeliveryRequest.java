@@ -39,9 +39,17 @@ public class CustomerDeliveryRequest {
     @DecimalMax(value = "100000.0", message = "Delivery fee is too large")
     private BigDecimal deliveryFee;
 
+    /** Approved prescription covering prescription-only items in the cart (required when there are any). */
+    private Long prescriptionId;
+
     @NotEmpty(message = "Your cart is empty")
     @Size(max = 50, message = "A single order can contain at most 50 different items")
     private List<@Valid OrderLine> items;
+
+    public CustomerDeliveryRequest(String preferredCourier, String deliveryAddress, String customerPhone,
+                                   String specialInstructions, BigDecimal deliveryFee, List<OrderLine> items) {
+        this(preferredCourier, deliveryAddress, customerPhone, specialInstructions, deliveryFee, null, items);
+    }
 
     @Data
     @NoArgsConstructor

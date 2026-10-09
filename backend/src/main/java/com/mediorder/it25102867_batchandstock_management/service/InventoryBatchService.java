@@ -22,6 +22,10 @@ import java.util.*;
 @Transactional
 public class InventoryBatchService {
 
+    /** System Admin kill switch; optional so unit tests without it still work. */
+    @Autowired(required = false)
+    private com.mediorder.system_build_functions.service.FeatureFlagService featureFlagService;
+
     @Autowired
     private InventoryBatchRepository inventoryBatchRepository;
 
@@ -182,6 +186,10 @@ public class InventoryBatchService {
     }
 
     public InventoryBatch createBatch(InventoryBatch batch) {
+        if (featureFlagService != null) {
+            featureFlagService.assertFeatureEnabled(
+                    com.mediorder.system_build_functions.service.FeatureKeys.STOCK_INTAKE, "Stock intake");
+        }
         if (batch.getMedicine() != null && batch.getMedicine().getId() != null) {
             Medicine med = medicineRepository.findById(batch.getMedicine().getId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Medicine not found with id: " + batch.getMedicine().getId()));

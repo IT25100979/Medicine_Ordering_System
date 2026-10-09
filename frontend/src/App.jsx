@@ -85,13 +85,13 @@ const App = () => {
               } />
 
               <Route path="/pharmacist_dashboard" element={
-                <ProtectedRoute allowedRoles={['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN']}>
+                <ProtectedRoute allowedRoles={['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN']}>
                   <PharmacistPrescriptionDashboard />
                 </ProtectedRoute>
               } />
 
               <Route path="/admin/prescriptions" element={
-                <ProtectedRoute allowedRoles={['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN']}>
+                <ProtectedRoute allowedRoles={['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN']}>
                   <PharmacistPrescriptionDashboard />
                 </ProtectedRoute>
               } />

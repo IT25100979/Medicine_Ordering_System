@@ -197,11 +197,13 @@ public class PrescriptionServiceTest {
                 .rejectionReason("Doctor's seal not available")
                 .build();
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+        org.springframework.web.server.ResponseStatusException ex = assertThrows(
+                org.springframework.web.server.ResponseStatusException.class, () ->
                 prescriptionService.verifyPrescription(500L, request, authentication)
         );
 
-        assertTrue(ex.getMessage().contains("already been finalized"));
+        assertEquals(409, ex.getStatusCode().value());
+        assertTrue(ex.getReason().contains("already been finalized"));
         verify(prescriptionRepository, never()).save(any());
     }
 
@@ -228,6 +230,26 @@ public class PrescriptionServiceTest {
 
         assertEquals(PrescriptionStatus.REJECTED, response.getStatus());
         verify(notificationRepository, times(1)).save(any(com.mediorder.system_build_functions.model.Notification.class));
+    }
+
+    @Test
+    void testSystemAdminCanApprovePrescription() {
+        User systemAdmin = User.builder().id(9L).email("systemadmin1@gmail.com").role(Role.SYSTEM_ADMIN).build();
+        Prescription pendingRx = Prescription.builder()
+                .id(650L)
+                .customer(customer)
+                .status(PrescriptionStatus.PENDING)
+                .build();
+
+        when(authentication.getName()).thenReturn("systemadmin1@gmail.com");
+        when(userRepository.findByEmail("systemadmin1@gmail.com")).thenReturn(Optional.of(systemAdmin));
+        when(prescriptionRepository.findById(650L)).thenReturn(Optional.of(pendingRx));
+        when(prescriptionRepository.save(any(Prescription.class))).thenAnswer(i -> i.getArgument(0));
+
+        PrescriptionResponse response = prescriptionService.verifyPrescription(650L,
+                PrescriptionVerificationRequest.builder().status(PrescriptionStatus.APPROVED).build(), authentication);
+
+        assertEquals(PrescriptionStatus.APPROVED, response.getStatus());
     }
 
     @Test

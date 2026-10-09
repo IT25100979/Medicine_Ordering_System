@@ -24,6 +24,7 @@ public class DeliveryResponse {
     private String orderAddress;
 
     private String itemsSummary;
+    private Long prescriptionId;
     private BigDecimal orderTotal;
     private String specialInstructions;
     private Boolean coldChainTag;
