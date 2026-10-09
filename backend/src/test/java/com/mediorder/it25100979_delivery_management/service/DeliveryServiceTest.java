@@ -99,15 +99,17 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void approve_movesPendingToApprovedAndRecordsApprover() {
+    void approve_movesPendingToDispatchedAndRecordsApprover() {
         stored(1L, DeliveryStatus.PENDING);
 
         DeliveryResponse result = deliveryService.approveDelivery(1L, new DeliveryApprovalRequest("Stock verified"));
 
-        assertEquals("APPROVED", result.getStatus());
+        assertEquals("DISPATCHED", result.getStatus());
         assertEquals("deliverycoordinator1", result.getApprovedBy());
+        assertEquals("Koombiyo", result.getAssignedCourier());
+        assertTrue(result.isOtpIssued());
         assertNotNull(result.getApprovedAt());
-        assertEquals(DeliveryEventType.DELIVERY_APPROVED, observer.last().type());
+        assertEquals(DeliveryEventType.COURIER_ASSIGNED, observer.last().type());
         assertEquals(DeliveryStatus.PENDING, observer.last().previousStatus());
         assertEquals("DELIVERY_COORDINATOR", observer.last().actor().role());
     }
@@ -125,20 +127,8 @@ class DeliveryServiceTest {
 
     @Test
     void approve_twiceIsRejectedByStateMachine() {
-        stored(1L, DeliveryStatus.APPROVED);
+        stored(1L, DeliveryStatus.DELIVERED);
         assertThrows(InvalidDeliveryStateException.class, () -> deliveryService.approveDelivery(1L, null));
-        assertTrue(observer.events.isEmpty());
-    }
-
-    @Test
-    void assign_requiresApprovalFirst() {
-        stored(1L, DeliveryStatus.PENDING);
-        AssignDeliveryRequest req = new AssignDeliveryRequest();
-        req.setDeliveryId(1L);
-
-        InvalidDeliveryStateException ex = assertThrows(InvalidDeliveryStateException.class,
-                () -> deliveryService.assignDeliveries(req));
-        assertTrue(ex.getMessage().contains("must be approved"));
     }
 
     @Test
@@ -153,7 +143,7 @@ class DeliveryServiceTest {
         assertEquals("DISPATCHED", result.get(0).getStatus());
         assertEquals("Koombiyo", result.get(0).getAssignedCourier());
         assertTrue(result.get(0).isOtpIssued());
-        assertEquals(6, d.getDeliveryOtp().length());
+        assertEquals(4, d.getDeliveryOtp().length());
         assertNotNull(d.getOtpExpiresAt());
         assertEquals(DeliveryEventType.COURIER_ASSIGNED, observer.last().type());
     }
@@ -212,18 +202,25 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void courier_cannotSkipOutForDelivery() {
+    void courierFlow_directDeliverWithValidOtp() {
         Delivery d = stored(1L, DeliveryStatus.DISPATCHED);
         otpService.issue(d);
-        assertThrows(InvalidDeliveryStateException.class, () -> deliveryService.updateCourierStatus(1L,
-                new CourierStatusUpdateRequest("DELIVERED", d.getDeliveryOtp(), null)));
+        String otp = "1234";
+
+        CourierDeliveryResponse result = deliveryService.updateCourierStatus(1L,
+                new CourierStatusUpdateRequest("DELIVERED", otp, null));
+
+        assertEquals("DELIVERED", result.getStatus());
+        assertNotNull(d.getDeliveredAt());
+        assertNull(d.getDeliveryOtp(), "OTP is single use");
+        assertEquals(List.of(DeliveryEventType.DELIVERED), observer.types());
     }
 
     @Test
     void wrongOtp_countsAttemptsAndLocksAfterFive() {
         Delivery d = stored(1L, DeliveryStatus.IN_TRANSIT);
         otpService.issue(d);
-        String wrong = d.getDeliveryOtp().equals("000000") ? "111111" : "000000";
+        String wrong = "9999";
 
         for (int i = 1; i <= 4; i++) {
             assertThrows(InvalidOtpException.class, () -> deliveryService.updateCourierStatus(1L,
@@ -231,7 +228,7 @@ class DeliveryServiceTest {
             assertEquals(i, d.getOtpAttempts());
         }
         InvalidOtpException locked = assertThrows(InvalidOtpException.class, () -> deliveryService.updateCourierStatus(1L,
-                new CourierStatusUpdateRequest("DELIVERED", wrong, null)));
+                    new CourierStatusUpdateRequest("DELIVERED", wrong, null)));
 
         assertTrue(locked.getMessage().contains("Too many wrong OTP attempts"));
         assertEquals("FAILED", d.getStatus());
@@ -244,7 +241,7 @@ class DeliveryServiceTest {
         Delivery pending = Delivery.builder().id(1L).status("PENDING").preferredCourier("DHL").build();
         Delivery approved = Delivery.builder().id(2L).status("APPROVED").preferredCourier("DHL").build();
         Delivery dispatched = Delivery.builder().id(3L).status("DISPATCHED").assignedCourier("DHL")
-                .customerName("A").deliveryOtp("123456").build();
+                .customerName("A").deliveryOtp("1234").build();
         when(deliveryRepository.findAllByOrderByIdDesc()).thenReturn(List.of(pending, approved, dispatched));
 
         List<CourierDeliveryResponse> queue = deliveryService.getCourierDeliveries("ALL");

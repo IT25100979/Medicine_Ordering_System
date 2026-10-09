@@ -110,11 +110,20 @@ public class DeliveryService {
         delivery.setActionStatus(null);
         delivery.setActionReason(null);
 
+        String courier = delivery.getPreferredCourier() != null && !delivery.getPreferredCourier().isBlank()
+                ? delivery.getPreferredCourier()
+                : "DHL";
+        delivery.setAssignedCourier(courier);
+        if (delivery.getAssignedRoute() == null || delivery.getAssignedRoute().isBlank()) {
+            delivery.setAssignedRoute("Colombo 1 - 5");
+        }
+        delivery.setDispatchedAt(LocalDateTime.now());
+        otpService.issue(delivery);
+
         String note = request != null ? blankToNull(request.getNote()) : null;
-        String message = "Delivery approved" + (note != null ? ": " + note : "")
-                + ". Preferred courier: " + valueOr(delivery.getPreferredCourier(), "not specified");
+        String message = "Delivery approved and dispatched to " + courier + (note != null ? " (" + note + ")" : "");
         return DeliveryMapper.toResponse(
-                lifecycle.transition(delivery, DeliveryStatus.APPROVED, DeliveryEventType.DELIVERY_APPROVED, message));
+                lifecycle.transition(delivery, DeliveryStatus.DISPATCHED, DeliveryEventType.COURIER_ASSIGNED, message));
     }
 
     public DeliveryResponse rejectDelivery(Long id, DeliveryRejectionRequest request) {
@@ -127,7 +136,7 @@ public class DeliveryService {
     }
 
     /**
-     * Assigns a courier to APPROVED deliveries (or re-assigns DISPATCHED / FAILED ones).
+     * Assigns a courier to deliveries (or re-assigns DISPATCHED / FAILED ones).
      * If no courier is given, each delivery is assigned to the partner the customer selected.
      * Issues the customer's handover OTP.
      */
@@ -149,20 +158,21 @@ public class DeliveryService {
         for (Long id : ids) {
             Delivery delivery = lifecycle.load(id);
             DeliveryStatus current = delivery.getStatusEnum();
-            if (current == DeliveryStatus.PENDING) {
+            if (current == DeliveryStatus.TERMINATED || current == DeliveryStatus.DELIVERED || current == DeliveryStatus.REJECTED) {
                 throw new InvalidDeliveryStateException(
-                        "Delivery #" + id + " must be approved before a courier can be assigned.");
+                        "Delivery #" + id + " is in final status and cannot be assigned.");
             }
 
             String courier = requestedCourier != null ? requestedCourier : delivery.getPreferredCourier();
             if (courier == null) {
-                throw new IllegalArgumentException(
-                        "Delivery #" + id + " has no preferred courier; please choose a courier partner.");
+                courier = "DHL";
             }
 
             delivery.setAssignedCourier(courier);
             if (request.getRoute() != null && !request.getRoute().isBlank()) {
                 delivery.setAssignedRoute(request.getRoute().trim());
+            } else if (delivery.getAssignedRoute() == null || delivery.getAssignedRoute().isBlank()) {
+                delivery.setAssignedRoute("Colombo 1 - 5");
             }
             if (batchId != null) {
                 delivery.setBatchId(batchId);
@@ -172,7 +182,7 @@ public class DeliveryService {
             delivery.setActionReason(null);
             otpService.issue(delivery);
 
-            String message = (current == DeliveryStatus.APPROVED ? "Courier assigned: " : "Courier re-assigned: ")
+            String message = (current == DeliveryStatus.APPROVED || current == DeliveryStatus.PENDING ? "Courier assigned: " : "Courier re-assigned: ")
                     + courier + (delivery.getAssignedRoute() != null ? " on route " + delivery.getAssignedRoute() : "");
             updated.add(DeliveryMapper.toResponse(lifecycle.transition(
                     delivery, DeliveryStatus.DISPATCHED, DeliveryEventType.COURIER_ASSIGNED, message)));
@@ -292,7 +302,7 @@ public class DeliveryService {
         DeliveryStatus current = delivery.getStatusEnum();
         if (!current.canTransitionTo(DeliveryStatus.DELIVERED)) {
             throw new InvalidDeliveryStateException(
-                    "Delivery #" + delivery.getId() + " must be out for delivery (IN_TRANSIT) before handover.");
+                    "Delivery #" + delivery.getId() + " cannot transition from " + current + " to DELIVERED.");
         }
         if (otp == null || otp.isBlank()) {
             throw new InvalidOtpException("Customer OTP is required to mark delivery as DELIVERED");

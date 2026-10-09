@@ -260,7 +260,7 @@ const CartPage = () => {
           <p className="text-xs text-neutral-500 leading-relaxed">
             Delivering to: <strong className="text-neutral-800">{placedDelivery?.orderAddress}</strong>
             <br />
-            You will receive a 6-digit handover OTP on the tracking console as soon as a courier rider dispatches your parcel.
+            You will receive a 4-digit handover OTP (1234) on the tracking console as soon as a courier rider dispatches your parcel.
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">

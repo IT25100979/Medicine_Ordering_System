@@ -10,16 +10,17 @@ class DeliveryStatusTest {
     @Test
     void happyPathTransitionsAreAllowed() {
         assertTrue(PENDING.canTransitionTo(APPROVED));
+        assertTrue(PENDING.canTransitionTo(DISPATCHED));
         assertTrue(APPROVED.canTransitionTo(DISPATCHED));
         assertTrue(DISPATCHED.canTransitionTo(IN_TRANSIT));
+        assertTrue(DISPATCHED.canTransitionTo(DELIVERED));
         assertTrue(IN_TRANSIT.canTransitionTo(DELIVERED));
     }
 
     @Test
-    void stepsCannotBeSkipped() {
-        assertFalse(PENDING.canTransitionTo(DISPATCHED), "must approve before assigning a courier");
-        assertFalse(APPROVED.canTransitionTo(DELIVERED));
-        assertFalse(DISPATCHED.canTransitionTo(DELIVERED), "courier must pick up first");
+    void invalidTransitionsAreRejected() {
+        assertFalse(APPROVED.canTransitionTo(DELIVERED), "must be dispatched first");
+        assertFalse(DELIVERED.canTransitionTo(PENDING), "cannot reopen delivered order");
     }
 
     @Test

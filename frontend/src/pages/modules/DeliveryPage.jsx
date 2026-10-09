@@ -86,7 +86,6 @@ const DeliveryPage = () => {
   const [isAssigning, setIsAssigning] = useState(false);
 
   // Modals State
-  const [isNewDeliveryModalOpen, setIsNewDeliveryModalOpen] = useState(false);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [targetActionDelivery, setTargetActionDelivery] = useState(null);
   const [actionType, setActionType] = useState('HOLD');
@@ -116,22 +115,6 @@ const DeliveryPage = () => {
   const [testCityQuery, setTestCityQuery] = useState('');
   const [testResult, setTestResult] = useState(null);
   const [testingCity, setTestingCity] = useState(false);
-
-  // New Delivery Form
-  const [newDeliveryForm, setNewDeliveryForm] = useState({
-    customerName: '',
-    orderAddress: '',
-    customerPhone: '',
-    customerEmail: '',
-    specialInstructions: '',
-    validatingPharmacist: user?.fullName ? `Pharm. ${user.fullName}` : 'Pharm. S. Perera',
-    arrangingStaff: 'Dispenser Kamal',
-    coldChainTag: false,
-    assignedRoute: 'Colombo 1 - 5',
-    assignedCourier: 'DHL',
-    batchId: ''
-  });
-  const [creatingDelivery, setCreatingDelivery] = useState(false);
 
   // Fetch Deliveries for Management View
   const fetchDeliveries = async () => {
@@ -197,62 +180,6 @@ const DeliveryPage = () => {
     fetchDeliveries();
     if (activeTab === 'courier') fetchCourierDeliveries();
   });
-
-  // Handle New Delivery Input
-  const handleNewDeliveryChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setNewDeliveryForm((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  // Submit New Delivery (POST /api/deliveries)
-  const handleCreateDelivery = async (e) => {
-    e.preventDefault();
-    setCreatingDelivery(true);
-    setDeliveryFeedback({ type: '', message: '' });
-
-    try {
-      const payload = {
-        ...newDeliveryForm,
-        specialInstructions: newDeliveryForm.coldChainTag
-          ? `${newDeliveryForm.specialInstructions ? newDeliveryForm.specialInstructions + ' | ' : ''}Cold Chain Refrigerator Required (2-8°C)`
-          : newDeliveryForm.specialInstructions
-      };
-
-      const created = await deliveryApi.record(payload);
-      setDeliveryFeedback({
-        type: 'success',
-        message: `Delivery #DEL-${created?.id || ''} recorded and added to the approval queue.`
-      });
-
-      // Reset form
-      setNewDeliveryForm({
-        customerName: '',
-        orderAddress: '',
-        customerPhone: '',
-        customerEmail: '',
-        specialInstructions: '',
-        validatingPharmacist: user?.fullName ? `Pharm. ${user.fullName}` : 'Pharm. S. Perera',
-        arrangingStaff: 'Dispenser Kamal',
-        coldChainTag: false,
-        assignedRoute: 'Colombo 1 - 5',
-        assignedCourier: 'DHL',
-        batchId: ''
-      });
-      setIsNewDeliveryModalOpen(false);
-      fetchDeliveries();
-      fetchCourierDeliveries();
-    } catch (error) {
-      setDeliveryFeedback({
-        type: 'error',
-        message: errorMessage(error, 'Failed to create delivery.')
-      });
-    } finally {
-      setCreatingDelivery(false);
-    }
-  };
 
   // Checkbox Selection
   // Only APPROVED (or FAILED / already dispatched for re-assignment) deliveries can get a courier.
@@ -638,14 +565,6 @@ const DeliveryPage = () => {
               className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-black text-white flex items-center justify-center shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${deliveriesLoading || courierLoading || zonesLoading ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsNewDeliveryModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Record New Delivery</span>
             </button>
           </div>
         </div>
@@ -1321,18 +1240,16 @@ const DeliveryPage = () => {
 
                             <button
                               type="button"
-                              disabled={item.status !== 'IN_TRANSIT'}
-                              title={item.status !== 'IN_TRANSIT' ? 'Mark the parcel as picked up first' : undefined}
                               onClick={() => {
                                 setTargetCourierDelivery(item);
                                 setEnteredOtp('');
                                 setOtpError('');
                                 setIsOtpModalOpen(true);
                               }}
-                              className="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                               <KeyRound className="w-3.5 h-3.5" />
-                              <span>Handover Parcel (Verify Customer OTP)</span>
+                              <span>Handover Parcel (OTP: 1234)</span>
                             </button>
                           </>
                         ) : isDelivered ? (
@@ -1503,155 +1420,7 @@ const DeliveryPage = () => {
         )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* MODAL 1: RECORD NEW DELIVERY                                              */}
-      {/* ========================================================================= */}
-      {isNewDeliveryModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-4">
-              <div>
-                <h3 className="text-lg font-black uppercase text-neutral-900">Record New Customer Delivery</h3>
-                <p className="text-xs text-neutral-500">
-                  Initial state will be PENDING. Customer verification OTP will be auto-generated.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsNewDeliveryModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <form onSubmit={handleCreateDelivery} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Customer / Recipient Name *</label>
-                  <input
-                    type="text"
-                    name="customerName"
-                    required
-                    placeholder="e.g. Kasun Fernando"
-                    value={newDeliveryForm.customerName}
-                    onChange={handleNewDeliveryChange}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Customer Phone Number *</label>
-                  <input
-                    type="text"
-                    name="customerPhone"
-                    required
-                    placeholder="e.g. 0771234567"
-                    value={newDeliveryForm.customerPhone}
-                    onChange={handleNewDeliveryChange}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-neutral-700 mb-1">Delivery Address *</label>
-                <input
-                  type="text"
-                  name="orderAddress"
-                  required
-                  placeholder="e.g. 142 Galle Road, Colombo 03"
-                  value={newDeliveryForm.orderAddress}
-                  onChange={handleNewDeliveryChange}
-                  className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Customer Email</label>
-                  <input
-                    type="email"
-                    name="customerEmail"
-                    placeholder="e.g. customer@gmail.com"
-                    value={newDeliveryForm.customerEmail}
-                    onChange={handleNewDeliveryChange}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Validating Pharmacist</label>
-                  <input
-                    type="text"
-                    name="validatingPharmacist"
-                    placeholder="e.g. Pharm. S. Perera"
-                    value={newDeliveryForm.validatingPharmacist}
-                    onChange={handleNewDeliveryChange}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-bold text-neutral-700 mb-1">Arranging Staff</label>
-                  <input
-                    type="text"
-                    name="arrangingStaff"
-                    placeholder="e.g. Dispenser Kamal"
-                    value={newDeliveryForm.arrangingStaff}
-                    onChange={handleNewDeliveryChange}
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </div>
-                <div className="flex items-center pt-5">
-                  <label className="inline-flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="coldChainTag"
-                      checked={newDeliveryForm.coldChainTag}
-                      onChange={handleNewDeliveryChange}
-                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="font-bold text-neutral-800 flex items-center gap-1">
-                      <Snowflake className="w-3.5 h-3.5 text-cyan-600" />
-                      Cold Chain Tagging Required (2-8°C)
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-neutral-700 mb-1">Special Handling Instructions</label>
-                <textarea
-                  name="specialInstructions"
-                  rows="2"
-                  placeholder="e.g. Call before delivery, handle with care, insulate temperature packaging..."
-                  value={newDeliveryForm.specialInstructions}
-                  onChange={handleNewDeliveryChange}
-                  className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                ></textarea>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100">
-                <button
-                  type="button"
-                  onClick={() => setIsNewDeliveryModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creatingDelivery}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider disabled:opacity-50 cursor-pointer"
-                >
-                  {creatingDelivery ? 'Creating...' : 'Create & Generate OTP'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* MODAL 2: ACTION CONFIRMATION (HOLD / POSTPONE / TERMINATE)                 */}
@@ -1730,22 +1499,22 @@ const DeliveryPage = () => {
               Customer OTP Verification
             </h3>
             <p className="text-xs text-neutral-500 mt-1 mb-4">
-              Enter the 6-digit verification code provided by <strong>{targetCourierDelivery.customerName}</strong> to confirm successful delivery handover.
+              Enter the 4-digit verification code (<strong>1234</strong>) provided by <strong>{targetCourierDelivery.customerName}</strong> to confirm successful delivery handover.
             </p>
 
             <form onSubmit={handleCourierVerifyOtpAndDeliver} className="space-y-4">
               <div>
                 <input
                   type="text"
-                  maxLength="6"
+                  maxLength="4"
                   required
                   autoFocus
-                  placeholder="• • • • • •"
+                  placeholder="1234"
                   value={enteredOtp}
                   inputMode="numeric"
-                  pattern="[0-9]{6}"
+                  pattern="[0-9]{4}"
                   onChange={(e) => setEnteredOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                  className="w-48 mx-auto text-center font-mono font-black text-2xl tracking-widest px-4 py-3 rounded-2xl bg-neutral-50 border-2 border-emerald-500/50 focus:border-emerald-600 focus:outline-none"
+                  className="w-40 mx-auto text-center font-mono font-black text-2xl tracking-widest px-4 py-3 rounded-2xl bg-neutral-50 border-2 border-emerald-500/50 focus:border-emerald-600 focus:outline-none"
                 />
               </div>
 
@@ -1766,7 +1535,7 @@ const DeliveryPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={otpSubmitting || enteredOtp.length !== 6}
+                  disabled={otpSubmitting || enteredOtp.length !== 4}
                   className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer shadow-md"
                 >
                   {otpSubmitting ? 'Verifying...' : 'Verify & Complete Handover'}

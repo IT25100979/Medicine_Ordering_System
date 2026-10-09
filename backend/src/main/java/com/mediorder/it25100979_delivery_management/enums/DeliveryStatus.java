@@ -38,9 +38,9 @@ public enum DeliveryStatus {
     private Set<DeliveryStatus> allowedNext = Collections.emptySet();
 
     static {
-        PENDING.allowedNext = EnumSet.of(APPROVED, REJECTED, ON_HOLD, POSTPONED, TERMINATED);
+        PENDING.allowedNext = EnumSet.of(APPROVED, DISPATCHED, REJECTED, ON_HOLD, POSTPONED, TERMINATED);
         APPROVED.allowedNext = EnumSet.of(DISPATCHED, ON_HOLD, POSTPONED, TERMINATED);
-        DISPATCHED.allowedNext = EnumSet.of(DISPATCHED, IN_TRANSIT, FAILED, ON_HOLD, POSTPONED, TERMINATED);
+        DISPATCHED.allowedNext = EnumSet.of(DISPATCHED, IN_TRANSIT, DELIVERED, FAILED, ON_HOLD, POSTPONED, TERMINATED);
         IN_TRANSIT.allowedNext = EnumSet.of(DELIVERED, FAILED);
         FAILED.allowedNext = EnumSet.of(DISPATCHED, TERMINATED);
         ON_HOLD.allowedNext = EnumSet.of(PENDING, APPROVED, TERMINATED);
