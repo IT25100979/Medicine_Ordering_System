@@ -38,6 +38,10 @@ public class DeliverySecurityRules implements ModuleSecurityRules {
                 "/api/v1/deliveries", "/api/v1/deliveries/**"
         ).hasAnyRole(COORDINATOR_ROLES);
 
+        // Pharmacist dispensing approved prescriptions into deliveries
+        auth.requestMatchers("/api/v1/pharmacy/**")
+                .hasAnyRole("CHIEF_PHARMACIST", "PHARMACIST", "ADMIN", "SYSTEM_ADMIN");
+
         // Courier work queue
         auth.requestMatchers(
                 "/api/courier", "/api/courier/**",

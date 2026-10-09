@@ -118,6 +118,11 @@ public class SubscriptionService {
                 .status(SubscriptionStatus.ACTIVE)
                 .createdAt(java.time.LocalDateTime.now())
                 .build());
+        subscription.setDeliveryAddress(request.getDeliveryAddress().trim());
+        subscription.setContactPhone(request.getContactPhone().trim());
+        subscription.setPreferredCourier(request.getPreferredCourier() != null && !request.getPreferredCourier().isBlank()
+                ? request.getPreferredCourier().trim() : null);
+        subscription = subscriptionRepository.save(subscription);
         saveItems(subscription, request.getItems());
         return toView(subscription);
     }
@@ -198,6 +203,9 @@ public class SubscriptionService {
                 sub.getNextRefillDate(),
                 sub.getStatus() != null ? sub.getStatus().name() : null,
                 sub.getCreatedAt(),
+                sub.getDeliveryAddress(),
+                sub.getContactPhone(),
+                sub.getPreferredCourier(),
                 items);
     }
 

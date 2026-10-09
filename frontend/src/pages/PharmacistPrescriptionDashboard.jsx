@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import useFeatureStatus from '../hooks/useFeatureStatus';
 import FeaturePausedBanner from '../components/FeaturePausedBanner';
 import NotificationBell from '../components/NotificationBell';
+import DispenseDialog from '../components/pharmacy/DispenseDialog';
+import RefillManager from '../components/pharmacy/RefillManager';
 import { formatDateDDMMYYYY, getShelfLifeStatus } from './OperationsCatalogDashboard';
 
 const REJECTION_TAGS = [
@@ -79,7 +81,9 @@ const PharmacistPrescriptionDashboard = () => {
   const { user, logout } = useAuth();
 
   // Navigation: 'prescriptions' (Rx Verification Queue) | 'condition_tagging' (Cold Chain & Shelf Tagging)
-  const [activeNavTab, setActiveNavTab] = useState('prescriptions');
+  const [searchParams] = useSearchParams();
+  const initialTab = { refills: 'refills', tagging: 'condition_tagging' }[searchParams.get('tab')] || 'prescriptions';
+  const [activeNavTab, setActiveNavTab] = useState(initialTab);
 
   // Toast Notification
   const [toast, setToast] = useState(null);
@@ -105,11 +109,19 @@ const PharmacistPrescriptionDashboard = () => {
   const [submittingVerification, setSubmittingVerification] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
+  // prescriptionId -> delivery created when the pharmacist dispensed it
+  const [dispensedByRx, setDispensedByRx] = useState({});
+  const [dispenseTarget, setDispenseTarget] = useState(null);
+
   const fetchPrescriptions = async () => {
     setLoadingPrescriptions(true);
     try {
-      const res = await client.get('/api/v1/prescriptions');
+      const [res, dispensed] = await Promise.all([
+        client.get('/api/v1/prescriptions'),
+        client.get('/api/v1/pharmacy/prescriptions/dispensed').catch(() => ({ data: { data: [] } })),
+      ]);
       setPrescriptions(Array.isArray(res.data) ? res.data : []);
+      setDispensedByRx(Object.fromEntries((dispensed.data?.data || []).map((d) => [d.prescriptionId, d])));
     } catch (err) {
       console.error('Failed to fetch prescriptions', err);
       showToast('Failed to load prescriptions from clinical server.', 'error');
@@ -633,9 +645,28 @@ const PharmacistPrescriptionDashboard = () => {
   };
 
   // Save Tag Configuration
+  const [tagFormError, setTagFormError] = useState('');
+
   const handleSaveTag = async (e, forceApprove = false) => {
     if (e) e.preventDefault();
     if (!editingMedicine) return;
+
+    const min = parseFloat(tagForm.storageTempMin);
+    const max = parseFloat(tagForm.storageTempMax);
+    const shelfLife = parseInt(tagForm.shelfLifeDays, 10);
+    if (Number.isNaN(min) || Number.isNaN(max) || min < -40 || max > 60) {
+      setTagFormError('Enter temperatures between -40°C and 60°C.');
+      return;
+    }
+    if (min >= max) {
+      setTagFormError('Minimum temperature must be lower than the maximum.');
+      return;
+    }
+    if (!(shelfLife >= 1 && shelfLife <= 3650)) {
+      setTagFormError('Shelf life must be between 1 and 3650 days.');
+      return;
+    }
+    setTagFormError('');
 
     // Check if dual confirmation is required
     const isCritical = tagForm.intensity === 'CRITICAL';
@@ -876,7 +907,7 @@ const PharmacistPrescriptionDashboard = () => {
             {/* Active Status Badge placed just below the Pharma + logo */}
             <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-[10px] font-bold tracking-wide shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>{activeNavTab === 'prescriptions' ? 'Prescription Verification Queue' : 'Cold-Chain & Condition Tagging Console'}</span>
+              <span>{{ prescriptions: 'Prescription Verification', condition_tagging: 'Condition Tagging', refills: 'Refill Subscriptions' }[activeNavTab]}</span>
             </div>
           </div>
 
@@ -909,6 +940,19 @@ const PharmacistPrescriptionDashboard = () => {
               >
                 <span className="material-symbols-outlined text-[16px]">ac_unit</span>
                 <span>Condition Tagging</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveNavTab('refills')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  activeNavTab === 'refills'
+                    ? 'bg-zinc-900 text-white shadow-xs'
+                    : 'text-neutral-700 hover:bg-neutral-200'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">autorenew</span>
+                <span>Refills</span>
               </button>
             </div>
 
@@ -1161,6 +1205,19 @@ const PharmacistPrescriptionDashboard = () => {
                             </td>
                             <td className="py-4 px-4 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-2">
+                                {rx.status === 'APPROVED' && (dispensedByRx[rx.id] ? (
+                                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                                    Sent to delivery #DEL-{dispensedByRx[rx.id].deliveryId}
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDispenseTarget(rx)}
+                                    className="px-3.5 py-1.5 rounded-full text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  >
+                                    Dispense
+                                  </button>
+                                ))}
                                 <button
                                   type="button"
                                   onClick={() => handleOpenUnifiedModal(rx)}
@@ -1200,6 +1257,8 @@ const PharmacistPrescriptionDashboard = () => {
         {/* ======================================================= */}
         {/* TAB 2: CONDITION & COLD-CHAIN TAGGING                   */}
         {/* ======================================================= */}
+        {activeNavTab === 'refills' && <RefillManager onMessage={(m) => showToast(m)} />}
+
         {activeNavTab === 'condition_tagging' && (
           <div>
             {/* Top Title & Telemetry Header */}
@@ -1486,7 +1545,6 @@ const PharmacistPrescriptionDashboard = () => {
                                     <th className="py-3 px-4">Shelf Section &amp; Envelope</th>
                                     <th className="py-3 px-4">Shelf-Life &amp; Expiry</th>
                                     <th className="py-3 px-4">Intensity &amp; Security</th>
-                                    <th className="py-3 px-4">Delivery Handling Tags</th>
                                     <th className="py-3 px-4">Tagging Status</th>
                                     <th className="py-3 px-4 text-right">Actions</th>
                                   </tr>
@@ -1602,44 +1660,6 @@ const PharmacistPrescriptionDashboard = () => {
                                           </div>
                                         </td>
 
-                                        {/* Delivery Handling Tags */}
-                                        <td className="py-3.5 px-4 align-top max-w-xs">
-                                          <div className="flex flex-wrap gap-1">
-                                            {item.actionsObj.insulatedBox && (
-                                              <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
-                                                Insulated Box
-                                              </span>
-                                            )}
-                                            {item.actionsObj.icePack && (
-                                              <span className="px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
-                                                Ice Pack
-                                              </span>
-                                            )}
-                                            {item.actionsObj.keepUpright && (
-                                              <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 text-[9px] font-bold">
-                                                Upright
-                                              </span>
-                                            )}
-                                            {item.actionsObj.signatureRequired && (
-                                              <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-bold">
-                                                Signature Req.
-                                              </span>
-                                            )}
-                                            {item.actionsObj.idAgeCheck && (
-                                              <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-[9px] font-bold">
-                                                ID Check
-                                              </span>
-                                            )}
-                                            {item.actionsObj.noLeaveAtDoor && (
-                                              <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-800 border border-red-200 text-[9px] font-bold">
-                                                Hand-to-Hand
-                                              </span>
-                                            )}
-                                            {!item.deliveryActions && (
-                                              <span className="text-[10px] text-neutral-400 italic">Standard ambient dispatch</span>
-                                            )}
-                                          </div>
-                                        </td>
 
                                         {/* Tagging Status */}
                                         <td className="py-3.5 px-4 align-top whitespace-nowrap">
@@ -2138,244 +2158,109 @@ const PharmacistPrescriptionDashboard = () => {
       {/* ========================================================= */}
       {/* MODAL 2: ITEM CONDITION & COLD CHAIN TAG EDITOR MODAL      */}
       {/* ========================================================= */}
+      {dispenseTarget && (
+        <DispenseDialog
+          prescription={dispenseTarget}
+          onClose={() => setDispenseTarget(null)}
+          onDispensed={(message) => {
+            setDispenseTarget(null);
+            showToast(message || 'Sent to Delivery Management.');
+            fetchPrescriptions();
+          }}
+        />
+      )}
+
       {showTagModal && editingMedicine && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 my-auto max-h-[92vh] flex flex-col">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl my-auto">
+            <div className="flex items-start justify-between pb-3 mb-4 border-b border-neutral-200">
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tight text-neutral-900">
-                  Condition &amp; Cold-Chain Tag Editor
-                </h3>
+                <h3 className="text-base font-bold text-neutral-900">Storage tag</h3>
                 <p className="text-xs text-neutral-500 mt-0.5">
-                  Target: <strong className="text-black">{editingMedicine.name}</strong> (SKU: {editingMedicine.sku})
+                  {editingMedicine.name} {editingMedicine.sku ? `(${editingMedicine.sku})` : ''}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowTagModal(false)}
-                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 transition-colors cursor-pointer"
-              >
+              <button type="button" onClick={() => setShowTagModal(false)} aria-label="Close"
+                className="w-8 h-8 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-500">
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
-            {/* Form Body */}
-            <form onSubmit={(e) => handleSaveTag(e, false)} className="space-y-5 overflow-y-auto pr-1">
-              
-              {/* 1. Shelf Section Selection (4 Canonical Sections) */}
-              <div>
-                <label className="block text-xs font-extrabold uppercase tracking-wider text-neutral-800 mb-2">
-                  1. Shelf Section (4 Canonical Envelopes)
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {CANONICAL_SECTIONS.map((sec) => (
-                    <button
-                      key={sec.key}
-                      type="button"
-                      onClick={() => handleSectionChange(sec.key)}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
-                        tagForm.section === sec.key
-                          ? 'bg-zinc-900 text-white border-zinc-900 ring-2 ring-zinc-700 shadow-xs'
-                          : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border-neutral-200'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px] mt-0.5">{sec.icon}</span>
-                      <div>
-                        <div className="text-xs font-bold">{sec.displayName}</div>
-                        <div className={`text-[10px] font-mono ${tagForm.section === sec.key ? 'text-neutral-300' : 'text-neutral-500'}`}>
-                          {sec.tempRange}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 2. Temperature Range & Shelf-Life (Days) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-neutral-50 p-4 rounded-2xl border border-neutral-200">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-600 mb-1">
-                    Min Temp (°C)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={tagForm.storageTempMin}
-                    onChange={(e) => setTagForm({ ...tagForm, storageTempMin: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-300 text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-600 mb-1">
-                    Max Temp (°C)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={tagForm.storageTempMax}
-                    onChange={(e) => setTagForm({ ...tagForm, storageTempMax: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-300 text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-600 mb-1">
-                    Shelf Life (Days)
-                  </label>
-                  <input
-                    type="number"
-                    value={tagForm.shelfLifeDays}
-                    onChange={(e) => setTagForm({ ...tagForm, shelfLifeDays: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-300 text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-              </div>
-
-              {/* 3. Intensity & Security Level */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-neutral-800 mb-1.5">
-                    3. Medicine Intensity (Risk Class)
-                  </label>
-                  <select
-                    value={tagForm.intensity}
-                    onChange={(e) => setTagForm({ ...tagForm, intensity: e.target.value })}
-                    className="w-full h-10 px-3 rounded-2xl bg-neutral-50 border border-neutral-300 text-xs font-bold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                  >
-                    <option value="LOW">LOW — Standard OTC formulation</option>
-                    <option value="MEDIUM">MEDIUM — Moderate risk prescription</option>
-                    <option value="HIGH">HIGH — High potency prescription / biologic</option>
-                    <option value="CRITICAL">CRITICAL — Cytotoxic / life-critical (Dual-Review)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-neutral-800 mb-1.5">
-                    4. Security Level
-                  </label>
-                  <select
-                    value={tagForm.securityLevel}
-                    onChange={(e) => setTagForm({ ...tagForm, securityLevel: e.target.value })}
-                    className="w-full h-10 px-3 rounded-2xl bg-neutral-50 border border-neutral-300 text-xs font-bold text-neutral-800 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
-                  >
-                    <option value="STANDARD">STANDARD — Open dispensary shelf</option>
-                    <option value="TAMPER_EVIDENT">TAMPER_EVIDENT — Serialized seal packaging</option>
-                    <option value="LOCKED">LOCKED — Double locked cabinet / fridge</option>
-                    <option value="CONTROLLED_SUBSTANCE">CONTROLLED_SUBSTANCE — Biometric Vault (Dual-Review)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* 5. Delivery Handling Actions (Checkboxes + Free Text) */}
-              <div>
-                <label className="block text-xs font-extrabold uppercase tracking-wider text-neutral-800 mb-2">
-                  5. Delivery Handling Actions &amp; Courier Directives
-                </label>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-50 p-4 rounded-2xl border border-neutral-200">
-                  {[
-                    { key: 'insulatedBox', label: 'Insulated Box' },
-                    { key: 'icePack', label: 'Ice Pack / Gel' },
-                    { key: 'keepUpright', label: 'Keep Upright' },
-                    { key: 'avoidSunlight', label: 'Avoid Sunlight' },
-                    { key: 'signatureRequired', label: 'Signature Req.' },
-                    { key: 'idAgeCheck', label: 'ID / Age Check' },
-                    { key: 'noLeaveAtDoor', label: 'Hand-to-Hand' },
-                  ].map((act) => (
-                    <label key={act.key} className="flex items-center gap-2 text-xs font-semibold text-neutral-800 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(tagForm.deliveryActions[act.key])}
-                        onChange={(e) =>
-                          setTagForm({
-                            ...tagForm,
-                            deliveryActions: {
-                              ...tagForm.deliveryActions,
-                              [act.key]: e.target.checked,
-                            },
-                          })
-                        }
-                        className="w-4 h-4 rounded accent-cyan-600"
-                      />
-                      <span>{act.label}</span>
-                    </label>
-                  ))}
-
-                  <div className="col-span-2 sm:col-span-1 flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-neutral-500">Max Transit:</span>
-                    <input
-                      type="number"
-                      value={tagForm.deliveryActions.maxTransitHours}
-                      onChange={(e) =>
-                        setTagForm({
-                          ...tagForm,
-                          deliveryActions: {
-                            ...tagForm.deliveryActions,
-                            maxTransitHours: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-12 h-7 px-1.5 text-center text-xs font-mono font-bold bg-white border border-neutral-300 rounded-md"
-                    />
-                    <span className="text-[10px] text-neutral-500">hrs</span>
-                  </div>
-                </div>
-
-                <div className="mt-2.5">
-                  <input
-                    type="text"
-                    value={tagForm.deliveryActions.customNotes}
-                    onChange={(e) =>
-                      setTagForm({
-                        ...tagForm,
-                        deliveryActions: {
-                          ...tagForm.deliveryActions,
-                          customNotes: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="Custom courier instructions (e.g. Do not expose to heat above 25°C)..."
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-50 text-xs border border-neutral-300 focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-              </div>
-
-              {/* Modal Buttons */}
-              <div className="pt-3 border-t border-neutral-200 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setShowTagModal(false)}
-                  className="px-4 py-2 rounded-full border border-neutral-300 text-xs font-bold uppercase tracking-wider text-neutral-700 hover:bg-neutral-50 cursor-pointer"
+            <form onSubmit={(e) => handleSaveTag(e, false)} className="space-y-4 text-sm">
+              <label className="block">
+                <span className="text-xs font-bold text-neutral-600">Storage section</span>
+                <select
+                  value={tagForm.section}
+                  onChange={(e) => handleSectionChange(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-300"
                 >
+                  {CANONICAL_SECTIONS.map((sec) => (
+                    <option key={sec.key} value={sec.key}>{sec.displayName} ({sec.tempRange})</option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="grid grid-cols-3 gap-3">
+                <label className="block">
+                  <span className="text-xs font-bold text-neutral-600">Min temp (°C)</span>
+                  <input type="number" step="0.1" value={tagForm.storageTempMin}
+                    onChange={(e) => setTagForm({ ...tagForm, storageTempMin: e.target.value })}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-300" />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold text-neutral-600">Max temp (°C)</span>
+                  <input type="number" step="0.1" value={tagForm.storageTempMax}
+                    onChange={(e) => setTagForm({ ...tagForm, storageTempMax: e.target.value })}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-300" />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold text-neutral-600">Shelf life (days)</span>
+                  <input type="number" min="1" value={tagForm.shelfLifeDays}
+                    onChange={(e) => setTagForm({ ...tagForm, shelfLifeDays: e.target.value })}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-300" />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-xs font-bold text-neutral-600">Risk level</span>
+                  <select value={tagForm.intensity} onChange={(e) => setTagForm({ ...tagForm, intensity: e.target.value })}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-300">
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="CRITICAL">Critical (needs a second confirmation)</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold text-neutral-600">Security</span>
+                  <select value={tagForm.securityLevel} onChange={(e) => setTagForm({ ...tagForm, securityLevel: e.target.value })}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-300">
+                    <option value="STANDARD">Standard shelf</option>
+                    <option value="TAMPER_EVIDENT">Sealed packaging</option>
+                    <option value="LOCKED">Locked cabinet / fridge</option>
+                    <option value="CONTROLLED_SUBSTANCE">Controlled substance (needs a second confirmation)</option>
+                  </select>
+                </label>
+              </div>
+
+              {tagFormError && <p className="text-xs text-red-600 font-semibold" role="alert">{tagFormError}</p>}
+
+              <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-2">
+                <button type="button" onClick={() => setShowTagModal(false)}
+                  className="px-4 py-2 rounded-xl border border-neutral-300 text-xs font-bold text-neutral-700 hover:bg-neutral-50">
                   Cancel
                 </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    disabled={savingTag}
-                    className="px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    Save Tag Draft
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={savingTag}
-                    onClick={(e) => handleSaveTag(e, true)}
-                    className="px-5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">verified</span>
-                    <span>Save &amp; Approve LIVE</span>
-                  </button>
-                </div>
+                <button type="submit" disabled={savingTag}
+                  className="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-bold text-neutral-800">
+                  Save draft
+                </button>
+                <button type="button" disabled={savingTag} onClick={(e) => handleSaveTag(e, true)}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
+                  Save &amp; approve for sale
+                </button>
               </div>
-
             </form>
-
           </div>
         </div>
       )}

@@ -7,9 +7,9 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * Batch & Stock integration: stock reserved at checkout is
- * deducted for good when the parcel is DELIVERED and returned to the shelf when the
- * delivery is REJECTED or TERMINATED. Runs in the same transaction as the delivery change.
+ * Batch & Stock integration: stock reserved at checkout is deducted for good when the parcel
+ * is DELIVERED. When a delivery is REJECTED or TERMINATED, reserved stock is released and any
+ * stock the pharmacist already deducted (prescription dispensing) goes back on the shelf. Runs in the same transaction as the delivery change.
  */
 @Component
 @Order(3)
@@ -29,7 +29,10 @@ public class StockReservationObserver implements DeliveryObserver {
         }
         switch (event.newStatus()) {
             case DELIVERED -> fefoAllocationService.confirmOrderStock(orderId);
-            case REJECTED, TERMINATED -> fefoAllocationService.releaseOrderStock(orderId);
+            case REJECTED, TERMINATED -> {
+                fefoAllocationService.releaseOrderStock(orderId);   // reserved at checkout
+                fefoAllocationService.returnConfirmedStock(orderId); // already deducted by the pharmacist
+            }
             default -> {
                 // still in progress (FAILED can be re-dispatched, so stock stays reserved)
             }

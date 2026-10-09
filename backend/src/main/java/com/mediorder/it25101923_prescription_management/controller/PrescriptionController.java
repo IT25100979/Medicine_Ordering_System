@@ -40,10 +40,14 @@ public class PrescriptionController {
             @RequestParam(value = "doctorName", required = false) String doctorName,
             @RequestParam(value = "patientNotes", required = false) String patientNotes,
             @RequestParam(value = "chronicSubscription", required = false, defaultValue = "false") Boolean chronicSubscription,
+            @RequestParam(value = "deliveryAddress", required = false) String deliveryAddress,
+            @RequestParam(value = "contactPhone", required = false) String contactPhone,
+            @RequestParam(value = "preferredCourier", required = false) String preferredCourier,
             Authentication authentication) {
 
         PrescriptionResponse response = prescriptionService.uploadPrescription(
-                file, doctorName, patientNotes, chronicSubscription, authentication
+                file, doctorName, patientNotes, chronicSubscription, authentication,
+                deliveryAddress, contactPhone, preferredCourier
         );
         return ResponseEntity.ok(response);
     }

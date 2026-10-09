@@ -77,6 +77,8 @@ class CustomerSubscriptionTest {
         item.setQuantity(qty);
         CustomerSubscriptionRequest req = new CustomerSubscriptionRequest();
         req.setFrequencyDays(30);
+        req.setDeliveryAddress("45 Galle Road, Colombo 03");
+        req.setContactPhone("0771234567");
         req.setItems(List.of(item));
         return req;
     }
@@ -92,6 +94,7 @@ class CustomerSubscriptionTest {
         assertEquals("Panadol Extra", view.items().get(0).name());
         assertEquals(3, view.items().get(0).quantity());
         assertNotNull(view.nextRefillDate());
+        assertEquals("45 Galle Road, Colombo 03", view.deliveryAddress());
     }
 
     @Test

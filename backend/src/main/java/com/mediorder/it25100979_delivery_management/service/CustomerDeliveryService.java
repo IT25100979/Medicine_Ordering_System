@@ -204,6 +204,14 @@ public class CustomerDeliveryService {
             throw new PrescriptionRequiredException("Prescription #" + prescriptionId + " is " + prescription.getStatus()
                     + ". Only a pharmacist-approved prescription can be used for " + items + ".");
         }
+        // one prescription = one order (unless that order was rejected/terminated)
+        deliveryRepository.findByPrescriptionId(prescriptionId).stream()
+                .filter(PrescriptionDispenseService::isActive)
+                .findFirst()
+                .ifPresent(d -> {
+                    throw new PrescriptionRequiredException("Prescription #" + prescriptionId
+                            + " has already been used for delivery #DEL-" + d.getId() + ".");
+                });
         return prescription.getId();
     }
 

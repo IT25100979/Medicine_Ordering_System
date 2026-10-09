@@ -130,8 +130,8 @@ const DeliveryPage = () => {
     customerPhone: '',
     customerEmail: '',
     specialInstructions: '',
-    validatingPharmacist: user?.fullName ? `Pharm. ${user.fullName}` : 'Pharm. S. Perera',
-    arrangingStaff: 'Dispenser Kamal',
+    validatingPharmacist: '',
+    arrangingStaff: '',
     coldChainTag: false,
     assignedRoute: 'Colombo 1 - 5',
     assignedCourier: 'DHL',
@@ -244,8 +244,8 @@ const DeliveryPage = () => {
         customerPhone: '',
         customerEmail: '',
         specialInstructions: '',
-        validatingPharmacist: user?.fullName ? `Pharm. ${user.fullName}` : 'Pharm. S. Perera',
-        arrangingStaff: 'Dispenser Kamal',
+        validatingPharmacist: '',
+        arrangingStaff: '',
         coldChainTag: false,
         assignedRoute: 'Colombo 1 - 5',
         assignedCourier: 'DHL',
@@ -925,7 +925,7 @@ const DeliveryPage = () => {
                       <th className="p-4">Customer Recipient</th>
                       <th className="p-4">Order Address</th>
                       <th className="p-4">Instructions / Cold Chain</th>
-                      <th className="p-4">Validating Pharmacist & Staff</th>
+                      <th className="p-4">Pharmacist</th>
                       <th className="p-4">Courier (chosen / assigned)</th>
                       <th className="p-4">Status</th>
                       <th className="p-4 text-right">Actions</th>
@@ -981,7 +981,7 @@ const DeliveryPage = () => {
                                   {delivery.batchId}
                                 </span>
                               ) : (
-                                <span className="text-[10px] text-neutral-400 italic">Individual</span>
+                                <span className="text-[10px] text-neutral-400 italic">No batch</span>
                               )}
                               {delivery.orderId && (
                                 <div className="text-[10px] text-neutral-500 mt-1 font-sans">Order #{delivery.orderId}</div>
@@ -1045,11 +1045,11 @@ const DeliveryPage = () => {
                             {/* Validating Pharmacist & Staff */}
                             <td className="p-4">
                               <div className="text-neutral-800 font-semibold text-[11px]">
-                                {delivery.validatingPharmacist || 'Dr. Pending Verification'}
+                                {delivery.validatingPharmacist || '—'}
                               </div>
-                              <div className="text-neutral-400 text-[10px]">
-                                Pack: {delivery.arrangingStaff || 'Fulfillment Staff'}
-                              </div>
+                              {delivery.arrangingStaff && (
+                                <div className="text-neutral-400 text-[10px]">Packed by {delivery.arrangingStaff}</div>
+                              )}
                             </td>
 
                             {/* Route & Courier */}
@@ -1601,7 +1601,7 @@ const DeliveryPage = () => {
                   <input
                     type="text"
                     name="validatingPharmacist"
-                    placeholder="e.g. Pharm. S. Perera"
+                    placeholder="Pharmacist who checked the order"
                     value={newDeliveryForm.validatingPharmacist}
                     onChange={handleNewDeliveryChange}
                     className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
@@ -1615,7 +1615,7 @@ const DeliveryPage = () => {
                   <input
                     type="text"
                     name="arrangingStaff"
-                    placeholder="e.g. Dispenser Kamal"
+                    placeholder="Staff member who packed it"
                     value={newDeliveryForm.arrangingStaff}
                     onChange={handleNewDeliveryChange}
                     className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
