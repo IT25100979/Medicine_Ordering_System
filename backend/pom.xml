@@ -20,6 +20,8 @@
     <properties>
         <java.version>21</java.version>
         <jwt.version>0.12.6</jwt.version>
+        <!-- 1.18.38+ is required to run on JDK 24 -->
+        <lombok.version>1.18.38</lombok.version>
     </properties>
 
     <dependencies>
@@ -105,6 +107,14 @@
                 <version>3.13.0</version>
                 <configuration>
                     <release>21</release>
+                    <!-- JDK 23+ no longer runs annotation processors implicitly; declare Lombok explicitly -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

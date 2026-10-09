@@ -35,3 +35,6 @@ Desktop.ini
 .agents/
 .mcp.json
 uploads/
+
+# --- Local dev MySQL instance (scripts/local-db.sh) ---
+.local-mysql/
