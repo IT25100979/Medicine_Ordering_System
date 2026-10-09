@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Amoxil 500mg">
-  <rect width="400" height="400" rx="24" fill="#eef2ff"/>
-  <ellipse cx="200" cy="300" rx="120" ry="14" fill="#000" opacity="0.08"/>
-  <rect x="110" y="105" width="180" height="170" rx="16" fill="#4f46e5"/>
-  <rect x="118" y="113" width="164" height="154" rx="12" fill="#ffffff" opacity="0.25"/>
-  <ellipse cx="150" cy="150" rx="18" ry="12" fill="#fbbf24" stroke="#ffffff" stroke-width="3"/><ellipse cx="200" cy="150" rx="18" ry="12" fill="#fbbf24" stroke="#ffffff" stroke-width="3"/><ellipse cx="250" cy="150" rx="18" ry="12" fill="#fbbf24" stroke="#ffffff" stroke-width="3"/><ellipse cx="150" cy="205" rx="18" ry="12" fill="#fbbf24" stroke="#ffffff" stroke-width="3"/><ellipse cx="200" cy="205" rx="18" ry="12" fill="#fbbf24" stroke="#ffffff" stroke-width="3"/><ellipse cx="250" cy="205" rx="18" ry="12" fill="#fbbf24" stroke="#ffffff" stroke-width="3"/>
-  <text x="200" y="352" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2937">Amoxil 500mg</text>
-  <text x="200" y="378" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#4b5563">Amoxicillin · Prescription</text>
-</svg>

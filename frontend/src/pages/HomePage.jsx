@@ -47,7 +47,7 @@ const HomePage = () => {
             </Link>
           </div>
         </div>
-        <img src="/products/category-prescription.svg" alt="" className="w-48 h-48 sm:w-64 sm:h-64 rounded-2xl" />
+        <img src="/products/paracetamol-tablets.jpg" alt="Paracetamol 500 mg tablets" className="w-48 h-48 sm:w-64 sm:h-64 rounded-2xl object-cover" />
       </section>
 
       {/* Categories */}
