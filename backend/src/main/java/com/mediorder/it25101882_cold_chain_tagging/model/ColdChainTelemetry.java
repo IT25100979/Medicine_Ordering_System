@@ -1,6 +1,6 @@
 package com.mediorder.it25101882_cold_chain_tagging.model;
 
-import com.mediorder.it25100979_delivery_management.model.Delivery;
+import com.mediorder.it25100979_delivery_management.entity.Delivery;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;

@@ -1,8 +1,13 @@
 import React from 'react';
 import { Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ADMIN_ROLE_LABELS } from '../utils/roleRoutes';
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+/**
+ * Guards a route by login state and (optionally) role.
+ * `loginPath` lets customer pages send guests to the customer login instead of the staff portal.
+ */
+const ProtectedRoute = ({ children, allowedRoles, loginPath = '/login/admin' }) => {
   const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
@@ -15,7 +20,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login/admin" state={{ from: location }} replace />;
+    const redirect = encodeURIComponent(location.pathname + location.search);
+    const target = loginPath === '/login' ? `/login?redirect=${redirect}` : loginPath;
+    return <Navigate to={target} state={{ from: location }} replace />;
   }
 
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
@@ -27,7 +34,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
           </div>
           <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Access Restricted</h2>
           <p className="text-xs text-gray-600 leading-relaxed">
-            The Product Catalog Management Console is restricted exclusively to authorized <strong>Operations Managers</strong>.
+            This page is restricted to:{' '}
+            <strong>{allowedRoles.map((r) => ADMIN_ROLE_LABELS[r] || r).join(', ')}</strong>.
           </p>
           <div className="bg-gray-50 p-3 rounded-2xl border text-xs text-gray-500">
             Current Authenticated Role: <span className="font-bold text-black uppercase">{user?.role || 'None'}</span>

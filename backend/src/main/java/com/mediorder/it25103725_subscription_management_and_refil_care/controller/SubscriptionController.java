@@ -36,7 +36,7 @@ public class SubscriptionController {
     }
 
     @PostMapping
-    public ResponseEntity<Subscription> createSubscription(@RequestBody SubscriptionRequest request) {
+    public ResponseEntity<Subscription> createSubscription(@jakarta.validation.Valid @RequestBody SubscriptionRequest request) {
         return ResponseEntity.ok(subscriptionService.createSubscription(request));
     }
 

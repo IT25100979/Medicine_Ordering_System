@@ -34,8 +34,16 @@ public class Order {
     @Column(name = "shipping_address", nullable = false, columnDefinition = "TEXT")
     private String shippingAddress;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    /** Set in Java so it works even when the table has no DEFAULT CURRENT_TIMESTAMP (fresh ddl-auto schema). */
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

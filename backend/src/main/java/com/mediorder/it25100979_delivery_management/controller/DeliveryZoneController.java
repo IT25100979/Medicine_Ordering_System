@@ -1,9 +1,13 @@
 package com.mediorder.it25100979_delivery_management.controller;
 
-import com.mediorder.it25100979_delivery_management.model.DeliveryZone;
+import com.mediorder.it25100979_delivery_management.dto.request.DeliveryZoneRequest;
+import com.mediorder.it25100979_delivery_management.entity.DeliveryZone;
 import com.mediorder.it25100979_delivery_management.service.DeliveryZoneService;
 import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -13,7 +17,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping({"/api/v1/delivery-zones", "/api/delivery-zones"})
-@CrossOrigin(origins = "*")
 public class DeliveryZoneController {
 
     @Autowired
@@ -71,25 +74,25 @@ public class DeliveryZoneController {
     }
 
     @PostMapping
-    public ResponseEntity<DeliveryZone> createDeliveryZone(@RequestBody DeliveryZone zone) {
-        return ResponseEntity.ok(deliveryZoneService.saveDeliveryZone(zone));
+    @PreAuthorize("hasAnyRole('DELIVERY_COORDINATOR', 'ADMIN', 'SYSTEM_ADMIN')")
+    public ResponseEntity<DeliveryZone> createDeliveryZone(@Valid @RequestBody DeliveryZoneRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(deliveryZoneService.createDeliveryZone(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DeliveryZone> updateDeliveryZone(@PathVariable Long id, @RequestBody DeliveryZone zone) {
-        return ResponseEntity.ok(deliveryZoneService.updateDeliveryZone(id, zone));
+    @PreAuthorize("hasAnyRole('DELIVERY_COORDINATOR', 'ADMIN', 'SYSTEM_ADMIN')")
+    public ResponseEntity<DeliveryZone> updateDeliveryZone(@PathVariable Long id, @Valid @RequestBody DeliveryZoneRequest request) {
+        return ResponseEntity.ok(deliveryZoneService.updateDeliveryZone(id, request));
     }
 
     @PatchMapping("/{id}/toggle-status")
+    @PreAuthorize("hasAnyRole('DELIVERY_COORDINATOR', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<DeliveryZone> toggleZoneStatus(@PathVariable Long id) {
-        DeliveryZone zone = deliveryZoneService.getDeliveryZoneById(id)
-                .orElseThrow(() -> new RuntimeException("Zone not found with id: " + id));
-        int newStatus = (zone.getIsActive() != null && zone.getIsActive() == 1) ? 0 : 1;
-        zone.setIsActive(newStatus);
-        return ResponseEntity.ok(deliveryZoneService.saveDeliveryZone(zone));
+        return ResponseEntity.ok(deliveryZoneService.toggleZoneStatus(id));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DELIVERY_COORDINATOR', 'ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<Void> deleteDeliveryZone(@PathVariable Long id) {
         deliveryZoneService.deleteDeliveryZone(id);
         return ResponseEntity.noContent().build();

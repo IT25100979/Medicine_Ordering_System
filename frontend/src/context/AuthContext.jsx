@@ -40,6 +40,13 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
+  // The API client fires this when a request with our token comes back 401 (expired / suspended).
+  useEffect(() => {
+    const handleExpired = () => logout();
+    window.addEventListener('auth:expired', handleExpired);
+    return () => window.removeEventListener('auth:expired', handleExpired);
+  }, []);
+
   const login = async (email, password) => {
     const response = await client.post('/api/v1/auth/login', { email, password });
     const authData = response.data.data;
@@ -96,7 +103,8 @@ export const AuthProvider = ({ children }) => {
       setUser(authData.user);
       return authData;
     }
-    return response.data;
+    // Staff registrations are created as PENDING_APPROVAL and receive no token until approved.
+    return { ...authData, pendingApproval: true, message: response.data?.message };
   };
 
   const logout = () => {

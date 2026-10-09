@@ -1,8 +1,27 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { CLINICAL_FALLBACK_IMAGES } from './CatalogPage';
+import { deliveryApi, COURIER_PARTNERS_FALLBACK } from '../api/deliveryApi';
+import { errorMessage } from '../api/client';
+
+const PHONE_PATTERN = /^[0-9+ -]{7,15}$/;
+
+/** Default saved address from the Profile page (stored in localStorage), formatted as one line. */
+const defaultSavedAddress = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('pharma_user_addresses') || '[]');
+    const addr = saved.find((a) => a.isDefault) || saved[0];
+    if (!addr) return null;
+    return {
+      text: [addr.street, addr.city, addr.postalCode].filter(Boolean).join(', '),
+      phone: addr.phone,
+    };
+  } catch {
+    return null;
+  }
+};
 
 const CartPage = () => {
   const { cartItems, updateQuantity, removeItem, removeFromCart, clearCart, loading, isGuest } = useCart();
@@ -22,7 +41,28 @@ const CartPage = () => {
   });
 
   const [checkoutStep, setCheckoutStep] = useState('review'); // 'review' | 'confirmed'
-  const [orderRef, setOrderRef] = useState('');
+  const [placedDelivery, setPlacedDelivery] = useState(null);
+
+  // Checkout details: courier partner chosen by the customer + where to deliver
+  const savedAddress = defaultSavedAddress();
+  const [courierPartners, setCourierPartners] = useState(COURIER_PARTNERS_FALLBACK);
+  const [preferredCourier, setPreferredCourier] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState(savedAddress?.text || '');
+  const [contactPhone, setContactPhone] = useState(savedAddress?.phone || user?.contactNumber || '');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [checkoutErrors, setCheckoutErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
+  const [placingOrder, setPlacingOrder] = useState(false);
+
+  useEffect(() => {
+    deliveryApi.courierPartners()
+      .then((list) => Array.isArray(list) && list.length > 0 && setCourierPartners(list))
+      .catch(() => { /* keep the built-in list */ });
+  }, []);
+
+  useEffect(() => {
+    if (!contactPhone && user?.contactNumber) setContactPhone(user.contactNumber);
+  }, [user]);
 
   const actualIsGuest = isGuest || !isAuthenticated || !user;
 
@@ -42,16 +82,50 @@ const CartPage = () => {
     }
   };
 
+  const validateCheckout = () => {
+    const errors = {};
+    if (!preferredCourier) errors.courier = 'Please choose a delivery partner.';
+    if (deliveryAddress.trim().length < 5) errors.address = 'Enter your full delivery address (at least 5 characters).';
+    if (!PHONE_PATTERN.test(contactPhone.trim())) errors.phone = 'Enter a valid phone number (7-15 digits).';
+    if (deliveryNotes.length > 1000) errors.notes = 'Instructions must be at most 1000 characters.';
+    if (cartItems.length === 0) errors.cart = 'Your cart is empty.';
+    setCheckoutErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Customer confirms the order with the chosen courier partner -> backend creates the
+  // order + a PENDING delivery, which appears live on the Delivery Management page.
   const handleCheckout = async () => {
     if (actualIsGuest) {
       navigate('/login?redirect=/cart');
       return;
     }
+    if (placingOrder || !validateCheckout()) return;
 
-    const ref = `ORD-${Math.floor(100000 + Math.random() * 900000)}-LK`;
-    setOrderRef(ref);
-    setCheckoutStep('confirmed');
-    await clearCart();
+    setPlacingOrder(true);
+    setSubmitError('');
+    try {
+      const delivery = await deliveryApi.placeOrder({
+        preferredCourier,
+        deliveryAddress: deliveryAddress.trim(),
+        customerPhone: contactPhone.trim(),
+        specialInstructions: deliveryNotes.trim() || null,
+        deliveryFee: subtotal > 0 ? deliveryFee : 0,
+        items: cartItems.map((item) => ({
+          medicineId: Number(item.medicineId) || null,
+          name: item.name || 'Pharmaceutical Item',
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice ?? item.price ?? 0),
+        })),
+      });
+      setPlacedDelivery(delivery);
+      setCheckoutStep('confirmed');
+      await clearCart();
+    } catch (err) {
+      setSubmitError(errorMessage(err, 'Could not place your order. Please try again.'));
+    } finally {
+      setPlacingOrder(false);
+    }
   };
 
   return (
@@ -139,15 +213,20 @@ const CartPage = () => {
             <i className="fa-solid fa-check" />
           </div>
           <h2 className="text-2xl font-black uppercase tracking-tight text-neutral-900">
-            Prescription Order Confirmed!
+            Order Placed!
           </h2>
           <p className="text-xs text-neutral-600 leading-relaxed">
-            Your pharmaceutical dispatch reference is{' '}
+            Your delivery reference is{' '}
             <strong className="font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              {orderRef}
-            </strong>
-            . Our licensed pharmacist will verify the allocation for dispatch to{' '}
-            <strong>{deliveryLocation}</strong>.
+              #DEL-{placedDelivery?.id}
+            </strong>{' '}
+            (order #{placedDelivery?.orderId}). It is now <strong>awaiting approval</strong> by our delivery team, who will
+            assign it to <strong>{placedDelivery?.preferredCourier}</strong> for delivery to{' '}
+            <strong>{placedDelivery?.orderAddress}</strong>.
+          </p>
+          <p className="text-[11px] text-neutral-500">
+            Total: <strong>LKR {Number(placedDelivery?.orderTotal || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</strong>
+            {' '}· You will get a 6-digit handover code on the tracking page once a courier is assigned.
           </p>
           <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
@@ -157,10 +236,10 @@ const CartPage = () => {
               Browse Catalog
             </Link>
             <Link
-              to="/modules/delivery"
+              to="/my-deliveries"
               className="px-6 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
             >
-              Track Deliveries
+              Track My Delivery
             </Link>
           </div>
         </div>
@@ -294,6 +373,96 @@ const CartPage = () => {
               </div>
             </div>
 
+            {/* Checkout details: delivery partner, address, phone */}
+            {!actualIsGuest && cartItems.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 border border-neutral-200 shadow-sm space-y-4">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400">
+                    Choose Delivery Partner *
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2 mt-2" role="radiogroup" aria-label="Delivery partner">
+                    {courierPartners.map((partner) => {
+                      const selected = preferredCourier === partner.name;
+                      return (
+                        <button
+                          key={partner.code}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => {
+                            setPreferredCourier(partner.name);
+                            setCheckoutErrors((prev) => ({ ...prev, courier: undefined }));
+                          }}
+                          className={`text-left p-3 rounded-xl border transition-all ${
+                            selected
+                              ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-500/30'
+                              : 'border-neutral-200 hover:border-neutral-400 bg-neutral-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-black text-neutral-900">{partner.name}</span>
+                            {selected && <i className="fa-solid fa-circle-check text-emerald-600 text-xs" />}
+                          </div>
+                          <p className="text-[10px] text-neutral-500 mt-0.5 leading-snug">{partner.description}</p>
+                          <p className="text-[10px] font-bold text-neutral-700 mt-1">
+                            ~{partner.estimatedDays} day{partner.estimatedDays > 1 ? 's' : ''}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {checkoutErrors.courier && <p className="text-[11px] text-red-600 font-semibold mt-1.5">{checkoutErrors.courier}</p>}
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label htmlFor="checkout-address" className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                      Delivery Address *
+                    </label>
+                    <textarea
+                      id="checkout-address"
+                      rows="2"
+                      maxLength={500}
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      placeholder={`e.g. 12 Flower Road, ${deliveryLocation}`}
+                      className={`w-full px-3 py-2 rounded-xl bg-neutral-50 border ${checkoutErrors.address ? 'border-red-400' : 'border-neutral-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500/20`}
+                    />
+                    {checkoutErrors.address && <p className="text-[11px] text-red-600 font-semibold mt-1">{checkoutErrors.address}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="checkout-phone" className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                      Contact Phone *
+                    </label>
+                    <input
+                      id="checkout-phone"
+                      type="tel"
+                      maxLength={15}
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      placeholder="e.g. 0771234567"
+                      className={`w-full px-3 py-2 rounded-xl bg-neutral-50 border ${checkoutErrors.phone ? 'border-red-400' : 'border-neutral-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500/20`}
+                    />
+                    {checkoutErrors.phone && <p className="text-[11px] text-red-600 font-semibold mt-1">{checkoutErrors.phone}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="checkout-notes" className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
+                      Delivery Instructions (optional)
+                    </label>
+                    <input
+                      id="checkout-notes"
+                      type="text"
+                      maxLength={1000}
+                      value={deliveryNotes}
+                      onChange={(e) => setDeliveryNotes(e.target.value)}
+                      placeholder="e.g. Call on arrival"
+                      className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Summary */}
             <div className="bg-white rounded-2xl p-5 border border-neutral-200 shadow-sm space-y-4">
               <h3 className="text-xs font-black uppercase tracking-wider text-neutral-900 pb-3 border-b border-neutral-100">
@@ -342,15 +511,27 @@ const CartPage = () => {
                   </p>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  disabled={cartItems.length === 0}
-                  onClick={handleCheckout}
-                  className="w-full py-3.5 bg-neutral-900 hover:bg-black disabled:bg-neutral-300 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <i className="fa-solid fa-shield-halved text-emerald-400 text-xs" />
-                  <span>Confirm &amp; Place Order</span>
-                </button>
+                <div className="space-y-2">
+                  {submitError && (
+                    <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold" role="alert">
+                      {submitError}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    disabled={cartItems.length === 0 || placingOrder}
+                    onClick={handleCheckout}
+                    className="w-full py-3.5 bg-neutral-900 hover:bg-black disabled:bg-neutral-300 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-shield-halved text-emerald-400 text-xs" />
+                    <span>{placingOrder ? 'Placing Order...' : 'Confirm & Place Order'}</span>
+                  </button>
+                  {preferredCourier && (
+                    <p className="text-[10px] text-center text-neutral-500">
+                      Delivery partner: <strong>{preferredCourier}</strong>
+                    </p>
+                  )}
+                </div>
               )}
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-neutral-400 font-medium pt-1">

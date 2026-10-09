@@ -6,6 +6,8 @@ import com.mediorder.system_build_functions.config.JwtTokenProvider;
 import com.mediorder.system_build_functions.dto.AuthRequest;
 import com.mediorder.system_build_functions.dto.AuthResponse;
 import com.mediorder.system_build_functions.dto.DemoLoginRequest;
+import com.mediorder.system_build_functions.dto.RegisterRequest;
+import com.mediorder.system_build_functions.model.UserStatus;
 import com.mediorder.system_build_functions.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -248,5 +251,41 @@ public class AuthServiceTest {
         assertNotNull(response);
         assertEquals("mock-cust-token", response.getToken());
         assertEquals(Role.CUSTOMER, response.getUser().getRole());
+    }
+
+    // --- Regression tests for auth hardening -------------------------------------------
+
+    @Test
+    void testRegister_RejectsSelfRegisteredSystemAdmin() {
+        RegisterRequest request = new RegisterRequest("Mallory", "mallory@example.com", "secret12", "0771234567", Role.SYSTEM_ADMIN);
+        when(userRepository.existsByEmail("mallory@example.com")).thenReturn(false);
+
+        assertThrows(AccessDeniedException.class, () -> authService.register(request));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void testRegister_StaffAccountIsPendingAndGetsNoToken() {
+        RegisterRequest request = new RegisterRequest("Dan Driver", "Dan@Example.com", "secret12", "0771234567", Role.DELIVERY_COORDINATOR);
+        when(userRepository.existsByEmail("dan@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("secret12")).thenReturn("hash");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AuthResponse response = authService.register(request);
+
+        assertNull(response.getToken(), "pending staff must not receive a usable token");
+        assertEquals(UserStatus.PENDING_APPROVAL, response.getUser().getStatus());
+        assertEquals("dan@example.com", response.getUser().getEmail());
+        verify(tokenProvider, never()).generateTokenFromUsername(any());
+    }
+
+    @Test
+    void testAdminLogin_PendingAccountGetsClearMessage() {
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new DisabledException("User is disabled"));
+
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class,
+                () -> authService.adminLogin(new AuthRequest("staff@example.com", "secret12")));
+        assertTrue(ex.getMessage().contains("pending"));
     }
 }

@@ -1,6 +1,6 @@
 package com.mediorder.it25100979_delivery_management.service;
 
-import com.mediorder.it25100979_delivery_management.model.DeliveryZone;
+import com.mediorder.it25100979_delivery_management.entity.DeliveryZone;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryZoneRepository;
 import com.mediorder.it25100979_delivery_management.service.DeliveryZoneService;
 import org.junit.jupiter.api.BeforeEach;

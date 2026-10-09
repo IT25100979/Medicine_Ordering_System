@@ -36,3 +36,6 @@ Desktop.ini
 .mcp.json
 uploads/
 test_env/
+
+# --- Local dev MySQL instance (scripts/local-db.sh) ---
+.local-mysql/

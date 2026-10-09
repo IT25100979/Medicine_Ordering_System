@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAdminDashboardRoute } from '../utils/roleRoutes';
 import DemoRoleGrid from '../components/DemoRoleGrid';
@@ -7,6 +7,8 @@ import DemoRoleGrid from '../components/DemoRoleGrid';
 const AdminLoginPage = () => {
   const { adminLogin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const notice = location.state?.notice;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -96,6 +98,14 @@ const AdminLoginPage = () => {
                 Provide your administrative credentials to manage pharmacy logistics, clinical workflows, and staff permissions.
               </p>
             </div>
+
+            {/* Notice (e.g. staff registration pending approval) */}
+            {notice && !errorMessage && (
+              <div className="mb-4 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2">
+                <span className="material-symbols-outlined text-[18px] shrink-0 text-amber-600">hourglass_top</span>
+                <span>{notice}</span>
+              </div>
+            )}
 
             {/* Error Message */}
             {errorMessage && (

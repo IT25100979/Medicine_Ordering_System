@@ -1,6 +1,7 @@
 package com.mediorder.system_build_functions.service;
 
 import com.mediorder.system_build_functions.model.User;
+import com.mediorder.system_build_functions.model.UserStatus;
 import com.mediorder.system_build_functions.repository.UserRepository;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -44,9 +45,19 @@ public class CustomUserDetailsService implements UserDetailsService {
             authorities.add(new SimpleGrantedAuthority("ADMIN"));
         }
 
+        // Only ACTIVE accounts may authenticate. PENDING_APPROVAL -> disabled, SUSPENDED -> locked.
+        // A null status is treated as ACTIVE for rows created before the status column existed.
+        UserStatus status = user.getStatus() != null ? user.getStatus() : UserStatus.ACTIVE;
+        boolean enabled = status != UserStatus.PENDING_APPROVAL;
+        boolean accountNonLocked = status != UserStatus.SUSPENDED;
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPasswordHash(),
+                enabled,
+                true,
+                true,
+                accountNonLocked,
                 authorities
         );
     }

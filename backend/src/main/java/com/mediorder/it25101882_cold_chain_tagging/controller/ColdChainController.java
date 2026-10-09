@@ -39,7 +39,7 @@ public class ColdChainController {
     }
 
     @PostMapping("/telemetry")
-    public ResponseEntity<ColdChainTelemetry> recordTelemetry(@RequestBody ColdChainTelemetryRequest request) {
+    public ResponseEntity<ColdChainTelemetry> recordTelemetry(@jakarta.validation.Valid @RequestBody ColdChainTelemetryRequest request) {
         return ResponseEntity.ok(coldChainService.recordTelemetry(request));
     }
 

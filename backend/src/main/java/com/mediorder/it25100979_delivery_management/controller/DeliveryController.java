@@ -1,80 +1,87 @@
 package com.mediorder.it25100979_delivery_management.controller;
 
-import com.mediorder.it25100979_delivery_management.dto.AssignDeliveryRequest;
-import com.mediorder.it25100979_delivery_management.dto.DeliveryActionRequest;
-import com.mediorder.it25100979_delivery_management.dto.DeliveryCreationRequest;
-import com.mediorder.it25100979_delivery_management.model.Delivery;
+import com.mediorder.it25100979_delivery_management.dto.request.*;
+import com.mediorder.it25100979_delivery_management.dto.response.DeliveryResponse;
+import com.mediorder.it25100979_delivery_management.dto.response.DeliveryTimelineResponse;
 import com.mediorder.it25100979_delivery_management.service.DeliveryService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mediorder.system_build_functions.dto.ApiResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
+/** Delivery Management console for the Delivery Coordinator. */
 @RestController
 @RequestMapping({"/api/deliveries", "/api/v1/deliveries"})
-@CrossOrigin(origins = "*")
+@PreAuthorize("hasAnyRole('DELIVERY_COORDINATOR', 'ADMIN', 'SYSTEM_ADMIN')")
 public class DeliveryController {
 
-    @Autowired
-    private DeliveryService deliveryService;
+    private final DeliveryService deliveryService;
 
-    /**
-     * POST /api/deliveries: Receive new deliveries from customers, show related entities, and persist them.
-     */
-    @PostMapping
-    public ResponseEntity<Delivery> createDelivery(@RequestBody DeliveryCreationRequest request) {
-        Delivery created = deliveryService.createDelivery(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public DeliveryController(DeliveryService deliveryService) {
+        this.deliveryService = deliveryService;
     }
 
-    /**
-     * GET /api/deliveries: List all deliveries with optional status filter.
-     */
+    /** GET /api/v1/deliveries?status=PENDING */
     @GetMapping
-    public ResponseEntity<List<Delivery>> getAllDeliveries(@RequestParam(value = "status", required = false) String status) {
-        return ResponseEntity.ok(deliveryService.getAllDeliveries(status));
+    public ResponseEntity<ApiResponse<List<DeliveryResponse>>> getAllDeliveries(
+            @RequestParam(value = "status", required = false) String status) {
+        return ResponseEntity.ok(ApiResponse.success("Deliveries retrieved", deliveryService.getAllDeliveries(status)));
     }
 
-    /**
-     * GET /api/deliveries/{id}: Get single delivery details.
-     */
     @GetMapping("/{id}")
-    public ResponseEntity<Delivery> getDeliveryById(@PathVariable Long id) {
-        return ResponseEntity.ok(deliveryService.getDeliveryById(id));
+    public ResponseEntity<ApiResponse<DeliveryResponse>> getDeliveryById(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("Delivery retrieved", deliveryService.getDeliveryById(id)));
     }
 
-    /**
-     * PUT /api/deliveries/assign: Select single or batch deliveries and assign route and courier.
-     * Transitions status from PENDING to DISPATCHED.
-     */
+    @GetMapping("/{id}/timeline")
+    public ResponseEntity<ApiResponse<List<DeliveryTimelineResponse>>> getTimeline(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("Delivery timeline retrieved", deliveryService.getTimeline(id)));
+    }
+
+    /** Record a delivery manually (e.g. phone order). It enters the approval queue as PENDING. */
+    @PostMapping
+    public ResponseEntity<ApiResponse<DeliveryResponse>> createDelivery(@Valid @RequestBody DeliveryCreationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Delivery recorded and waiting for approval", deliveryService.createDelivery(request)));
+    }
+
+    /** PENDING -> APPROVED */
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<ApiResponse<DeliveryResponse>> approve(
+            @PathVariable Long id, @Valid @RequestBody(required = false) DeliveryApprovalRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Delivery approved", deliveryService.approveDelivery(id, request)));
+    }
+
+    /** PENDING -> REJECTED (reason required) */
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<DeliveryResponse>> reject(
+            @PathVariable Long id, @Valid @RequestBody DeliveryRejectionRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Delivery rejected", deliveryService.rejectDelivery(id, request)));
+    }
+
+    /** APPROVED -> DISPATCHED for one or many deliveries; issues the customer's OTP. */
     @PutMapping("/assign")
-    public ResponseEntity<List<Delivery>> assignDeliveries(@RequestBody AssignDeliveryRequest request) {
-        return ResponseEntity.ok(deliveryService.assignDeliveries(request));
+    public ResponseEntity<ApiResponse<List<DeliveryResponse>>> assignDeliveries(@Valid @RequestBody AssignDeliveryRequest request) {
+        List<DeliveryResponse> assigned = deliveryService.assignDeliveries(request);
+        return ResponseEntity.ok(ApiResponse.success(assigned.size() + " delivery(ies) assigned to courier", assigned));
     }
 
-    /**
-     * PUT /api/deliveries/{id}/action: Perform specific actions (TERMINATE, HOLD, POSTPONE).
-     */
+    /** HOLD / POSTPONE / TERMINATE / RESUME */
     @PutMapping("/{id}/action")
-    public ResponseEntity<Delivery> performDeliveryAction(@PathVariable Long id, @RequestBody DeliveryActionRequest request) {
-        return ResponseEntity.ok(deliveryService.performAction(id, request));
+    public ResponseEntity<ApiResponse<DeliveryResponse>> performDeliveryAction(
+            @PathVariable Long id, @Valid @RequestBody DeliveryActionRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Action applied", deliveryService.performAction(id, request)));
     }
 
-    /**
-     * Backward-compatible status update endpoint
-     */
-    @PutMapping("/{id}/status")
-    public ResponseEntity<Delivery> updateDeliveryStatus(@PathVariable Long id, @RequestBody Map<String, String> statusUpdate) {
-        String status = statusUpdate != null ? statusUpdate.get("status") : "PENDING";
-        return ResponseEntity.ok(deliveryService.updateDeliveryStatus(id, status));
+    @PostMapping("/{id}/regenerate-otp")
+    public ResponseEntity<ApiResponse<DeliveryResponse>> regenerateOtp(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("A new OTP was sent to the customer", deliveryService.regenerateOtp(id)));
     }
 
-    /**
-     * DELETE /api/deliveries/{id}: Delete a delivery.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDelivery(@PathVariable Long id) {
         deliveryService.deleteDelivery(id);

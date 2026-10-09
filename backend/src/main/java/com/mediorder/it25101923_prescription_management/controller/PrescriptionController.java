@@ -112,7 +112,7 @@ public class PrescriptionController {
     @PutMapping("/{id}/verify")
     public ResponseEntity<PrescriptionResponse> verifyPrescription(
             @PathVariable Long id,
-            @RequestBody PrescriptionVerificationRequest request,
+            @jakarta.validation.Valid @RequestBody PrescriptionVerificationRequest request,
             Authentication authentication) {
 
         return ResponseEntity.ok(prescriptionService.verifyPrescription(id, request, authentication));
