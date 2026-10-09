@@ -404,7 +404,8 @@ const Navbar = () => {
           {/* ======================================================= */}
           <div className="flex items-center gap-3 sm:gap-4 md:gap-5 shrink-0">
             
-            {/* Offer Link with Symbol in Orange Colour */}
+            {/* Offers + Cart are only shown once the visitor has logged in */}
+            {isAuthenticated && (
             <Link
               to="/offers"
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full hover:bg-neutral-200/80 transition-colors font-bold text-xs uppercase tracking-wider text-neutral-800 group shrink-0"
@@ -413,6 +414,7 @@ const Navbar = () => {
               <i className="fa-solid fa-tag text-orange-500 text-sm group-hover:scale-125 transition-transform" />
               <span className="hidden sm:inline font-extrabold text-neutral-900">Offers</span>
             </Link>
+            )}
 
             {/* Delivery tracking for logged-in customers */}
             {isAuthenticated && user?.role === 'CUSTOMER' && (
@@ -427,6 +429,7 @@ const Navbar = () => {
             )}
 
             {/* Cart Link with Reactive Count Badge */}
+            {isAuthenticated && (
             <Link
               to="/cart"
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full hover:bg-neutral-200/80 transition-colors font-bold text-xs uppercase tracking-wider text-neutral-800 group shrink-0"
@@ -440,6 +443,7 @@ const Navbar = () => {
               </div>
               <span className="hidden sm:inline font-extrabold text-neutral-900">Cart</span>
             </Link>
+            )}
 
             {isAuthenticated && <NotificationBell />}
 

@@ -106,6 +106,33 @@ public class MedicineService {
                 .orElseThrow(() -> new RuntimeException("Medicine not found with ID: " + id));
     }
 
+    /** Stock figures must be realistic: nothing negative, and reserved stock can never exceed real stock. */
+    private void validateStockNumbers(Medicine m) {
+        int stock = m.getStockQuantity() != null ? m.getStockQuantity() : 0;
+        int allocated = m.getAllocatedStock() != null ? m.getAllocatedStock() : 0;
+        if (stock < 0) {
+            throw new IllegalArgumentException("Stock quantity cannot be negative.");
+        }
+        if (stock > 1_000_000) {
+            throw new IllegalArgumentException("Stock quantity is unrealistically large (max 1,000,000).");
+        }
+        if (allocated < 0) {
+            throw new IllegalArgumentException("Reserved (allocated) stock cannot be negative.");
+        }
+        if (allocated > stock) {
+            throw new IllegalArgumentException("Reserved stock (" + allocated + ") cannot be more than the real stock (" + stock + ").");
+        }
+        if (m.getReorderLevel() != null && m.getReorderLevel() < 0) {
+            throw new IllegalArgumentException("Reorder level cannot be negative.");
+        }
+        if (m.getUnitPrice() != null && m.getUnitPrice().signum() < 0) {
+            throw new IllegalArgumentException("Price cannot be negative.");
+        }
+        if (m.getCogs() != null && m.getCogs().signum() < 0) {
+            throw new IllegalArgumentException("Cost price cannot be negative.");
+        }
+    }
+
     public Medicine createMedicine(Medicine medicine) {
         if (medicine.getSku() == null || medicine.getSku().trim().isEmpty()) {
             medicine.setSku("SKU-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
@@ -120,6 +147,7 @@ public class MedicineService {
             medicine.setCategory("Daily Health & Wellness");
         }
         medicine.setCreatedAt(LocalDateTime.now());
+        validateStockNumbers(medicine);
         return medicineRepository.save(medicine);
     }
 
@@ -152,6 +180,7 @@ public class MedicineService {
         if (details.getReorderLevel() != null) existing.setReorderLevel(details.getReorderLevel());
         if (details.getIsQuarantined() != null) existing.setIsQuarantined(details.getIsQuarantined());
 
+        validateStockNumbers(existing);
         return medicineRepository.save(existing);
     }
 
@@ -250,6 +279,7 @@ public class MedicineService {
                 existing.setExpiryDate(LocalDate.parse(eDate));
             }
         }
+        validateStockNumbers(existing);
         return medicineRepository.save(existing);
     }
 

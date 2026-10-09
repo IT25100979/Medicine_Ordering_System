@@ -1,5 +1,7 @@
 package com.mediorder.system_build_functions.dto;
 
+import com.mediorder.system_build_functions.validation.ValidPhone;
+
 import com.mediorder.system_build_functions.model.Role;
 import com.mediorder.system_build_functions.model.UserStatus;
 
@@ -10,6 +12,7 @@ public class AdminUserUpdateRequest {
     private String password;
     private Role role;
     private UserStatus status;
+    @ValidPhone
     private String phoneNumber;
     private String avatarUrl;
 

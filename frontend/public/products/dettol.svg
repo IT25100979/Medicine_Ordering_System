@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Dettol Antiseptic">
+  <rect width="400" height="400" rx="24" fill="#ecfdf5"/>
+  <ellipse cx="200" cy="300" rx="120" ry="14" fill="#000" opacity="0.08"/>
+  <rect x="165" y="70" width="70" height="34" rx="6" fill="#f59e0b" stroke="#d1d5db" stroke-width="2"/>
+  <rect x="135" y="100" width="130" height="200" rx="22" fill="#047857"/>
+  <rect x="145" y="150" width="110" height="90" rx="10" fill="#ffffff"/>
+  <text x="200" y="192" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="800" fill="#047857">Dettol</text>
+  <rect x="160" y="210" width="80" height="6" rx="3" fill="#e5e7eb"/>
+  <rect x="170" y="222" width="60" height="6" rx="3" fill="#e5e7eb"/>
+  <text x="200" y="352" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2937">Dettol Antiseptic</text>
+  <text x="200" y="378" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#4b5563">Chloroxylenol · 250 ml</text>
+</svg>

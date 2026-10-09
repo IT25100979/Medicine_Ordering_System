@@ -196,14 +196,14 @@ public class AuthService {
                 targetRole = Role.CHIEF_PHARMACIST;
                 email = "pharmacist1@gmail.com";
                 defaultName = "pharmacist1";
-                defaultPhone = "555-010-0004";
+                defaultPhone = "0771000004";
                 break;
             case "OPERATIONS_MANAGER":
             case "OPS":
                 targetRole = Role.OPERATIONS_MANAGER;
                 email = "operationsmanager1@gmail.com";
                 defaultName = "operationsmanager1";
-                defaultPhone = "555-010-0003";
+                defaultPhone = "0771000003";
                 break;
             case "DELIVERY_COORDINATOR":
             case "COORDINATOR":
@@ -213,7 +213,7 @@ public class AuthService {
                 targetRole = Role.DELIVERY_COORDINATOR;
                 email = "deliverycoordinator1@gmail.com";
                 defaultName = "deliverycoordinator1";
-                defaultPhone = "555-010-0005";
+                defaultPhone = "0771000005";
                 break;
             case "SYSTEM_ADMIN":
             case "ADMIN":
@@ -222,14 +222,14 @@ public class AuthService {
                 targetRole = Role.SYSTEM_ADMIN;
                 email = "systemadmin1@gmail.com";
                 defaultName = "systemadmin1";
-                defaultPhone = "555-010-0002";
+                defaultPhone = "0771000002";
                 break;
             case "CUSTOMER":
             default:
                 targetRole = Role.CUSTOMER;
                 email = "customer1@gmail.com";
                 defaultName = "customer1";
-                defaultPhone = "555-010-0001";
+                defaultPhone = "0771000001";
                 break;
         }
 

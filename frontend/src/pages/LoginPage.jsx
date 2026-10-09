@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAdminDashboardRoute } from '../utils/roleRoutes';
 import DemoRoleGrid from '../components/DemoRoleGrid';
@@ -7,6 +7,10 @@ import DemoRoleGrid from '../components/DemoRoleGrid';
 const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Only allow in-app paths ("/cart"), never "//evil.com" or full URLs
+  const rawRedirect = searchParams.get('redirect') || '';
+  const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,12 +25,8 @@ const LoginPage = () => {
 
     try {
       const authData = await login(email, password);
-      const adminDest = getAdminDashboardRoute(authData?.user?.role);
-      if (adminDest) {
-        navigate(adminDest);
-      } else {
-        navigate('/');
-      }
+      const role = authData?.user?.role;
+      navigate(role && role !== 'CUSTOMER' ? getAdminDashboardRoute(role) : redirectTo);
     } catch (err) {
       console.error('Login error', err);
       const msg = err.response?.data?.message || err.message || 'Invalid email or password. Please try again.';

@@ -1,5 +1,6 @@
 package com.mediorder.system_build_functions.dto;
 
+import com.mediorder.system_build_functions.validation.ValidPhone;
 import com.mediorder.system_build_functions.model.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -20,7 +21,7 @@ public class RegisterRequest {
     private String password;
 
     @NotBlank(message = "Contact number is required")
-    @Pattern(regexp = "^[0-9+ -]{7,15}$", message = "Invalid contact number format")
+    @ValidPhone
     private String contactNumber;
 
     private Role role;

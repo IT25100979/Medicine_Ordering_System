@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { isValidPhone, PHONE_HINT } from '../utils/validation';
 import { useAuth } from '../context/AuthContext';
 
 const RegisterPage = () => {
@@ -18,6 +19,11 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+
+    if (!isValidPhone(phoneNumber)) {
+      setErrorMessage(PHONE_HINT);
+      return;
+    }
 
     if (password.length < 6) {
       setErrorMessage('Password must be at least 6 characters long.');
