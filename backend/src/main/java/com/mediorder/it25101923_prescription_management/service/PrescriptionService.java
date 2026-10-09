@@ -16,7 +16,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -54,7 +56,8 @@ public class PrescriptionService {
     private boolean isStaffUser(User user) {
         if (user == null || user.getRole() == null) return false;
         Role r = user.getRole();
-        return r == Role.PHARMACIST || r == Role.CHIEF_PHARMACIST || r == Role.ADMIN || r == Role.OPERATIONS_MANAGER || r == Role.FINANCE_MANAGER;
+        return r == Role.PHARMACIST || r == Role.CHIEF_PHARMACIST || r == Role.ADMIN || r == Role.SYSTEM_ADMIN
+                || r == Role.OPERATIONS_MANAGER || r == Role.FINANCE_MANAGER;
     }
 
     public PrescriptionResponse uploadPrescription(
@@ -158,7 +161,7 @@ public class PrescriptionService {
     public PrescriptionResponse getPrescriptionById(Long id, Authentication authentication) {
         User currentUser = getAuthenticatedUser(authentication);
         Prescription p = prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prescription not found with ID: " + id));
 
         if (!isStaffUser(currentUser) && !p.getCustomer().getId().equals(currentUser.getId())) {
             throw new AccessDeniedException("You are not authorized to view this prescription.");
@@ -178,10 +181,10 @@ public class PrescriptionService {
         }
 
         Prescription p = prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prescription not found with ID: " + id));
 
         if (p.getStatus() != PrescriptionStatus.PENDING) {
-            throw new IllegalStateException("Prescription #" + id + " has already been finalized as " + p.getStatus() + " and cannot be re-reviewed.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Prescription #" + id + " has already been finalized as " + p.getStatus() + " and cannot be re-reviewed.");
         }
 
         if (request.getStatus() == null) {
@@ -248,7 +251,7 @@ public class PrescriptionService {
     public void deletePrescription(Long id, Authentication authentication) {
         User currentUser = getAuthenticatedUser(authentication);
         Prescription p = prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prescription not found with ID: " + id));
 
         // Ownership and permission check
         if (!isStaffUser(currentUser)) {
@@ -256,7 +259,7 @@ public class PrescriptionService {
                 throw new AccessDeniedException("You do not have permission to delete this prescription.");
             }
             if (p.getStatus() != PrescriptionStatus.PENDING) {
-                throw new IllegalStateException("Customers can only cancel prescriptions that are still PENDING review.");
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Customers can only cancel prescriptions that are still PENDING review.");
             }
         }
 
@@ -272,14 +275,14 @@ public class PrescriptionService {
     public Resource getFileResource(Long id, Authentication authentication) {
         User currentUser = getAuthenticatedUser(authentication);
         Prescription p = prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prescription not found with ID: " + id));
 
         if (!isStaffUser(currentUser) && !p.getCustomer().getId().equals(currentUser.getId())) {
             throw new AccessDeniedException("You are not authorized to view this prescription document.");
         }
 
         if (Boolean.TRUE.equals(p.getIsFileDeleted())) {
-            throw new RuntimeException("Prescription document file has been deleted per policy.");
+            throw new ResponseStatusException(HttpStatus.GONE, "Prescription document file has been deleted per policy.");
         }
 
         return fileStorageService.loadFileAsResource(p.getStoredFileName());
@@ -288,7 +291,7 @@ public class PrescriptionService {
     @Transactional(readOnly = true)
     public Prescription getPrescriptionEntity(Long id) {
         return prescriptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prescription not found with ID: " + id));
     }
 }
 

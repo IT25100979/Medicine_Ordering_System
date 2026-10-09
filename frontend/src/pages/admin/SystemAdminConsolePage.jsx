@@ -396,7 +396,22 @@ const SystemAdminConsolePage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Oversight shortcuts: System Admin can act inside other modules */}
+          <Link
+            to="/pharmacist_dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors"
+          >
+            <i className="fa-solid fa-file-prescription" />
+            <span>Prescription Review</span>
+          </Link>
+          <Link
+            to="/modules/delivery"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold uppercase tracking-wider rounded-xl border border-neutral-700 transition-colors"
+          >
+            <i className="fa-solid fa-truck-fast" />
+            <span>Deliveries</span>
+          </Link>
           <button
             onClick={() => loadModuleData(activeModule)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold uppercase tracking-wider rounded-xl border border-neutral-700 transition-colors"
