@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /** Writes each delivery event to the system-wide audit log (visible in the System Admin console). */
 @Component
-@Order(3)
+@Order(4)
 public class DeliveryAuditObserver implements DeliveryObserver {
 
     private final AuditService auditService;

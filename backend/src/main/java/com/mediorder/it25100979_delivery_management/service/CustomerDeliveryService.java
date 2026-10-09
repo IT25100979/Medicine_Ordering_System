@@ -19,6 +19,7 @@ import com.mediorder.it25100979_delivery_management.repository.DeliveryRepositor
 import com.mediorder.it25100979_delivery_management.repository.DeliveryTimelineRepository;
 import com.mediorder.it25102867_batchandstock_management.model.Medicine;
 import com.mediorder.it25102867_batchandstock_management.repository.MedicineRepository;
+import com.mediorder.it25102867_batchandstock_management.service.FefoAllocationService;
 import com.mediorder.it25103946_order_processing_and_workflow.model.Order;
 import com.mediorder.it25103946_order_processing_and_workflow.model.OrderStatus;
 import com.mediorder.it25103946_order_processing_and_workflow.service.OrderService;
@@ -35,7 +36,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -60,6 +63,7 @@ public class CustomerDeliveryService {
     private final MedicineRepository medicineRepository;
     private final FeatureFlagService featureFlagService;
     private final PrescriptionRepository prescriptionRepository;
+    private final FefoAllocationService fefoAllocationService;
 
     public CustomerDeliveryService(DeliveryRepository deliveryRepository,
                                    DeliveryTimelineRepository timelineRepository,
@@ -69,7 +73,8 @@ public class CustomerDeliveryService {
                                    OrderService orderService,
                                    MedicineRepository medicineRepository,
                                    FeatureFlagService featureFlagService,
-                                   PrescriptionRepository prescriptionRepository) {
+                                   PrescriptionRepository prescriptionRepository,
+                                   FefoAllocationService fefoAllocationService) {
         this.deliveryRepository = deliveryRepository;
         this.timelineRepository = timelineRepository;
         this.lifecycle = lifecycle;
@@ -79,6 +84,7 @@ public class CustomerDeliveryService {
         this.medicineRepository = medicineRepository;
         this.featureFlagService = featureFlagService;
         this.prescriptionRepository = prescriptionRepository;
+        this.fefoAllocationService = fefoAllocationService;
     }
 
     @Transactional(readOnly = true)
@@ -108,6 +114,7 @@ public class CustomerDeliveryService {
         BigDecimal subtotal = BigDecimal.ZERO;
         boolean coldChain = false;
         List<String> prescriptionOnlyItems = new ArrayList<>();
+        Map<Long, Integer> catalogQuantities = new LinkedHashMap<>();
         for (OrderLine line : request.getItems()) {
             Optional<Medicine> medicine = line.getMedicineId() != null
                     ? medicineRepository.findById(line.getMedicineId())
@@ -118,6 +125,7 @@ public class CustomerDeliveryService {
                     .orElse(line.getUnitPrice());
             String name = medicine.map(Medicine::getName).orElse(line.getName().trim());
             coldChain |= medicine.map(m -> Boolean.TRUE.equals(m.getIsTemperatureSensitive())).orElse(false);
+            medicine.ifPresent(m -> catalogQuantities.merge(m.getId(), line.getQuantity(), Integer::sum));
             if (medicine.map(m -> Boolean.TRUE.equals(m.getRequiresPrescription())).orElse(false)) {
                 prescriptionOnlyItems.add(name);
             }
@@ -144,6 +152,12 @@ public class CustomerDeliveryService {
                 .orderStatus(OrderStatus.PLACED)
                 .shippingAddress(address)
                 .build());
+
+        // Batch & Stock integration: hold stock from the earliest-expiring LIVE batches (FEFO) until the
+        // delivery closes. Delivered -> deducted, rejected/terminated -> released (StockReservationObserver).
+        // Not enough stock -> 409 and the whole checkout (order included) rolls back.
+        catalogQuantities.forEach((medicineId, quantity) ->
+                fefoAllocationService.reserveStockFEFO(order.getId(), medicineId, quantity, null));
 
         String instructions = request.getSpecialInstructions() != null && !request.getSpecialInstructions().isBlank()
                 ? request.getSpecialInstructions().trim() : null;

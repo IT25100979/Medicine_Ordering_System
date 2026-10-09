@@ -25,7 +25,7 @@ import java.util.Set;
  * delivery coordinators hear about new requests, customers hear about progress on their delivery.
  */
 @Component
-@Order(5)
+@Order(6)
 public class CustomerNotificationObserver implements DeliveryObserver {
 
     private static final Set<DeliveryEventType> CUSTOMER_EVENTS = EnumSet.of(

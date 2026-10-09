@@ -19,7 +19,7 @@ import java.util.Map;
  * The payload carries no personal data; pages re-fetch details through the secured REST API.
  */
 @Component
-@Order(4)
+@Order(5)
 public class DeliveryRealtimeObserver implements DeliveryObserver {
 
     public static final String STAFF_CHANNEL = "deliveries";

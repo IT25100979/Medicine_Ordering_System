@@ -40,6 +40,14 @@ public class FefoAllocationService {
      * Reserve stock for an order using strict First-Expired, First-Out (FEFO) strategy.
      */
     public List<StockReservation> reserveStockFEFO(Long orderId, Long medicineId, int requestedQty) {
+        return reserveStockFEFO(orderId, medicineId, requestedQty, java.time.Duration.ofMinutes(15));
+    }
+
+    /**
+     * Same as above with a custom hold time. {@code hold == null} keeps the reservation until the order
+     * is explicitly confirmed (delivered) or released (cancelled) - used for placed orders.
+     */
+    public List<StockReservation> reserveStockFEFO(Long orderId, Long medicineId, int requestedQty, java.time.Duration hold) {
         if (requestedQty <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested quantity must be greater than zero");
         }
@@ -61,7 +69,7 @@ public class FefoAllocationService {
         List<InventoryBatch> candidateBatches = batchRepository.findFefoCandidateBatches(medicineId, LocalDate.now());
         List<StockReservation> createdReservations = new ArrayList<>();
         int remainingToAllocate = requestedQty;
-        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(15);
+        LocalDateTime expiresAt = hold != null ? LocalDateTime.now().plus(hold) : null;
 
         for (InventoryBatch batch : candidateBatches) {
             if (remainingToAllocate <= 0) break;
@@ -87,6 +95,13 @@ public class FefoAllocationService {
 
             createdReservations.add(reservationRepository.save(reservation));
             remainingToAllocate -= allocateFromThisBatch;
+        }
+
+        // Never hand out a partial allocation: sellable (LIVE, unexpired) batches must cover the whole quantity.
+        if (remainingToAllocate > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, String.format(
+                    "Insufficient sellable stock for %s. Available in live batches: %d, Requested: %d",
+                    medicine.getName(), requestedQty - remainingToAllocate, requestedQty));
         }
 
         // Update medicine allocated counter

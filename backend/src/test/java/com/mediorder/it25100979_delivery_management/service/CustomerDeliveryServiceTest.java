@@ -50,6 +50,7 @@ class CustomerDeliveryServiceTest {
     @Mock private MedicineRepository medicineRepository;
     @Mock private com.mediorder.system_build_functions.service.FeatureFlagService featureFlagService;
     @Mock private com.mediorder.it25101923_prescription_management.repository.PrescriptionRepository prescriptionRepository;
+    @Mock private com.mediorder.it25102867_batchandstock_management.service.FefoAllocationService fefoAllocationService;
 
     private RecordingObserver observer;
     private CustomerDeliveryService service;
@@ -62,7 +63,7 @@ class CustomerDeliveryServiceTest {
                 deliveryRepository, new DeliveryEventPublisher(List.of(observer)), currentUserProvider);
         service = new CustomerDeliveryService(deliveryRepository, timelineRepository, lifecycle,
                 deliveryZoneService, currentUserProvider, orderService, medicineRepository, featureFlagService,
-                prescriptionRepository);
+                prescriptionRepository, fefoAllocationService);
 
         customer = User.builder().id(1L).fullName("customer1").email("customer1@gmail.com").role(Role.CUSTOMER).build();
         when(currentUserProvider.currentUser()).thenReturn(Optional.of(customer));
@@ -112,6 +113,10 @@ class CustomerDeliveryServiceTest {
 
         assertEquals(List.of(DeliveryEventType.DELIVERY_REQUESTED), observer.types());
         assertEquals("CUSTOMER", observer.last().actor().role());
+
+        // only catalog items are reserved, held (null) until the delivery closes
+        verify(fefoAllocationService).reserveStockFEFO(500L, 3L, 2, null);
+        org.mockito.Mockito.verifyNoMoreInteractions(fefoAllocationService);
     }
 
     private Medicine rxMedicine() {
@@ -182,6 +187,36 @@ class CustomerDeliveryServiceTest {
                 new OrderLine(null, "Plasters", 1, new BigDecimal("250"))));
 
         assertEquals(new BigDecimal("600.00"), result.getOrderTotal());
+    }
+
+    @Test
+    void checkout_reservesSameMedicineOnceWithCombinedQuantity() {
+        Medicine panadol = new Medicine();
+        panadol.setId(2L);
+        panadol.setName("Panadol Extra");
+        panadol.setUnitPrice(new BigDecimal("120"));
+        when(medicineRepository.findById(2L)).thenReturn(Optional.of(panadol));
+
+        service.requestDelivery(request("DHL",
+                new OrderLine(2L, "Panadol", 2, new BigDecimal("120")),
+                new OrderLine(2L, "Panadol", 3, new BigDecimal("120"))));
+
+        verify(fefoAllocationService).reserveStockFEFO(500L, 2L, 5, null);
+    }
+
+    @Test
+    void checkout_failsWhenStockCannotBeReserved() {
+        Medicine panadol = new Medicine();
+        panadol.setId(2L);
+        panadol.setName("Panadol Extra");
+        panadol.setUnitPrice(new BigDecimal("120"));
+        when(medicineRepository.findById(2L)).thenReturn(Optional.of(panadol));
+        when(fefoAllocationService.reserveStockFEFO(500L, 2L, 999, null)).thenThrow(
+                new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Insufficient stock"));
+
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> service.requestDelivery(request("DHL",
+                new OrderLine(2L, "Panadol", 999, new BigDecimal("120")))));
+        assertTrue(observer.events.isEmpty(), "no delivery is announced when stock is short");
     }
 
     @Test
