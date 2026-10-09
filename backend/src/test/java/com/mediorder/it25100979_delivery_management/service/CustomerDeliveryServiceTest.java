@@ -78,7 +78,18 @@ class CustomerDeliveryServiceTest {
             d.setId(42L);
             return d;
         });
+        DeliveryZone colombo = new DeliveryZone();
+        colombo.setIsActive(1);
+        colombo.setDeliveryFee(500.0);
+        when(deliveryZoneService.checkCity(anyString())).thenReturn(Optional.of(colombo));
+    }
+
+    @Test
+    void checkout_refusesAddressesOutsideEveryActiveZone() {
         when(deliveryZoneService.checkCity(anyString())).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> service.requestDelivery(request("DHL",
+                new OrderLine(null, "Plasters", 1, new BigDecimal("250")))));
+        verify(orderService, org.mockito.Mockito.never()).createOrder(any());
     }
 
     private CustomerDeliveryRequest request(String courier, OrderLine... lines) {

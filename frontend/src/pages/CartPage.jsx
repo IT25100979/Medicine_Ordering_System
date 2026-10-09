@@ -1,120 +1,107 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { CLINICAL_FALLBACK_IMAGES } from './CatalogPage';
 import { deliveryApi, COURIER_PARTNERS_FALLBACK } from '../api/deliveryApi';
 import client, { errorMessage, unwrap } from '../api/client';
 import useFeatureStatus from '../hooks/useFeatureStatus';
-import { isValidPhone, PHONE_HINT } from '../utils/validation';
 import FeaturePausedBanner from '../components/FeaturePausedBanner';
+import { isValidPhone, PHONE_HINT } from '../utils/validation';
+import { CLINICAL_FALLBACK_IMAGES, productImage } from '../utils/productImages';
 
+const money = (n) => `LKR ${Number(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}`;
 
-/** Default saved address from the Profile page (stored in localStorage), formatted as one line. */
-const defaultSavedAddress = () => {
+/** Default saved address from the Profile page (kept in this browser), as one line. */
+const savedAddress = () => {
   try {
-    const saved = JSON.parse(localStorage.getItem('pharma_user_addresses') || '[]');
-    const addr = saved.find((a) => a.isDefault) || saved[0];
-    if (!addr) return null;
-    return {
-      text: [addr.street, addr.city, addr.postalCode].filter(Boolean).join(', '),
-      phone: addr.phone,
-    };
+    const list = JSON.parse(localStorage.getItem('pharma_user_addresses') || '[]');
+    const a = list.find((x) => x.isDefault) || list[0];
+    return a ? { text: [a.street, a.city, a.postalCode].filter(Boolean).join(', '), phone: a.phone } : null;
   } catch {
     return null;
   }
 };
 
+/**
+ * Cart + checkout. The customer picks a delivery partner and address and places the order;
+ * the backend creates the order + a delivery waiting for approval in Delivery Management.
+ */
 const CartPage = () => {
-  const { cartItems, updateQuantity, removeItem, removeFromCart, clearCart, loading, isGuest } = useCart();
+  const { cartItems, updateQuantity, removeFromCart, clearCart } = useCart();
   const { user, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  const [deliveryLocation, setDeliveryLocation] = useState(() => {
-    return localStorage.getItem('pharma_plus_location') || 'Colombo 01 (0100)';
-  });
-  const [deliveryZone, setDeliveryZone] = useState(() => {
-    try {
-      const stored = localStorage.getItem('pharma_plus_delivery_zone');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const [checkoutStep, setCheckoutStep] = useState('review'); // 'review' | 'confirmed'
-  const [placedDelivery, setPlacedDelivery] = useState(null);
-
-  // Checkout details: courier partner chosen by the customer + where to deliver
-  const savedAddress = defaultSavedAddress();
-  const [courierPartners, setCourierPartners] = useState(COURIER_PARTNERS_FALLBACK);
-  const [preferredCourier, setPreferredCourier] = useState('');
-  const [deliveryAddress, setDeliveryAddress] = useState(savedAddress?.text || '');
-  const [contactPhone, setContactPhone] = useState(savedAddress?.phone || user?.contactNumber || '');
-  const [deliveryNotes, setDeliveryNotes] = useState('');
-  const [checkoutErrors, setCheckoutErrors] = useState({});
-  const [submitError, setSubmitError] = useState('');
-  const [placingOrder, setPlacingOrder] = useState(false);
   const { status: featureStatus, isEnabled } = useFeatureStatus();
+  const isCustomer = isAuthenticated && user?.role === 'CUSTOMER';
   const orderingPaused = !isEnabled('ORDERING') || !isEnabled('DELIVERY');
 
-  useEffect(() => {
-    deliveryApi.courierPartners()
-      .then((list) => Array.isArray(list) && list.length > 0 && setCourierPartners(list))
-      .catch(() => { /* keep the built-in list */ });
-  }, []);
-
-  useEffect(() => {
-    if (!contactPhone && user?.contactNumber) setContactPhone(user.contactNumber);
-  }, [user]);
-
-  // Prescription-only items need one of the customer's APPROVED prescriptions (checked again by the server)
-  const [rxMedicineIds, setRxMedicineIds] = useState(new Set());
-  const [stockById, setStockById] = useState({});
-  const [cartError, setCartError] = useState('');
+  // catalog facts per medicine: available stock and whether it needs a prescription
+  const [catalog, setCatalog] = useState({});
+  const [partners, setPartners] = useState(COURIER_PARTNERS_FALLBACK);
   const [approvedPrescriptions, setApprovedPrescriptions] = useState([]);
+
+  // checkout form
+  const [initialAddress] = useState(savedAddress);
+  const [preferredCourier, setPreferredCourier] = useState('');
+  const [address, setAddress] = useState(initialAddress?.text || '');
+  const [phone, setPhone] = useState(initialAddress?.phone || user?.contactNumber || '');
+  const [notes, setNotes] = useState('');
   const [prescriptionId, setPrescriptionId] = useState('');
+  const [zone, setZone] = useState(null); // { available, delivery_fee, city } for the typed address
+  const [errors, setErrors] = useState({});
+  const [cartError, setCartError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [placing, setPlacing] = useState(false);
+  const [placed, setPlaced] = useState(null);
 
   useEffect(() => {
     client.get('/api/v1/medicines')
       .then((res) => {
         const list = unwrap(res);
-        const meds = Array.isArray(list) ? list : (list?.content || []);
-        setRxMedicineIds(new Set(meds.filter((m) => m.requiresPrescription).map((m) => Number(m.id))));
-        setStockById(Object.fromEntries(meds.map((m) => [
-          Number(m.id), Math.max(0, Number(m.stockQuantity || 0) - Number(m.allocatedStock || 0)),
-        ])));
+        setCatalog(Object.fromEntries((Array.isArray(list) ? list : []).map((m) => [Number(m.id), {
+          available: Math.max(0, Number(m.stockQuantity || 0) - Number(m.allocatedStock || 0)),
+          requiresPrescription: Boolean(m.requiresPrescription),
+        }])));
       })
+      .catch(() => {});
+    deliveryApi.courierPartners()
+      .then((list) => Array.isArray(list) && list.length && setPartners(list))
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (actualIsGuest) return;
+    if (!isCustomer) return;
+    if (!phone && user?.contactNumber) setPhone(user.contactNumber);
     client.get('/api/v1/prescriptions', { params: { status: 'APPROVED' } })
       .then((res) => {
-        const list = unwrap(res);
-        const approved = (Array.isArray(list) ? list : []).filter((p) => p.status === 'APPROVED');
-        setApprovedPrescriptions(approved);
-        if (approved.length === 1) setPrescriptionId(String(approved[0].id));
+        const list = (unwrap(res) || []).filter((p) => p.status === 'APPROVED');
+        setApprovedPrescriptions(list);
+        if (list.length === 1) setPrescriptionId(String(list[0].id));
       })
       .catch(() => {});
-  }, [actualIsGuest]);
+  }, [isCustomer]);
 
-  const rxItems = cartItems.filter((item) => rxMedicineIds.has(Number(item.medicineId)) || item.requiresPrescription);
-  const needsPrescription = rxItems.length > 0;
+  // Look up the delivery zone (and its fee) for the typed address, shortly after typing stops
+  useEffect(() => {
+    if (address.trim().length < 3) {
+      setZone(null);
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      deliveryApi.checkZone(address.trim()).then(setZone).catch(() => setZone(null));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [address]);
 
-  const actualIsGuest = isGuest || !isAuthenticated || !user;
+  const rxItems = useMemo(
+    () => cartItems.filter((i) => catalog[Number(i.medicineId)]?.requiresPrescription || i.requiresPrescription),
+    [cartItems, catalog],
+  );
+  const subtotal = cartItems.reduce((sum, i) => sum + Number(i.unitPrice ?? i.price ?? 0) * i.quantity, 0);
+  const deliveryFee = zone?.available ? Number(zone.delivery_fee || 0) : null;
+  const total = subtotal + (deliveryFee || 0);
 
-  const subtotal = cartItems.reduce((acc, item) => acc + (Number(item.price || item.unitPrice) || 0) * item.quantity, 0);
-  const deliveryFee = deliveryZone?.delivery_fee !== undefined
-    ? Number(deliveryZone.delivery_fee)
-    : (deliveryZone?.deliveryFee !== undefined ? Number(deliveryZone.deliveryFee) : 5.00);
-  const total = subtotal > 0 ? subtotal + deliveryFee : 0;
-
-  // Change a cart line, never above what is really in stock (the server checks this too)
   const changeQuantity = async (item, next) => {
     setCartError('');
-    const available = stockById[Number(item.medicineId)];
+    const available = catalog[Number(item.medicineId)]?.available;
     if (next > item.quantity && available !== undefined && next > available) {
       setCartError(`Only ${available} unit(s) of ${item.name} are in stock.`);
       return;
@@ -126,527 +113,232 @@ const CartPage = () => {
     }
   };
 
-  const handleDeleteItem = (itemId) => {
-    if (removeItem) {
-      removeItem(itemId);
-    } else if (removeFromCart) {
-      removeFromCart(itemId);
-    } else {
-      updateQuantity(itemId, 0);
-    }
+  const validate = () => {
+    const e = {};
+    if (!preferredCourier) e.courier = 'Choose a delivery partner.';
+    if (address.trim().length < 5) e.address = 'Enter your full delivery address.';
+    else if (zone && !zone.available) e.address = "We don't deliver to this address yet. Include your city, e.g. \"Colombo 03\".";
+    if (!isValidPhone(phone)) e.phone = PHONE_HINT;
+    if (rxItems.length > 0 && !prescriptionId) e.prescription = 'Choose an approved prescription.';
+    cartItems.forEach((i) => {
+      const available = catalog[Number(i.medicineId)]?.available;
+      if (available !== undefined && i.quantity > available) e.stock = `Only ${available} unit(s) of ${i.name} are in stock.`;
+    });
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const validateCheckout = () => {
-    const errors = {};
-    if (!preferredCourier) errors.courier = 'Please choose a delivery partner.';
-    if (deliveryAddress.trim().length < 5) errors.address = 'Enter your full delivery address (at least 5 characters).';
-    if (!isValidPhone(contactPhone)) errors.phone = PHONE_HINT;
-    if (deliveryNotes.length > 1000) errors.notes = 'Instructions must be at most 1000 characters.';
-    if (cartItems.length === 0) errors.cart = 'Your cart is empty.';
-    if (needsPrescription && !prescriptionId) errors.prescription = 'Choose an approved prescription for the prescription-only items.';
-    setCheckoutErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Customer confirms the order with the chosen courier partner -> backend creates the
-  // order + a PENDING delivery, which appears live on the Delivery Management page.
-  const handleCheckout = async () => {
-    if (actualIsGuest) {
-      navigate('/login?redirect=/cart');
-      return;
-    }
-    if (placingOrder || !validateCheckout()) return;
-
-    setPlacingOrder(true);
+  const placeOrder = async () => {
+    if (placing || !validate()) return;
+    setPlacing(true);
     setSubmitError('');
     try {
       const delivery = await deliveryApi.placeOrder({
         preferredCourier,
-        deliveryAddress: deliveryAddress.trim(),
-        customerPhone: contactPhone.trim(),
-        specialInstructions: deliveryNotes.trim() || null,
-        prescriptionId: needsPrescription ? Number(prescriptionId) : null,
-        deliveryFee: subtotal > 0 ? deliveryFee : 0,
-        items: cartItems.map((item) => ({
-          medicineId: Number(item.medicineId) || null,
-          name: item.name || 'Pharmaceutical Item',
-          quantity: item.quantity,
-          unitPrice: Number(item.unitPrice ?? item.price ?? 0),
+        deliveryAddress: address.trim(),
+        customerPhone: phone.trim(),
+        specialInstructions: notes.trim() || null,
+        prescriptionId: rxItems.length > 0 ? Number(prescriptionId) : null,
+        items: cartItems.map((i) => ({
+          medicineId: Number(i.medicineId) || null,
+          name: i.name || 'Item',
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice ?? i.price ?? 0),
         })),
       });
-      setPlacedDelivery(delivery);
-      setCheckoutStep('confirmed');
+      setPlaced(delivery);
       await clearCart();
     } catch (err) {
       setSubmitError(errorMessage(err, 'Could not place your order. Please try again.'));
     } finally {
-      setPlacingOrder(false);
+      setPlacing(false);
     }
   };
 
-  return (
-    <div className="pt-28 pb-20 px-4 sm:px-6 lg:px-12 max-w-[1440px] mx-auto min-h-screen">
-      {/* Breadcrumb Navigation */}
-      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-500 mb-6">
-        <Link to="/" className="hover:text-black transition-colors">Home</Link>
-        <span>/</span>
-        <Link to="/catalog" className="hover:text-black transition-colors">Catalog</Link>
-        <span>/</span>
-        <span className="text-black">Inside Cart</span>
-      </div>
+  // ---------------------------------------------------------------- views
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-neutral-200">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-neutral-900 flex items-center gap-3">
-            <i className="fa-solid fa-cart-shopping text-emerald-700" />
-            <span>Shopping Cart &amp; Order Dispatch</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-            Verified licensed pharmacy fulfillment with cold-chain monitoring.
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {cartItems.length > 0 && (
-            <button
-              type="button"
-              onClick={clearCart}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-wider bg-red-50 hover:bg-red-100 px-3.5 py-2 rounded-full border border-red-200 transition-colors shadow-xs"
-              title="Clear all items from cart"
-            >
-              <i className="fa-solid fa-trash-can text-xs" />
-              <span>Clear Cart</span>
-            </button>
-          )}
-          <Link
-            to="/catalog"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 uppercase tracking-wider bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-full border border-emerald-200 transition-colors"
-          >
-            <i className="fa-solid fa-arrow-left text-xs" />
-            <span>Continue Shopping</span>
-          </Link>
-        </div>
-      </div>
-
-      {checkoutStep !== 'confirmed' && (
-        <>
-          <FeaturePausedBanner title="Online ordering" info={featureStatus.ORDERING} />
-          <FeaturePausedBanner title="Home delivery" info={featureStatus.DELIVERY} />
-        </>
-      )}
-
-      {/* Guest Warning Banner if Not Logged In */}
-      {actualIsGuest && cartItems.length > 0 && checkoutStep !== 'confirmed' && (
-        <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-              <i className="fa-solid fa-user-clock text-lg" />
-            </div>
-            <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center gap-2">
-                <span>Guest Session Cart Active</span>
-                <span className="text-[10px] font-bold bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full">
-                  Saved in Session
-                </span>
-              </h3>
-              <p className="text-xs text-amber-800/90 mt-0.5 max-w-xl">
-                Your items are stored in this browser session. To complete prescription verification and purchase, please sign in or register your account.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-            <Link
-              to="/login?redirect=/cart"
-              className="flex-1 sm:flex-none text-center px-4 py-2 bg-neutral-900 hover:bg-black text-white text-xs font-extrabold uppercase tracking-wider rounded-full transition shadow-xs"
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/register?redirect=/cart"
-              className="flex-1 sm:flex-none text-center px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-800 border border-neutral-300 text-xs font-bold uppercase tracking-wider rounded-full transition"
-            >
-              Register
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {checkoutStep === 'confirmed' ? (
-        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center max-w-xl mx-auto shadow-xl border border-neutral-200 space-y-5 animate-scaleUp">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto text-2xl shadow-sm">
+  if (placed) {
+    return (
+      <div className="pt-28 pb-20 px-4 max-w-xl mx-auto">
+        <div className="bg-white rounded-3xl border border-neutral-200 p-8 text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto text-xl">
             <i className="fa-solid fa-check" />
           </div>
-          <h2 className="text-2xl font-black uppercase tracking-tight text-neutral-900">
-            Order Placed!
-          </h2>
-          <p className="text-xs text-neutral-600 leading-relaxed">
-            Your delivery reference is{' '}
-            <strong className="font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              #DEL-{placedDelivery?.id}
-            </strong>{' '}
-            (order #{placedDelivery?.orderId}). It is now <strong>awaiting approval</strong> by our delivery team, who will
-            assign it to <strong>{placedDelivery?.preferredCourier}</strong> for delivery to{' '}
-            <strong>{placedDelivery?.orderAddress}</strong>.
+          <h1 className="text-2xl font-extrabold text-neutral-900">Order placed</h1>
+          <p className="text-sm text-neutral-600">
+            Delivery <strong>#DEL-{placed.id}</strong> (order #{placed.orderId}) is waiting for approval.
+            Our team will assign it to <strong>{placed.preferredCourier}</strong>.
           </p>
-          <p className="text-[11px] text-neutral-500">
-            Total: <strong>LKR {Number(placedDelivery?.orderTotal || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</strong>
-            {' '}· You will get a 6-digit handover code on the tracking page once a courier is assigned.
-          </p>
-          <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              to="/catalog"
-              className="px-6 py-3 bg-neutral-900 hover:bg-black text-white rounded-full text-xs font-bold uppercase tracking-wider transition-colors shadow-md"
-            >
-              Browse Catalog
-            </Link>
-            <Link
-              to="/my-deliveries"
-              className="px-6 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
-            >
-              Track My Delivery
-            </Link>
+          <p className="text-sm text-neutral-600">Total: <strong>{money(placed.orderTotal)}</strong></p>
+          <p className="text-xs text-neutral-500">Your 6-digit handover code appears on the tracking page once a courier is assigned.</p>
+          <div className="flex justify-center gap-3 pt-2">
+            <Link to="/my-deliveries" className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-sm font-bold">Track my delivery</Link>
+            <Link to="/catalog" className="px-5 py-2.5 rounded-xl border border-neutral-300 text-sm font-bold">Continue shopping</Link>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="pt-28 pb-20 px-4 max-w-xl mx-auto text-center space-y-3">
+        <h1 className="text-2xl font-extrabold">Your cart</h1>
+        <p className="text-sm text-neutral-600">Please log in to see your cart and check out.</p>
+        <Link to="/login?redirect=/cart" className="inline-block px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-sm font-bold">Log in</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-28 pb-20 px-4 sm:px-6 lg:px-12 max-w-6xl mx-auto">
+      <div className="flex items-end justify-between mb-6">
+        <h1 className="text-2xl font-extrabold text-neutral-900">Your cart</h1>
+        <Link to="/catalog" className="text-sm font-bold text-emerald-700 hover:underline">Continue shopping</Link>
+      </div>
+
+      <FeaturePausedBanner title="Online ordering" info={featureStatus.ORDERING} />
+      <FeaturePausedBanner title="Home delivery" info={featureStatus.DELIVERY} />
+
+      {cartItems.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-neutral-200 p-10 text-center space-y-3">
+          <p className="text-sm text-neutral-600">Your cart is empty.</p>
+          <Link to="/catalog" className="inline-block px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-sm font-bold">Browse products</Link>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Left 2 Cols: Cart Items */}
-          <div className="lg:col-span-2 space-y-4">
-            {cartError && (
-              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold" role="alert">
-                {cartError}
-              </div>
-            )}
-            {cartItems.length > 0 ? (
-              cartItems.map((item) => {
-                const itemImg = item.imageUrl || CLINICAL_FALLBACK_IMAGES[item.category] || CLINICAL_FALLBACK_IMAGES['General'] || '';
-                const itemUnitPrice = Number(item.unitPrice ?? item.price ?? 0);
-                const itemTotal = itemUnitPrice * item.quantity;
-
-                return (
-                  <div
-                    key={item.id || item.medicineId}
-                    className="bg-white rounded-2xl p-4 sm:p-5 border border-neutral-200 shadow-sm flex flex-col sm:flex-row items-center gap-4 transition-all hover:shadow-md"
-                  >
-                    {itemImg ? (
-                      <img
-                        src={itemImg}
-                        alt={item.name}
-                        className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border border-neutral-100 shrink-0 bg-neutral-50"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border border-neutral-100 bg-neutral-100 flex items-center justify-center text-neutral-400 shrink-0">
-                        <i className="fa-solid fa-pills text-xl" />
-                      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Items */}
+          <div className="lg:col-span-2 space-y-3">
+            {cartError && <p className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold" role="alert">{cartError}</p>}
+            {cartItems.map((item) => {
+              const available = catalog[Number(item.medicineId)]?.available;
+              const price = Number(item.unitPrice ?? item.price ?? 0);
+              return (
+                <div key={item.id} className="bg-white rounded-2xl border border-neutral-200 p-4 flex items-center gap-4">
+                  <img
+                    src={item.imageUrl || productImage(item)}
+                    alt={item.name}
+                    onError={(e) => { e.currentTarget.src = CLINICAL_FALLBACK_IMAGES.General; }}
+                    className="w-16 h-16 rounded-xl object-cover bg-neutral-50 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-neutral-900 truncate">{item.name}</p>
+                    <p className="text-xs text-neutral-500">{money(price)} each</p>
+                    {(catalog[Number(item.medicineId)]?.requiresPrescription || item.requiresPrescription) && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">Prescription</span>
                     )}
-                    <div className="flex-1 min-w-0 text-center sm:text-left">
-                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 tracking-wider">
-                        {item.category || 'General'}
-                      </span>
-                      <h3 className="text-sm sm:text-base font-bold text-neutral-900 mt-1 truncate">
-                        {item.name}
-                      </h3>
-                      <p className="text-xs text-neutral-500 font-medium truncate mt-0.5">
-                        {item.genericName || ''}
-                      </p>
-                      <div className="text-sm font-extrabold text-neutral-900 mt-2 flex items-center gap-2 justify-center sm:justify-start">
-                        <span>
-                          LKR {itemUnitPrice.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        {item.quantity > 1 && (
-                          <span className="text-xs text-neutral-400 font-normal">
-                            (Total: LKR {itemTotal.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Quantity Adjuster */}
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="flex items-center border border-neutral-300 rounded-full overflow-hidden bg-neutral-50">
-                        <button
-                          type="button"
-                          aria-label="Decrease quantity"
-                          onClick={() => changeQuantity(item, item.quantity - 1)}
-                          className="w-8 h-8 flex items-center justify-center hover:bg-neutral-200 text-neutral-700 font-bold transition-colors active:scale-95"
-                        >
-                          -
-                        </button>
-                        <span className="w-8 text-center text-xs font-black text-neutral-900">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          aria-label="Increase quantity"
-                          onClick={() => changeQuantity(item, item.quantity + 1)}
-                          disabled={stockById[Number(item.medicineId)] !== undefined && item.quantity >= stockById[Number(item.medicineId)]}
-                          className="w-8 h-8 flex items-center justify-center hover:bg-neutral-200 text-neutral-700 font-bold transition-colors active:scale-95"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="w-8 h-8 rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-600 flex items-center justify-center transition-colors active:scale-95"
-                        title="Remove item"
-                      >
-                        <i className="fa-solid fa-trash text-xs" />
-                      </button>
-                    </div>
                   </div>
-                );
-              })
-            ) : (
-              <div className="bg-white rounded-3xl p-12 text-center border border-neutral-200 shadow-sm space-y-4">
-                <div className="w-14 h-14 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto text-xl">
-                  <i className="fa-solid fa-cart-shopping" />
+                  <div className="flex items-center border border-neutral-300 rounded-full overflow-hidden">
+                    <button type="button" aria-label={`Decrease ${item.name}`} onClick={() => changeQuantity(item, item.quantity - 1)}
+                      className="w-8 h-8 hover:bg-neutral-100 font-bold">-</button>
+                    <span className="w-8 text-center text-sm font-bold">{item.quantity}</span>
+                    <button type="button" aria-label={`Increase ${item.name}`} onClick={() => changeQuantity(item, item.quantity + 1)}
+                      disabled={available !== undefined && item.quantity >= available}
+                      className="w-8 h-8 hover:bg-neutral-100 font-bold disabled:opacity-30">+</button>
+                  </div>
+                  <span className="w-28 text-right text-sm font-bold">{money(price * item.quantity)}</span>
+                  <button type="button" aria-label={`Remove ${item.name}`} onClick={() => removeFromCart(item.id)}
+                    className="w-8 h-8 rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-600">
+                    <i className="fa-solid fa-trash text-xs" />
+                  </button>
                 </div>
-                <h3 className="text-base font-bold text-neutral-900 uppercase tracking-tight">
-                  Your Cart is Empty
-                </h3>
-                <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                  Explore our certified catalog to find essential medications, vitamins, and clinical skin care treatments.
-                </p>
-                <Link
-                  to="/catalog"
-                  className="inline-block px-6 py-2.5 bg-neutral-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-full shadow-sm transition-colors"
-                >
-                  Explore Catalog
-                </Link>
-              </div>
-            )}
+              );
+            })}
           </div>
 
-          {/* Right Col: Order Dispatch & Summary */}
+          {/* Checkout */}
           <div className="space-y-4">
-            
-            {/* Delivery Destination Card */}
-            <div className="bg-white rounded-2xl p-5 border border-neutral-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400">
-                  Delivery Destination
-                </span>
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                  {actualIsGuest ? 'SESSION DESTINATION' : 'VERIFIED DB ZONE'}
-                </span>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <i className="fa-solid fa-location-dot text-emerald-700 text-sm mt-0.5" />
+            {!isCustomer ? (
+              <p className="bg-white rounded-2xl border border-neutral-200 p-5 text-sm text-neutral-600">
+                Only customer accounts can place orders.
+              </p>
+            ) : (
+              <div className="bg-white rounded-2xl border border-neutral-200 p-5 space-y-4 text-sm">
                 <div>
-                  <p className="text-xs font-black text-neutral-900">{deliveryLocation}</p>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">
-                    Est. Transit Time: {deliveryZone?.estimated_delivery_time || 30} mins
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Checkout details: delivery partner, address, phone */}
-            {!actualIsGuest && cartItems.length > 0 && (
-              <div className="bg-white rounded-2xl p-5 border border-neutral-200 shadow-sm space-y-4">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400">
-                    Choose Delivery Partner *
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2 mt-2" role="radiogroup" aria-label="Delivery partner">
-                    {courierPartners.map((partner) => {
-                      const selected = preferredCourier === partner.name;
-                      return (
-                        <button
-                          key={partner.code}
-                          type="button"
-                          role="radio"
-                          aria-checked={selected}
-                          onClick={() => {
-                            setPreferredCourier(partner.name);
-                            setCheckoutErrors((prev) => ({ ...prev, courier: undefined }));
-                          }}
-                          className={`text-left p-3 rounded-xl border transition-all ${
-                            selected
-                              ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-500/30'
-                              : 'border-neutral-200 hover:border-neutral-400 bg-neutral-50'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-black text-neutral-900">{partner.name}</span>
-                            {selected && <i className="fa-solid fa-circle-check text-emerald-600 text-xs" />}
-                          </div>
-                          <p className="text-[10px] text-neutral-500 mt-0.5 leading-snug">{partner.description}</p>
-                          <p className="text-[10px] font-bold text-neutral-700 mt-1">
-                            ~{partner.estimatedDays} day{partner.estimatedDays > 1 ? 's' : ''}
-                          </p>
-                        </button>
-                      );
-                    })}
+                  <p className="text-xs font-bold text-neutral-600 mb-2">Delivery partner *</p>
+                  <div className="space-y-2" role="radiogroup" aria-label="Delivery partner">
+                    {partners.map((p) => (
+                      <label key={p.code} className={`flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer ${
+                        preferredCourier === p.name ? 'border-emerald-600 bg-emerald-50' : 'border-neutral-200'}`}>
+                        <input type="radio" name="courier" value={p.name} checked={preferredCourier === p.name}
+                          onChange={() => setPreferredCourier(p.name)} className="mt-1" />
+                        <span>
+                          <span className="block text-sm font-bold">{p.name}</span>
+                          <span className="block text-xs text-neutral-500">{p.description} · ~{p.estimatedDays} day(s)</span>
+                        </span>
+                      </label>
+                    ))}
                   </div>
-                  {checkoutErrors.courier && <p className="text-[11px] text-red-600 font-semibold mt-1.5">{checkoutErrors.courier}</p>}
+                  {errors.courier && <p className="text-xs text-red-600 mt-1">{errors.courier}</p>}
                 </div>
 
-                {needsPrescription && (
-                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs space-y-2">
-                    <p className="font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
-                      <i className="fa-solid fa-file-prescription" /> Prescription required
-                    </p>
-                    <p className="text-amber-900">
-                      {rxItems.map((i) => i.name).join(', ')} can only be sold against a pharmacist-approved prescription.
+                <label className="block">
+                  <span className="text-xs font-bold text-neutral-600">Delivery address *</span>
+                  <textarea rows="2" maxLength={500} value={address} onChange={(e) => setAddress(e.target.value)}
+                    placeholder="e.g. 12 Flower Road, Colombo 07"
+                    className={`mt-1 w-full px-3 py-2 rounded-xl border ${errors.address ? 'border-red-400' : 'border-neutral-300'}`} />
+                  {zone && (
+                    <span className={`block text-xs mt-1 ${zone.available ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {zone.available ? `Delivering to ${zone.city} · fee ${money(zone.delivery_fee)}` : "Sorry, we don't deliver to this area yet."}
+                    </span>
+                  )}
+                  {errors.address && <span className="block text-xs text-red-600 mt-1">{errors.address}</span>}
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-bold text-neutral-600">Phone *</span>
+                  <input type="tel" maxLength={16} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0771234567"
+                    className={`mt-1 w-full px-3 py-2 rounded-xl border ${errors.phone ? 'border-red-400' : 'border-neutral-300'}`} />
+                  {errors.phone && <span className="block text-xs text-red-600 mt-1">{errors.phone}</span>}
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-bold text-neutral-600">Delivery note (optional)</span>
+                  <input type="text" maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Call on arrival"
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-neutral-300" />
+                </label>
+
+                {rxItems.length > 0 && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
+                    <p className="text-xs font-bold text-amber-900">
+                      Prescription needed for: {rxItems.map((i) => i.name).join(', ')}
                     </p>
                     {approvedPrescriptions.length > 0 ? (
-                      <select
-                        aria-label="Approved prescription"
-                        value={prescriptionId}
-                        onChange={(e) => {
-                          setPrescriptionId(e.target.value);
-                          setCheckoutErrors((prev) => ({ ...prev, prescription: undefined }));
-                        }}
-                        className={`w-full px-3 py-2 rounded-xl bg-white border ${checkoutErrors.prescription ? 'border-red-400' : 'border-amber-300'}`}
-                      >
-                        <option value="">Select an approved prescription</option>
+                      <select aria-label="Approved prescription" value={prescriptionId} onChange={(e) => setPrescriptionId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-amber-300 bg-white">
+                        <option value="">Choose an approved prescription</option>
                         {approvedPrescriptions.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            Rx #{p.id}{p.doctorName ? ` · ${p.doctorName}` : ''}{p.verifiedAt ? ` · approved ${new Date(p.verifiedAt).toLocaleDateString()}` : ''}
-                          </option>
+                          <option key={p.id} value={p.id}>Rx #{p.id}{p.doctorName ? ` · ${p.doctorName}` : ''}</option>
                         ))}
                       </select>
                     ) : (
-                      <p className="text-amber-900">
-                        You have no approved prescription yet.{' '}
-                        <Link to="/prescription" className="font-bold underline">Upload your prescription</Link>{' '}
-                        and wait for the pharmacist to approve it.
+                      <p className="text-xs text-amber-900">
+                        You have no approved prescription. <Link to="/prescription" className="font-bold underline">Upload one</Link> and wait for the pharmacist.
                       </p>
                     )}
-                    {checkoutErrors.prescription && <p className="text-red-600 font-semibold">{checkoutErrors.prescription}</p>}
+                    {errors.prescription && <p className="text-xs text-red-600">{errors.prescription}</p>}
                   </div>
                 )}
-
-                <div className="space-y-3 text-xs">
-                  <div>
-                    <label htmlFor="checkout-address" className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
-                      Delivery Address *
-                    </label>
-                    <textarea
-                      id="checkout-address"
-                      rows="2"
-                      maxLength={500}
-                      value={deliveryAddress}
-                      onChange={(e) => setDeliveryAddress(e.target.value)}
-                      placeholder={`e.g. 12 Flower Road, ${deliveryLocation}`}
-                      className={`w-full px-3 py-2 rounded-xl bg-neutral-50 border ${checkoutErrors.address ? 'border-red-400' : 'border-neutral-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500/20`}
-                    />
-                    {checkoutErrors.address && <p className="text-[11px] text-red-600 font-semibold mt-1">{checkoutErrors.address}</p>}
-                  </div>
-                  <div>
-                    <label htmlFor="checkout-phone" className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
-                      Contact Phone *
-                    </label>
-                    <input
-                      id="checkout-phone"
-                      type="tel"
-                      maxLength={15}
-                      value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
-                      placeholder="e.g. 0771234567"
-                      className={`w-full px-3 py-2 rounded-xl bg-neutral-50 border ${checkoutErrors.phone ? 'border-red-400' : 'border-neutral-200'} focus:outline-none focus:ring-2 focus:ring-emerald-500/20`}
-                    />
-                    {checkoutErrors.phone && <p className="text-[11px] text-red-600 font-semibold mt-1">{checkoutErrors.phone}</p>}
-                  </div>
-                  <div>
-                    <label htmlFor="checkout-notes" className="block text-[10px] font-black uppercase tracking-wider text-neutral-400 mb-1">
-                      Delivery Instructions (optional)
-                    </label>
-                    <input
-                      id="checkout-notes"
-                      type="text"
-                      maxLength={1000}
-                      value={deliveryNotes}
-                      onChange={(e) => setDeliveryNotes(e.target.value)}
-                      placeholder="e.g. Call on arrival"
-                      className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
-                </div>
               </div>
             )}
 
-            {/* Summary */}
-            <div className="bg-white rounded-2xl p-5 border border-neutral-200 shadow-sm space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-wider text-neutral-900 pb-3 border-b border-neutral-100">
-                Order Summary
-              </h3>
-
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between text-neutral-600">
-                  <span>Subtotal ({cartItems.reduce((acc, i) => acc + i.quantity, 0)} items)</span>
-                  <span className="font-bold text-neutral-900">
-                    LKR {subtotal.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-neutral-600">
-                  <span>Delivery Dispatch Fee</span>
-                  <span className="font-bold text-neutral-900">
-                    {subtotal > 0
-                      ? `LKR ${deliveryFee.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                      : 'LKR 0.00'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-emerald-700 font-semibold pt-1">
-                  <span>Prescription Verification</span>
-                  <span>Free</span>
-                </div>
+            <div className="bg-white rounded-2xl border border-neutral-200 p-5 space-y-2 text-sm">
+              <div className="flex justify-between"><span>Subtotal</span><span>{money(subtotal)}</span></div>
+              <div className="flex justify-between">
+                <span>Delivery</span>
+                <span>{deliveryFee === null ? 'Enter address' : money(deliveryFee)}</span>
               </div>
-
-              <div className="pt-3 border-t border-neutral-200 flex items-center justify-between text-sm font-black text-neutral-900">
-                <span>Estimated Total</span>
-                <span className="text-base text-emerald-800">
-                  LKR {total.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              {actualIsGuest ? (
-                <div className="space-y-2">
-                  <Link
-                    to="/login?redirect=/cart"
-                    className="w-full py-3.5 bg-neutral-900 hover:bg-black text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <i className="fa-solid fa-lock text-amber-400 text-xs" />
-                    <span>Sign In to Complete Purchase</span>
-                  </Link>
-                  <p className="text-[10px] text-center text-neutral-500 font-medium">
-                    Guests must log in to verify prescription items and finalize delivery.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {submitError && (
-                    <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold" role="alert">
-                      {submitError}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    disabled={cartItems.length === 0 || placingOrder || orderingPaused}
-                    onClick={handleCheckout}
-                    className="w-full py-3.5 bg-neutral-900 hover:bg-black disabled:bg-neutral-300 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <i className="fa-solid fa-shield-halved text-emerald-400 text-xs" />
-                    <span>{placingOrder ? 'Placing Order...' : 'Confirm & Place Order'}</span>
-                  </button>
-                  {preferredCourier && (
-                    <p className="text-[10px] text-center text-neutral-500">
-                      Delivery partner: <strong>{preferredCourier}</strong>
-                    </p>
-                  )}
-                </div>
+              <div className="flex justify-between font-black pt-2 border-t border-neutral-100"><span>Total</span><span>{money(total)}</span></div>
+              {errors.stock && <p className="text-xs text-red-600">{errors.stock}</p>}
+              {submitError && <p className="text-xs text-red-600 font-semibold" role="alert">{submitError}</p>}
+              {isCustomer && (
+                <button type="button" onClick={placeOrder} disabled={placing || orderingPaused}
+                  className="w-full mt-2 py-3 rounded-xl bg-neutral-900 hover:bg-black text-white font-bold disabled:opacity-40">
+                  {placing ? 'Placing order...' : 'Place order'}
+                </button>
               )}
-
-              <div className="flex items-center justify-center gap-2 text-[10px] text-neutral-400 font-medium pt-1">
-                <i className="fa-solid fa-shield-halved text-emerald-600 text-xs" />
-                <span>256-Bit Encrypted Healthcare Checkout</span>
-              </div>
             </div>
-
           </div>
-
         </div>
       )}
     </div>

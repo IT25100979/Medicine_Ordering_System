@@ -138,11 +138,14 @@ public class CustomerDeliveryService {
                 ? null
                 : requireApprovedPrescription(customer, request.getPrescriptionId(), prescriptionOnlyItems);
 
+        // The delivery fee always comes from the active delivery zone that covers the address
+        // (never from the browser); addresses outside every active zone are not accepted.
         BigDecimal deliveryFee = deliveryZoneService.checkCity(address)
                 .filter(zone -> zone.getIsActive() != null && zone.getIsActive() == 1)
                 .map(DeliveryZone::getDeliveryFee)
                 .map(BigDecimal::valueOf)
-                .orElse(request.getDeliveryFee() != null ? request.getDeliveryFee() : BigDecimal.ZERO);
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Sorry, we don't deliver to this address yet. Please include your city, e.g. \"Colombo 03\"."));
         BigDecimal total = subtotal.add(deliveryFee).setScale(2, RoundingMode.HALF_UP);
 
         // Order Processing module: one order per checkout, linked to the delivery.
