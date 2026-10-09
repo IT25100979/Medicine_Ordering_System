@@ -1,7 +1,9 @@
 package com.mediorder.it25100979_delivery_management.controller;
 
 import com.mediorder.it25100979_delivery_management.dto.request.*;
+import com.mediorder.it25100979_delivery_management.dto.response.CourierAccountResponse;
 import com.mediorder.it25100979_delivery_management.dto.response.DeliveryResponse;
+import com.mediorder.it25100979_delivery_management.service.CourierAccountService;
 import com.mediorder.it25100979_delivery_management.dto.response.DeliveryTimelineResponse;
 import com.mediorder.it25100979_delivery_management.service.DeliveryService;
 import com.mediorder.system_build_functions.dto.ApiResponse;
@@ -20,9 +22,24 @@ import java.util.List;
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
+    private final CourierAccountService courierAccountService;
 
-    public DeliveryController(DeliveryService deliveryService) {
+    public DeliveryController(DeliveryService deliveryService, CourierAccountService courierAccountService) {
         this.deliveryService = deliveryService;
+        this.courierAccountService = courierAccountService;
+    }
+
+    /** Courier logins and the company each one delivers for. */
+    @GetMapping("/couriers")
+    public ResponseEntity<ApiResponse<List<CourierAccountResponse>>> listCouriers() {
+        return ResponseEntity.ok(ApiResponse.success("Courier accounts", courierAccountService.listCouriers()));
+    }
+
+    @PutMapping("/couriers/{userId}")
+    public ResponseEntity<ApiResponse<CourierAccountResponse>> linkCourier(
+            @PathVariable Long userId, @Valid @RequestBody LinkCourierRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Courier linked to " + request.getCourierCompany(),
+                courierAccountService.linkCourier(userId, request.getCourierCompany())));
     }
 
     /** GET /api/v1/deliveries?status=PENDING */

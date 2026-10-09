@@ -5,6 +5,7 @@ systemadmin1	systemadmin1@gmail.com	555-010-0002	System Admin	admin123
 operationsmanager1	operationsmanager1@gmail.com	555-010-0003	Operations Manager	admin123
 pharmacist1	pharmacist1@gmail.com	555-010-0004	Pharmacist	admin123
 deliverycoordinator1	deliverycoordinator1@gmail.com	555-010-0005	Delivery Coordinator	admin123
+courier1	courier1@gmail.com	555-010-0006	Courier (In Company Delivery)	admin123
 
 
 # Data for catalog and stock batch

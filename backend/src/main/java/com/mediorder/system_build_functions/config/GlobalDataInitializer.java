@@ -153,6 +153,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
         seedUser("operationsmanager1@gmail.com", "operationsmanager1", Role.OPERATIONS_MANAGER, "555-010-0003", "admin123");
         seedUser("pharmacist1@gmail.com", "pharmacist1", Role.CHIEF_PHARMACIST, "555-010-0004", "admin123");
         seedUser("deliverycoordinator1@gmail.com", "deliverycoordinator1", Role.DELIVERY_COORDINATOR, "555-010-0005", "admin123");
+        seedUser("courier1@gmail.com", "courier1", Role.DELIVERY_RIDER, "555-010-0006", "admin123");
     }
 
     private void seedUser(String email, String fullName, Role role, String phone, String rawPassword) {

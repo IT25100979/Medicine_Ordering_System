@@ -205,11 +205,16 @@ public class AuthService {
                 defaultName = "operationsmanager1";
                 defaultPhone = "555-010-0003";
                 break;
-            case "DELIVERY_COORDINATOR":
-            case "COORDINATOR":
             case "DELIVERY_RIDER":
             case "RIDER":
             case "COURIER":
+                targetRole = Role.DELIVERY_RIDER;
+                email = "courier1@gmail.com";
+                defaultName = "courier1";
+                defaultPhone = "555-010-0006";
+                break;
+            case "DELIVERY_COORDINATOR":
+            case "COORDINATOR":
                 targetRole = Role.DELIVERY_COORDINATOR;
                 email = "deliverycoordinator1@gmail.com";
                 defaultName = "deliverycoordinator1";

@@ -34,6 +34,12 @@ export const DEMO_ROLES = [
     email: 'deliverycoordinator1@gmail.com',
     dest: '/modules/delivery',
   },
+  {
+    role: 'DELIVERY_RIDER',
+    title: 'Courier',
+    email: 'courier1@gmail.com',
+    dest: '/modules/delivery',
+  },
 ];
 
 const DemoRoleGrid = ({ onSelectRole }) => {
