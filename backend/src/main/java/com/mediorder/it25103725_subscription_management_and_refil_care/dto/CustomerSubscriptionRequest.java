@@ -18,6 +18,17 @@ public class CustomerSubscriptionRequest {
     @FutureOrPresent(message = "First refill date cannot be in the past")
     private LocalDate nextRefillDate;
 
+    @NotBlank(message = "Enter the delivery address for your refills")
+    @Size(min = 5, max = 500, message = "Delivery address must be between 5 and 500 characters")
+    private String deliveryAddress;
+
+    @NotBlank(message = "Enter a contact phone number")
+    @com.mediorder.system_build_functions.validation.ValidPhone
+    private String contactPhone;
+
+    @Size(max = 50, message = "Unknown delivery partner")
+    private String preferredCourier;
+
     /** Required when any item is prescription-only: one of the customer's APPROVED prescriptions. */
     private Long prescriptionId;
 
@@ -33,6 +44,13 @@ public class CustomerSubscriptionRequest {
 
     public Long getPrescriptionId() { return prescriptionId; }
     public void setPrescriptionId(Long prescriptionId) { this.prescriptionId = prescriptionId; }
+
+    public String getDeliveryAddress() { return deliveryAddress; }
+    public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
+    public String getContactPhone() { return contactPhone; }
+    public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
+    public String getPreferredCourier() { return preferredCourier; }
+    public void setPreferredCourier(String preferredCourier) { this.preferredCourier = preferredCourier; }
 
     public List<SubscriptionItemDto> getItems() { return items; }
     public void setItems(List<SubscriptionItemDto> items) { this.items = items; }

@@ -154,6 +154,35 @@ public class FefoAllocationService {
     }
 
     /**
+     * Puts stock that was already deducted for an order back on the shelf (same batches),
+     * e.g. a pharmacist-dispensed order whose delivery was later rejected or terminated.
+     */
+    public void returnConfirmedStock(Long orderId) {
+        List<StockReservation> confirmed = reservationRepository.findByOrderIdAndStatus(orderId, ReservationStatus.CONFIRMED);
+        for (StockReservation res : confirmed) {
+            res.setStatus(ReservationStatus.RELEASED);
+            reservationRepository.save(res);
+            InventoryBatch batch = res.getBatch();
+            if (batch != null) {
+                batch.setStockQuantity(batch.getStockQuantity() + res.getQuantity());
+                if (batch.getStatus() == BatchStatus.DEPLETED) {
+                    batch.setStatus(BatchStatus.LIVE);
+                }
+                batchRepository.save(batch);
+                Medicine medicine = batch.getMedicine();
+                if (medicine != null) {
+                    medicine.setStockQuantity((medicine.getStockQuantity() != null ? medicine.getStockQuantity() : 0) + res.getQuantity());
+                    medicineRepository.save(medicine);
+                }
+            }
+        }
+        if (auditService != null && !confirmed.isEmpty()) {
+            auditService.logAction("FEFO_STOCK_RETURNED", "Order", String.valueOf(orderId),
+                    "CONFIRMED", "RETURNED (" + confirmed.size() + " allocations)");
+        }
+    }
+
+    /**
      * Release reservations if order fails, is cancelled, or expires.
      */
     public void releaseOrderStock(Long orderId) {

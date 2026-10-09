@@ -23,6 +23,9 @@ public class PrescriptionResponse {
     private Long fileSizeBytes;
     private String doctorName;
     private String patientNotes;
+    private String deliveryAddress;
+    private String contactPhone;
+    private String preferredCourier;
     private Boolean chronicSubscription;
     private PrescriptionStatus status;
     private Long verifiedById;
@@ -49,6 +52,9 @@ public class PrescriptionResponse {
         response.setFileSizeBytes(p.getFileSizeBytes());
         response.setDoctorName(p.getDoctorName());
         response.setPatientNotes(p.getPatientNotes());
+        response.setDeliveryAddress(p.getDeliveryAddress());
+        response.setContactPhone(p.getContactPhone());
+        response.setPreferredCourier(p.getPreferredCourier());
         response.setChronicSubscription(Boolean.TRUE.equals(p.getChronicSubscription()));
         response.setStatus(p.getStatus());
         if (p.getVerifiedBy() != null) {
@@ -83,6 +89,13 @@ public class PrescriptionResponse {
     public void setFileSizeBytes(Long fileSizeBytes) { this.fileSizeBytes = fileSizeBytes; }
     public String getDoctorName() { return doctorName; }
     public void setDoctorName(String doctorName) { this.doctorName = doctorName; }
+    public String getDeliveryAddress() { return deliveryAddress; }
+    public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
+    public String getContactPhone() { return contactPhone; }
+    public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
+    public String getPreferredCourier() { return preferredCourier; }
+    public void setPreferredCourier(String preferredCourier) { this.preferredCourier = preferredCourier; }
+
     public String getPatientNotes() { return patientNotes; }
     public void setPatientNotes(String patientNotes) { this.patientNotes = patientNotes; }
     public Boolean getChronicSubscription() { return chronicSubscription; }

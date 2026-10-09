@@ -129,6 +129,23 @@ public class Prescription {
     public String getDoctorName() { return doctorName; }
     public void setDoctorName(String doctorName) { this.doctorName = doctorName; }
 
+    // --- Where to deliver the medicines once the pharmacist dispenses them ---
+    @Column(name = "delivery_address", columnDefinition = "TEXT")
+    private String deliveryAddress;
+
+    @Column(name = "contact_phone", length = 20)
+    private String contactPhone;
+
+    @Column(name = "preferred_courier", length = 50)
+    private String preferredCourier;
+
+    public String getDeliveryAddress() { return deliveryAddress; }
+    public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
+    public String getContactPhone() { return contactPhone; }
+    public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
+    public String getPreferredCourier() { return preferredCourier; }
+    public void setPreferredCourier(String preferredCourier) { this.preferredCourier = preferredCourier; }
+
     public String getPatientNotes() { return patientNotes; }
     public void setPatientNotes(String patientNotes) { this.patientNotes = patientNotes; }
 

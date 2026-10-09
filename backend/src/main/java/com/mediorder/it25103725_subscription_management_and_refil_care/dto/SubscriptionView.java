@@ -14,6 +14,9 @@ public record SubscriptionView(
         LocalDate nextRefillDate,
         String status,
         LocalDateTime createdAt,
+        String deliveryAddress,
+        String contactPhone,
+        String preferredCourier,
         List<Item> items) {
 
     public record Item(Long medicineId, String name, Integer quantity, BigDecimal unitPrice, Boolean requiresPrescription) {

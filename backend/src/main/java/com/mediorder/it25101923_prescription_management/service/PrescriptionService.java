@@ -71,6 +71,41 @@ public class PrescriptionService {
         }
     }
 
+    /**
+     * Upload with delivery details, so the pharmacist can dispense straight to the customer's door.
+     * Address/phone are validated here because they arrive as multipart form fields.
+     */
+    public PrescriptionResponse uploadPrescription(
+            MultipartFile file,
+            String doctorName,
+            String patientNotes,
+            Boolean chronicSubscription,
+            Authentication authentication,
+            String deliveryAddress,
+            String contactPhone,
+            String preferredCourier) {
+        String address = deliveryAddress != null && !deliveryAddress.isBlank() ? deliveryAddress.trim() : null;
+        String phone = contactPhone != null && !contactPhone.isBlank() ? contactPhone.trim() : null;
+        if (address != null && (address.length() < 5 || address.length() > 500)) {
+            throw new IllegalArgumentException("Delivery address must be between 5 and 500 characters.");
+        }
+        if (phone != null && !com.mediorder.system_build_functions.validation.PhoneNumberValidator.isValid(phone)) {
+            throw new IllegalArgumentException("Enter a valid phone number, e.g. 0771234567 or +94771234567");
+        }
+        if (preferredCourier != null && preferredCourier.length() > 50) {
+            throw new IllegalArgumentException("Unknown delivery partner.");
+        }
+        PrescriptionResponse uploaded = uploadPrescription(file, doctorName, patientNotes, chronicSubscription, authentication);
+        if (address == null && phone == null && preferredCourier == null) {
+            return uploaded;
+        }
+        Prescription saved = prescriptionRepository.findById(uploaded.getId()).orElseThrow();
+        saved.setDeliveryAddress(address);
+        saved.setContactPhone(phone);
+        saved.setPreferredCourier(preferredCourier != null && !preferredCourier.isBlank() ? preferredCourier.trim() : null);
+        return PrescriptionResponse.fromEntity(prescriptionRepository.save(saved));
+    }
+
     public PrescriptionResponse uploadPrescription(
             MultipartFile file,
             String doctorName,

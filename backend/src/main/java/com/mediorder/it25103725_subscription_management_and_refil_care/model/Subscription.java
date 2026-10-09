@@ -46,6 +46,23 @@ public class Subscription {
     public void setNextRefillDate(LocalDate nextRefillDate) { this.nextRefillDate = nextRefillDate; }
     public SubscriptionStatus getStatus() { return status; }
     public void setStatus(SubscriptionStatus status) { this.status = status; }
+    // --- Where each refill is delivered ---
+    @Column(name = "delivery_address", columnDefinition = "TEXT")
+    private String deliveryAddress;
+
+    @Column(name = "contact_phone", length = 20)
+    private String contactPhone;
+
+    @Column(name = "preferred_courier", length = 50)
+    private String preferredCourier;
+
+    public String getDeliveryAddress() { return deliveryAddress; }
+    public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
+    public String getContactPhone() { return contactPhone; }
+    public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
+    public String getPreferredCourier() { return preferredCourier; }
+    public void setPreferredCourier(String preferredCourier) { this.preferredCourier = preferredCourier; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 

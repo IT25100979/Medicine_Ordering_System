@@ -901,7 +901,7 @@ const SystemAdminConsolePage = () => {
                   </p>
                 </div>
                 <Link
-                  to="/modules/subscriptions"
+                  to="/pharmacist_dashboard?tab=refills"
                   className="px-5 py-2.5 bg-neutral-900 text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-black transition-all shadow-sm shrink-0"
                 >
                   Open Full Subscription Engine

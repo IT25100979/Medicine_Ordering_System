@@ -15,4 +15,6 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     List<Delivery> findAllByOrderByIdDesc();
     List<Delivery> findByUserIdOrderByIdDesc(Long userId);
     Optional<Delivery> findByIdAndUserId(Long id, Long userId);
+    List<Delivery> findByPrescriptionId(Long prescriptionId);
+    List<Delivery> findByPrescriptionIdIsNotNull();
 }
