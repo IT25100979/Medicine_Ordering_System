@@ -1,3 +1,5 @@
+# OPTIONAL: copy to application.yml only if you need to override the built-in
+# defaults in mediorder-defaults.properties (which use the local DB on port 3307).
 server:
   port: 8080
 
