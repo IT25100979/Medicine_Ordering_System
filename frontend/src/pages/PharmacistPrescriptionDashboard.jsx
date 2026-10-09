@@ -110,6 +110,32 @@ const PharmacistPrescriptionDashboard = () => {
   const [submittingVerification, setSubmittingVerification] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
+  // Pharmacist Dispensing & Direct Order Creation State
+  const [catalogMedicines, setCatalogMedicines] = useState([]);
+  const [dispenseItems, setDispenseItems] = useState([]);
+  const [selectedMedIdToAdd, setSelectedMedIdToAdd] = useState('');
+  const [selectedMedQty, setSelectedMedQty] = useState(1);
+  const [selectedMedDosage, setSelectedMedDosage] = useState('');
+  const [dispenseAddress, setDispenseAddress] = useState('No. 45/2, Galle Road, Colombo 03');
+  const [dispensePhone, setDispensePhone] = useState('555-010-0001');
+  const [dispenseCourier, setDispenseCourier] = useState('DHL');
+  const [dispenseInstructions, setDispenseInstructions] = useState('');
+  const [submittingDispenseOrder, setSubmittingDispenseOrder] = useState(false);
+
+  const fetchCatalogMedicines = async () => {
+    try {
+      const res = await client.get('/api/v1/medicines');
+      const list = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+      setCatalogMedicines(list);
+    } catch (err) {
+      console.error('Failed to fetch catalog medicines', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCatalogMedicines();
+  }, []);
+
   const fetchPrescriptions = async () => {
     setLoadingPrescriptions(true);
     try {
@@ -136,9 +162,107 @@ const PharmacistPrescriptionDashboard = () => {
   const handleOpenUnifiedModal = (rx) => {
     setSelectedRx(rx);
     setVerificationStatus('APPROVED');
-    setVerificationNotes('');
+    setVerificationNotes(rx.patientNotes || '');
     setRejectionReason(REJECTION_TAGS[0]);
     setDeleteFileImmediately(false);
+    setDispenseAddress('No. 45/2, Galle Road, Colombo 03');
+    setDispensePhone(rx.customerPhone || '555-010-0001');
+    setDispenseCourier('DHL');
+    setDispenseInstructions(rx.patientNotes ? `Rx notes: ${rx.patientNotes}` : '');
+    
+    // Auto populate item line if matched with catalog medicine
+    const notesLower = ((rx.patientNotes || '') + ' ' + (rx.originalFileName || '')).toLowerCase();
+    const matched = catalogMedicines.find(m => 
+      notesLower.includes(m.name.toLowerCase()) || 
+      (m.genericName && notesLower.includes(m.genericName.toLowerCase()))
+    );
+
+    if (matched) {
+      setDispenseItems([{
+        medicineId: matched.id,
+        name: matched.name,
+        quantity: 1,
+        unitPrice: Number(matched.unitPrice || 0),
+        dosageInstructions: rx.patientNotes || '1 capsule tid x 7 days',
+        isTemperatureSensitive: matched.isTemperatureSensitive
+      }]);
+    } else if (catalogMedicines.length > 0) {
+      const first = catalogMedicines[0];
+      setDispenseItems([{
+        medicineId: first.id,
+        name: first.name,
+        quantity: 1,
+        unitPrice: Number(first.unitPrice || 0),
+        dosageInstructions: rx.patientNotes || 'Take as directed',
+        isTemperatureSensitive: first.isTemperatureSensitive
+      }]);
+    } else {
+      setDispenseItems([]);
+    }
+  };
+
+  const handleAddMedicineLine = () => {
+    if (!selectedMedIdToAdd) return;
+    const med = catalogMedicines.find(m => String(m.id) === String(selectedMedIdToAdd));
+    if (!med) return;
+
+    setDispenseItems(prev => [
+      ...prev,
+      {
+        medicineId: med.id,
+        name: med.name,
+        quantity: selectedMedQty > 0 ? selectedMedQty : 1,
+        unitPrice: Number(med.unitPrice || 0),
+        dosageInstructions: selectedMedDosage.trim() || 'Take as directed',
+        isTemperatureSensitive: med.isTemperatureSensitive
+      }
+    ]);
+    setSelectedMedIdToAdd('');
+    setSelectedMedQty(1);
+    setSelectedMedDosage('');
+  };
+
+  const handleRemoveMedicineLine = (index) => {
+    setDispenseItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDispenseAndCreateOrder = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedRx) return;
+
+    if (dispenseItems.length === 0) {
+      showToast('Please add at least one medicine to dispense before creating the order.', 'error');
+      return;
+    }
+
+    setSubmittingDispenseOrder(true);
+    try {
+      const payload = {
+        verificationNotes: verificationNotes.trim() || `Prescription dispensed by pharmacist.`,
+        deliveryAddress: dispenseAddress.trim() || 'No. 45/2, Galle Road, Colombo 03',
+        customerPhone: dispensePhone.trim() || '555-010-0001',
+        preferredCourier: dispenseCourier,
+        specialInstructions: dispenseInstructions.trim() || null,
+        items: dispenseItems.map(item => ({
+          medicineId: item.medicineId,
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          dosageInstructions: item.dosageInstructions
+        }))
+      };
+
+      const res = await client.post(`/api/v1/prescriptions/${selectedRx.id}/dispense-order`, payload);
+      const data = res.data;
+      showToast(`Prescription #${selectedRx.id} approved! Order #${data.orderNumber || ''} created & dispatched to Delivery Management in real-time!`);
+      setSelectedRx(null);
+      await fetchPrescriptions();
+    } catch (err) {
+      console.error('Dispense order creation failed', err);
+      showToast(err.response?.data?.message || 'Failed to create dispensing order.', 'error');
+    } finally {
+      setSubmittingDispenseOrder(false);
+    }
   };
 
   const handleVerificationSubmit = async (e) => {
@@ -2044,17 +2168,181 @@ const PharmacistPrescriptionDashboard = () => {
                     </div>
 
                     {verificationStatus === 'APPROVED' ? (
-                      <div className="space-y-1.5">
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700">
-                          Pharmacist Dispensing Instructions (Optional)
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={verificationNotes}
-                          onChange={(e) => setVerificationNotes(e.target.value)}
-                          placeholder="e.g. Validated with prescriber. Cleared for cold-chain dispensing."
-                          className="w-full p-3 rounded-2xl bg-neutral-50 text-xs border border-neutral-300 focus:outline-none focus:ring-1 focus:ring-black resize-none"
-                        />
+                      <div className="space-y-4">
+                        {/* Dispense Medicines Selection */}
+                        <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[16px] text-emerald-700">medication</span>
+                              <span>Add Catalog Medicines to Dispense</span>
+                            </span>
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900">
+                              Catalog Linked
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                            <div className="sm:col-span-6">
+                              <label className="block text-[10px] font-extrabold uppercase text-neutral-600 mb-1">
+                                Select Medicine
+                              </label>
+                              <select
+                                value={selectedMedIdToAdd}
+                                onChange={(e) => setSelectedMedIdToAdd(e.target.value)}
+                                className="w-full px-2.5 py-1.5 bg-white border border-neutral-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-700"
+                              >
+                                <option value="">-- Choose from 8 Official Products --</option>
+                                {catalogMedicines.map((m) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.name} (LKR {Number(m.unitPrice || 0).toLocaleString()})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="sm:col-span-2">
+                              <label className="block text-[10px] font-extrabold uppercase text-neutral-600 mb-1">
+                                Qty
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                value={selectedMedQty}
+                                onChange={(e) => setSelectedMedQty(parseInt(e.target.value, 10) || 1)}
+                                className="w-full px-2.5 py-1.5 bg-white border border-neutral-300 rounded-xl text-xs text-center font-bold"
+                              />
+                            </div>
+
+                            <div className="sm:col-span-4 flex items-end">
+                              <button
+                                type="button"
+                                onClick={handleAddMedicineLine}
+                                disabled={!selectedMedIdToAdd}
+                                className="w-full py-1.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-neutral-300 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">add</span>
+                                <span>Add Item</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Dosage instructions for new item */}
+                          {selectedMedIdToAdd && (
+                            <div>
+                              <input
+                                type="text"
+                                value={selectedMedDosage}
+                                onChange={(e) => setSelectedMedDosage(e.target.value)}
+                                placeholder="Dosage instruction (e.g. 1 capsule 3 times daily after meals)"
+                                className="w-full px-2.5 py-1.5 bg-white border border-neutral-300 rounded-xl text-xs placeholder:text-neutral-400"
+                              />
+                            </div>
+                          )}
+
+                          {/* Dispense Items Table */}
+                          {dispenseItems.length > 0 ? (
+                            <div className="space-y-1.5 pt-1">
+                              <label className="block text-[10px] font-extrabold uppercase text-neutral-700">
+                                Dispensing Line Items ({dispenseItems.length})
+                              </label>
+                              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                                {dispenseItems.map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="p-2 bg-white rounded-xl border border-emerald-200/80 flex items-center justify-between gap-2 text-xs shadow-2xs"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        <strong className="text-neutral-900 truncate">{item.name}</strong>
+                                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded">
+                                          x{item.quantity}
+                                        </span>
+                                        {item.isTemperatureSensitive && (
+                                          <span className="text-[9px] font-bold text-cyan-800 bg-cyan-100 px-1.5 py-0.2 rounded">
+                                            Cold-Chain
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[11px] text-neutral-500 truncate">{item.dosageInstructions}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className="font-extrabold text-neutral-900">
+                                        LKR {(item.unitPrice * item.quantity).toLocaleString()}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveMedicineLine(idx)}
+                                        className="w-6 h-6 rounded-lg text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer"
+                                        title="Remove item"
+                                      >
+                                        <span className="material-symbols-outlined text-[14px]">close</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Subtotal & Cold Chain */}
+                              <div className="flex items-center justify-between text-xs pt-2 border-t border-emerald-200/60 font-black text-emerald-950">
+                                <span>Dispensed Total:</span>
+                                <span>
+                                  LKR {dispenseItems.reduce((acc, i) => acc + (i.unitPrice * i.quantity), 0).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-neutral-500 italic">
+                              No medicines added yet. Select a medicine above to create a fulfillment order.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Delivery Destination & Courier Partner */}
+                        <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2.5">
+                          <span className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-700">
+                            Fulfillment &amp; Delivery Management
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <label className="block text-[10px] font-bold text-neutral-500 mb-0.5">Delivery Address</label>
+                              <input
+                                type="text"
+                                value={dispenseAddress}
+                                onChange={(e) => setDispenseAddress(e.target.value)}
+                                className="w-full px-2.5 py-1.5 bg-white border border-neutral-300 rounded-xl text-xs"
+                                placeholder="Delivery Address"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-neutral-500 mb-0.5">Courier Partner</label>
+                              <select
+                                value={dispenseCourier}
+                                onChange={(e) => setDispenseCourier(e.target.value)}
+                                className="w-full px-2.5 py-1.5 bg-white border border-neutral-300 rounded-xl text-xs font-semibold"
+                              >
+                                <option value="DHL">DHL Express</option>
+                                <option value="Koombiyo">Koombiyo Delivery</option>
+                                <option value="Lanka Delivery">Lanka Delivery Network</option>
+                                <option value="In Company Delivery">In-Company Cold Fleet</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Optional Dispensing Notes */}
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-neutral-600">
+                            Pharmacist Notes / Dispensing Instructions
+                          </label>
+                          <input
+                            type="text"
+                            value={verificationNotes}
+                            onChange={(e) => setVerificationNotes(e.target.value)}
+                            placeholder="e.g. Validated with Dr. Samantha Perera. Cleared for packaging."
+                            className="w-full px-3 py-2 rounded-xl bg-neutral-50 text-xs border border-neutral-300 focus:outline-none focus:ring-1 focus:ring-black"
+                          />
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -2108,7 +2396,7 @@ const PharmacistPrescriptionDashboard = () => {
                       </div>
                     )}
 
-                    <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-2.5">
+                    <div className="pt-3 border-t border-neutral-200 flex items-center justify-end gap-2 flex-wrap">
                       <button
                         type="button"
                         onClick={() => setSelectedRx(null)}
@@ -2117,16 +2405,28 @@ const PharmacistPrescriptionDashboard = () => {
                         Cancel
                       </button>
 
+                      {verificationStatus === 'APPROVED' && (
+                        <button
+                          type="button"
+                          onClick={handleDispenseAndCreateOrder}
+                          disabled={submittingDispenseOrder || dispenseItems.length === 0}
+                          className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-neutral-300 text-white text-xs font-black uppercase tracking-wider rounded-full shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">local_shipping</span>
+                          <span>{submittingDispenseOrder ? 'Creating Order...' : 'Approve & Create Delivery Order'}</span>
+                        </button>
+                      )}
+
                       <button
                         type="submit"
                         disabled={submittingVerification}
-                        className={`px-5 py-2.5 rounded-full text-white text-xs font-bold uppercase tracking-wider shadow-sm disabled:opacity-50 transition-all cursor-pointer ${
+                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                           verificationStatus === 'APPROVED'
-                            ? 'bg-emerald-600 hover:bg-emerald-700'
-                            : 'bg-red-600 hover:bg-red-700'
+                            ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+                            : 'bg-red-600 hover:bg-red-700 text-white shadow-sm'
                         }`}
                       >
-                        {submittingVerification ? 'Recording Decision...' : verificationStatus === 'APPROVED' ? 'Confirm Approval' : 'Confirm Rejection'}
+                        {submittingVerification ? 'Saving...' : verificationStatus === 'APPROVED' ? 'Approve Only' : 'Confirm Rejection'}
                       </button>
                     </div>
                   </form>

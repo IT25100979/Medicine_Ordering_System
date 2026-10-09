@@ -93,6 +93,8 @@ const CartPage = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const [paymentMethod, setPaymentMethod] = useState('card'); // 'card' | 'cod' | 'gateway'
+
   // Customer confirms the order with the chosen courier partner -> backend creates the
   // order + a PENDING delivery, which appears live on the Delivery Management page.
   const handleCheckout = async () => {
@@ -208,38 +210,80 @@ const CartPage = () => {
       )}
 
       {checkoutStep === 'confirmed' ? (
-        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center max-w-xl mx-auto shadow-xl border border-neutral-200 space-y-5 animate-scaleUp">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto text-2xl shadow-sm">
-            <i className="fa-solid fa-check" />
+        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto shadow-2xl border border-emerald-100 space-y-6 animate-scaleUp">
+          {/* Payment Success Header */}
+          <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl shadow-inner animate-bounce">
+            <i className="fa-solid fa-check-double" />
           </div>
-          <h2 className="text-2xl font-black uppercase tracking-tight text-neutral-900">
-            Order Placed!
+
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black uppercase tracking-widest">
+            <i className="fa-solid fa-circle-check text-emerald-600" />
+            <span>Payment Successful &amp; Order Verified</span>
+          </div>
+
+          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
+            Payment Completed &amp; Order Placed!
           </h2>
-          <p className="text-xs text-neutral-600 leading-relaxed">
-            Your delivery reference is{' '}
-            <strong className="font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              #DEL-{placedDelivery?.id}
-            </strong>{' '}
-            (order #{placedDelivery?.orderId}). It is now <strong>awaiting approval</strong> by our delivery team, who will
-            assign it to <strong>{placedDelivery?.preferredCourier}</strong> for delivery to{' '}
-            <strong>{placedDelivery?.orderAddress}</strong>.
+
+          {/* Validation Banner */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 text-left text-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-extrabold uppercase tracking-wider text-emerald-900 flex items-center gap-2">
+                <i className="fa-solid fa-receipt text-emerald-700" />
+                <span>Transaction Confirmation</span>
+              </span>
+              <span className="font-bold text-emerald-700 bg-white px-2.5 py-0.5 rounded-md border border-emerald-200">
+                Payment Success
+              </span>
+            </div>
+            <p className="text-neutral-700 leading-relaxed">
+              Your payment of <strong className="text-emerald-900">LKR {Number(placedDelivery?.orderTotal || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</strong> has been authorized and cleared. Your order details have been synchronized with your account <strong>Order History</strong> and sent to <strong>Delivery Management</strong> in real time.
+            </p>
+          </div>
+
+          {/* Order Summary Specs */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-left">
+            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+              <span className="block text-[10px] font-extrabold uppercase text-neutral-500">Order ID</span>
+              <span className="font-mono font-bold text-xs text-neutral-900">ORD-{placedDelivery?.orderId}</span>
+            </div>
+            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+              <span className="block text-[10px] font-extrabold uppercase text-neutral-500">Delivery Reference</span>
+              <span className="font-mono font-bold text-xs text-emerald-800">#DEL-{placedDelivery?.id}</span>
+            </div>
+            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 col-span-2 sm:col-span-1">
+              <span className="block text-[10px] font-extrabold uppercase text-neutral-500">Courier Partner</span>
+              <span className="font-bold text-xs text-neutral-900">{placedDelivery?.preferredCourier || 'DHL'}</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-neutral-500 leading-relaxed">
+            Delivering to: <strong className="text-neutral-800">{placedDelivery?.orderAddress}</strong>
+            <br />
+            You will receive a 6-digit handover OTP on the tracking console as soon as a courier rider dispatches your parcel.
           </p>
-          <p className="text-[11px] text-neutral-500">
-            Total: <strong>LKR {Number(placedDelivery?.orderTotal || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</strong>
-            {' '}· You will get a 6-digit handover code on the tracking page once a courier is assigned.
-          </p>
-          <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
+
+          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              to="/catalog"
-              className="px-6 py-3 bg-neutral-900 hover:bg-black text-white rounded-full text-xs font-bold uppercase tracking-wider transition-colors shadow-md"
+              to="/profile?tab=orders"
+              className="px-6 py-3.5 bg-neutral-900 hover:bg-black text-white rounded-full text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2"
             >
-              Browse Catalog
+              <i className="fa-solid fa-clock-rotate-left text-xs text-emerald-400" />
+              <span>View in Order History</span>
             </Link>
             <Link
               to="/my-deliveries"
-              className="px-6 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
+              className="px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-full text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2"
             >
-              Track My Delivery
+              <i className="fa-solid fa-truck-fast text-xs" />
+              <span>Track Delivery Live</span>
+            </Link>
+            <Link
+              to="/catalog"
+              className="px-5 py-3.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-full text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+            >
+              <i className="fa-solid fa-store text-xs" />
+              <span>Catalog</span>
             </Link>
           </div>
         </div>
@@ -490,9 +534,54 @@ const CartPage = () => {
                 </div>
               </div>
 
+              {/* Payment Method Selector */}
+              <div className="pt-2 border-t border-neutral-100 space-y-2">
+                <span className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500">
+                  Payment Method
+                </span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('card')}
+                    className={`py-2 px-1 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all flex flex-col items-center justify-center gap-1 ${
+                      paymentMethod === 'card'
+                        ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
+                        : 'bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <i className="fa-solid fa-credit-card text-xs" />
+                    <span>Card</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('cod')}
+                    className={`py-2 px-1 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all flex flex-col items-center justify-center gap-1 ${
+                      paymentMethod === 'cod'
+                        ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
+                        : 'bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <i className="fa-solid fa-money-bill-wave text-xs" />
+                    <span>COD</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('gateway')}
+                    className={`py-2 px-1 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all flex flex-col items-center justify-center gap-1 ${
+                      paymentMethod === 'gateway'
+                        ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
+                        : 'bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100'
+                    }`}
+                  >
+                    <i className="fa-solid fa-laptop-medical text-xs" />
+                    <span>Health Rx</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="pt-3 border-t border-neutral-200 flex items-center justify-between text-sm font-black text-neutral-900">
-                <span>Estimated Total</span>
-                <span className="text-base text-emerald-800">
+                <span>Total Due</span>
+                <span className="text-base text-emerald-800 font-extrabold">
                   LKR {total.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>

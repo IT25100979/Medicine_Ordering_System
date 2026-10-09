@@ -127,6 +127,14 @@ public class PrescriptionController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/dispense-order")
+    public ResponseEntity<Map<String, Object>> dispenseAndCreateOrder(
+            @PathVariable Long id,
+            @RequestBody com.mediorder.it25101923_prescription_management.dto.PharmacistDispenseOrderRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(prescriptionService.dispenseAndCreateOrder(id, request, authentication));
+    }
+
     @PostMapping("/cleanup")
     public ResponseEntity<Map<String, Object>> triggerCleanup(Authentication authentication) {
         return ResponseEntity.ok(cleanupService.runCleanupManually());

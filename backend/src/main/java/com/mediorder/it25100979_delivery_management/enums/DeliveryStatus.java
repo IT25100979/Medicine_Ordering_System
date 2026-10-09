@@ -64,13 +64,20 @@ public enum DeliveryStatus {
         return allowedNext.isEmpty();
     }
 
-    /** Lenient parser for values stored as strings in the database / sent by clients. */
+    /** Parser for values stored as strings in the database / sent by clients. */
     public static DeliveryStatus from(String value) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("Delivery status is required");
+            throw new IllegalArgumentException("Delivery status value cannot be null or empty");
+        }
+        String normalized = value.trim().toUpperCase();
+        if ("UNSUCCESSFUL".equals(normalized)) {
+            return FAILED;
+        }
+        if ("CANCELLED".equals(normalized) || "CANCELED".equals(normalized)) {
+            return TERMINATED;
         }
         try {
-            return DeliveryStatus.valueOf(value.trim().toUpperCase());
+            return DeliveryStatus.valueOf(normalized);
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException("Unknown delivery status: " + value);
         }

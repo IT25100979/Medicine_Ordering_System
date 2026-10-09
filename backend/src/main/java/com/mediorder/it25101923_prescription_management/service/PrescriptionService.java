@@ -11,6 +11,18 @@ import com.mediorder.system_build_functions.model.User;
 import com.mediorder.system_build_functions.repository.NotificationRepository;
 import com.mediorder.it25101923_prescription_management.repository.PrescriptionRepository;
 import com.mediorder.system_build_functions.repository.UserRepository;
+import com.mediorder.it25100979_delivery_management.entity.Delivery;
+import com.mediorder.it25100979_delivery_management.enums.CourierCompany;
+import com.mediorder.it25100979_delivery_management.enums.DeliveryStatus;
+import com.mediorder.it25100979_delivery_management.event.DeliveryEventType;
+import com.mediorder.it25100979_delivery_management.repository.DeliveryRepository;
+import com.mediorder.it25100979_delivery_management.service.DeliveryLifecycleManager;
+import com.mediorder.it25101923_prescription_management.dto.PharmacistDispenseOrderRequest;
+import com.mediorder.it25102867_batchandstock_management.model.Medicine;
+import com.mediorder.it25102867_batchandstock_management.repository.MedicineRepository;
+import com.mediorder.it25103946_order_processing_and_workflow.model.Order;
+import com.mediorder.it25103946_order_processing_and_workflow.model.OrderStatus;
+import com.mediorder.it25103946_order_processing_and_workflow.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -20,8 +32,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +57,18 @@ public class PrescriptionService {
 
     @Autowired(required = false)
     private NotificationRepository notificationRepository;
+
+    @Autowired(required = false)
+    private OrderRepository orderRepository;
+
+    @Autowired(required = false)
+    private MedicineRepository medicineRepository;
+
+    @Autowired(required = false)
+    private DeliveryLifecycleManager lifecycle;
+
+    @Autowired(required = false)
+    private DeliveryRepository deliveryRepository;
 
     @Value("${app.upload.auto-delete-rejected-files:false}")
     private boolean autoDeleteRejectedFiles;
@@ -295,6 +325,143 @@ public class PrescriptionService {
     public Prescription getPrescriptionEntity(Long id) {
         return prescriptionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+    }
+
+    public Map<String, Object> dispenseAndCreateOrder(
+            Long id,
+            PharmacistDispenseOrderRequest request,
+            Authentication authentication) {
+        User staff = getAuthenticatedUser(authentication);
+        if (!isStaffUser(staff)) {
+            throw new AccessDeniedException("Only authorized pharmacists or administrators can dispense prescriptions and create orders.");
+        }
+
+        Prescription p = prescriptionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Prescription not found with ID: " + id));
+
+        // 1. Auto-approve prescription if it's currently PENDING
+        if (p.getStatus() == PrescriptionStatus.PENDING) {
+            p.setStatus(PrescriptionStatus.APPROVED);
+            p.setVerifiedBy(staff);
+            p.setVerifiedAt(LocalDateTime.now());
+            if (request != null && request.getVerificationNotes() != null && !request.getVerificationNotes().isBlank()) {
+                p.setVerificationNotes(request.getVerificationNotes().trim());
+            } else {
+                p.setVerificationNotes("Verified and dispensed by Pharmacist " + staff.getFullName());
+            }
+            prescriptionRepository.save(p);
+        }
+
+        User customer = p.getCustomer();
+        if (customer == null) {
+            throw new IllegalStateException("Prescription has no associated customer.");
+        }
+
+        // 2. Process items
+        List<String> lineSummaries = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        boolean coldChain = false;
+
+        if (request != null && request.getItems() != null && !request.getItems().isEmpty()) {
+            for (PharmacistDispenseOrderRequest.DispensedItemLine item : request.getItems()) {
+                int qty = item.getQuantity() != null && item.getQuantity() > 0 ? item.getQuantity() : 1;
+                BigDecimal price = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
+                String itemName = item.getName() != null ? item.getName().trim() : "Prescription Medicine";
+
+                if (item.getMedicineId() != null && medicineRepository != null) {
+                    Optional<Medicine> medOpt = medicineRepository.findById(item.getMedicineId());
+                    if (medOpt.isPresent()) {
+                        Medicine med = medOpt.get();
+                        itemName = med.getName();
+                        if (med.getUnitPrice() != null && med.getUnitPrice().signum() > 0) {
+                            price = med.getUnitPrice();
+                        }
+                        if (Boolean.TRUE.equals(med.getIsTemperatureSensitive())) {
+                            coldChain = true;
+                        }
+                    }
+                }
+
+                total = total.add(price.multiply(BigDecimal.valueOf(qty)));
+                String dosage = item.getDosageInstructions() != null && !item.getDosageInstructions().isBlank()
+                        ? " (" + item.getDosageInstructions().trim() + ")" : "";
+                lineSummaries.add(qty + " x " + itemName + dosage);
+            }
+        } else {
+            // Default single line if no explicit items chosen
+            String fallbackName = p.getPatientNotes() != null && !p.getPatientNotes().isBlank()
+                    ? p.getPatientNotes().trim() : "Prescription Formulation #" + p.getId();
+            lineSummaries.add("1 x " + fallbackName);
+            total = BigDecimal.valueOf(850.00);
+        }
+
+        String address = request != null && request.getDeliveryAddress() != null && !request.getDeliveryAddress().isBlank()
+                ? request.getDeliveryAddress().trim()
+                : "Colombo 03 (Customer Address)";
+
+        String phone = request != null && request.getCustomerPhone() != null && !request.getCustomerPhone().isBlank()
+                ? request.getCustomerPhone().trim()
+                : (customer.getPhoneNumber() != null ? customer.getPhoneNumber() : "555-010-0001");
+
+        String courier = request != null && request.getPreferredCourier() != null && !request.getPreferredCourier().isBlank()
+                ? CourierCompany.fromString(request.getPreferredCourier()).getDisplayName()
+                : "DHL";
+
+        // 3. Create Order
+        Order order = Order.builder()
+                .customer(customer)
+                .totalAmount(total.setScale(2, RoundingMode.HALF_UP))
+                .orderStatus(OrderStatus.PROCESSING)
+                .shippingAddress(address)
+                .build();
+        if (orderRepository != null) {
+            order = orderRepository.save(order);
+        }
+
+        // 4. Create Delivery with Realtime Event
+        String itemsSummary = String.join(", ", lineSummaries);
+        String specialInstructions = request != null && request.getSpecialInstructions() != null && !request.getSpecialInstructions().isBlank()
+                ? request.getSpecialInstructions().trim()
+                : "Prescription #" + p.getId() + " dispensed by " + staff.getFullName();
+
+        Delivery delivery = Delivery.builder()
+                .orderId(order.getId())
+                .userId(customer.getId())
+                .customerName(customer.getFullName())
+                .customerEmail(customer.getEmail())
+                .customerPhone(phone)
+                .orderAddress(address)
+                .itemsSummary(itemsSummary)
+                .orderTotal(total.setScale(2, RoundingMode.HALF_UP))
+                .specialInstructions(specialInstructions)
+                .coldChainTag(coldChain)
+                .handlingInstructionsSnapshot(coldChain ? "Cold chain: keep at 2-8°C, insulated box with ice pack" : null)
+                .preferredCourier(courier)
+                .validatingPharmacist("Pharm. " + staff.getFullName())
+                .status(DeliveryStatus.PENDING.name())
+                .build();
+
+        Delivery savedDelivery = null;
+        if (lifecycle != null) {
+            savedDelivery = lifecycle.create(delivery, DeliveryEventType.DELIVERY_REQUESTED,
+                    "Order #" + order.getId() + " from Prescription #" + p.getId() + " created by Pharmacist " + staff.getFullName());
+        } else if (deliveryRepository != null) {
+            savedDelivery = deliveryRepository.save(delivery);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        result.put("message", "Prescription dispensed and delivery order created successfully");
+        result.put("prescriptionId", p.getId());
+        result.put("prescriptionStatus", p.getStatus().name());
+        result.put("orderId", order.getId());
+        result.put("orderNumber", "ORD-" + order.getId());
+        result.put("deliveryId", savedDelivery != null ? savedDelivery.getId() : null);
+        result.put("deliveryRef", savedDelivery != null ? "#DEL-" + savedDelivery.getId() : null);
+        result.put("totalAmount", total);
+        result.put("itemsSummary", itemsSummary);
+        result.put("coldChainTag", coldChain);
+        return result;
     }
 }
 

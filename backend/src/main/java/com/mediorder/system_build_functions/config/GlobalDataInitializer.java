@@ -116,16 +116,20 @@ public class GlobalDataInitializer implements CommandLineRunner {
         try {
             if (jdbcTemplate != null) {
                 jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
-                try { jdbcTemplate.execute("TRUNCATE TABLE cart_items"); } catch (Exception ignored) {}
+                try { jdbcTemplate.execute("TRUNCATE TABLE delivery_timeline_entries"); } catch (Exception ignored) {}
+                try { jdbcTemplate.execute("TRUNCATE TABLE deliveries"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE order_items"); } catch (Exception ignored) {}
+                try { jdbcTemplate.execute("TRUNCATE TABLE orders"); } catch (Exception ignored) {}
+                try { jdbcTemplate.execute("TRUNCATE TABLE cart_items"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE prescriptions"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE cold_chain_telemetry"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE cold_chain_tags"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE inventory_batches"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE stock_reservations"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE medicines"); } catch (Exception ignored) {}
+                try { jdbcTemplate.execute("TRUNCATE TABLE notifications"); } catch (Exception ignored) {}
                 jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
-                log.info("Successfully truncated all stock, catalog, and prescription database tables.");
+                log.info("Successfully truncated all delivery, order, stock, catalog, and prescription database tables.");
             } else {
                 try { prescriptionRepository.deleteAll(); } catch (Exception ignored) {}
                 coldChainTagRepository.deleteAll();
