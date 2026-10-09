@@ -11,6 +11,15 @@ const REJECTION_TAGS = [
   'Medical Institute / Medical Personal Information is not true',
 ];
 
+export const resolveFileUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
+    return url;
+  }
+  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  return `${base.replace(/\/+$/, '')}/${url.replace(/^\/+/, '')}`;
+};
+
 // 4 Canonical Pharmacy Shelf Storage Sections
 const CANONICAL_SECTIONS = [
   {
@@ -1884,7 +1893,7 @@ const PharmacistPrescriptionDashboard = () => {
                   <span>Prescription Document</span>
                   {selectedRx.fileUrl && !selectedRx.isFileDeleted && (
                     <a
-                      href={selectedRx.fileUrl}
+                      href={resolveFileUrl(selectedRx.fileUrl)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-emerald-700 hover:underline inline-flex items-center gap-1 lowercase text-[11px] font-semibold"
@@ -1907,14 +1916,18 @@ const PharmacistPrescriptionDashboard = () => {
                   ) : selectedRx.fileUrl ? (
                     selectedRx.contentType && selectedRx.contentType.includes('pdf') ? (
                       <iframe
-                        src={selectedRx.fileUrl}
+                        src={resolveFileUrl(selectedRx.fileUrl)}
                         title="Prescription PDF"
                         className="w-full h-[420px] rounded-xl border border-neutral-300"
                       />
                     ) : (
                       <img
-                        src={selectedRx.fileUrl}
+                        src={resolveFileUrl(selectedRx.fileUrl)}
                         alt="Prescription Document"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1584308666744-24d5e4708709?auto=format&fit=crop&q=80&w=600';
+                        }}
                         className="max-h-[420px] w-auto object-contain rounded-xl shadow-sm"
                       />
                     )

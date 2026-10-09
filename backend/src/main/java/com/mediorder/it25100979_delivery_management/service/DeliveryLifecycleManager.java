@@ -7,7 +7,7 @@ import com.mediorder.it25100979_delivery_management.event.DeliveryLifecycleEvent
 import com.mediorder.it25100979_delivery_management.event.DeliveryLifecycleEvent.Actor;
 import com.mediorder.it25100979_delivery_management.exception.DeliveryNotFoundException;
 import com.mediorder.it25100979_delivery_management.exception.InvalidDeliveryStateException;
-import com.mediorder.it25100979_delivery_management.observer.DeliverySubject;
+import com.mediorder.it25100979_delivery_management.designe_patter.observer.DeliverySubject;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryRepository;
 import com.mediorder.system_build_functions.model.User;
 import com.mediorder.system_build_functions.security.CurrentUserProvider;

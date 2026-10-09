@@ -1,10 +1,10 @@
-package com.mediorder.it25100979_delivery_management.observer.impl;
+package com.mediorder.it25100979_delivery_management.designe_patter.observer.impl;
 
+import com.mediorder.it25100979_delivery_management.designe_patter.observer.AfterCommit;
+import com.mediorder.it25100979_delivery_management.designe_patter.observer.DeliveryObserver;
 import com.mediorder.it25100979_delivery_management.entity.Delivery;
 import com.mediorder.it25100979_delivery_management.event.DeliveryEventType;
 import com.mediorder.it25100979_delivery_management.event.DeliveryLifecycleEvent;
-import com.mediorder.it25100979_delivery_management.observer.AfterCommit;
-import com.mediorder.it25100979_delivery_management.observer.DeliveryObserver;
 import com.mediorder.system_build_functions.model.Notification;
 import com.mediorder.system_build_functions.model.NotificationChannel;
 import com.mediorder.system_build_functions.model.Role;

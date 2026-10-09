@@ -1,4 +1,4 @@
-package com.mediorder.it25100979_delivery_management.observer;
+package com.mediorder.it25100979_delivery_management.designe_patter.observer;
 
 import com.mediorder.it25100979_delivery_management.event.DeliveryLifecycleEvent;
 import org.slf4j.Logger;
@@ -10,7 +10,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * CONCRETE SUBJECT. Every {@link DeliveryObserver} bean in the application is attached
+ * CONCRETE SUBJECT in the Observer design pattern.
+ * Every {@link DeliveryObserver} bean in the application is attached
  * automatically at start-up; observers can also be attached/detached at runtime.
  */
 @Component

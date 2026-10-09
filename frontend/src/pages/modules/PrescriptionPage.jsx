@@ -3,6 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
+const resolveFileUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
+    return url;
+  }
+  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  return `${base.replace(/\/+$/, '')}/${url.replace(/^\/+/, '')}`;
+};
+
 const PrescriptionPage = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -15,7 +24,7 @@ const PrescriptionPage = () => {
   }, [user, navigate]);
 
   // Active view tab: 'upload' | 'my-prescriptions' | 'verification-queue' | 'retention'
-  const isStaff = user && ['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN', 'OPERATIONS_MANAGER', 'FINANCE_MANAGER'].includes(user.role);
+  const isStaff = user && ['PHARMACIST', 'CHIEF_PHARMACIST', 'ADMIN', 'SYSTEM_ADMIN', 'OPERATIONS_MANAGER', 'FINANCE_MANAGER'].includes(user.role);
   const [activeTab, setActiveTab] = useState(isStaff ? 'verification-queue' : 'upload');
 
   // --- Upload State ---
@@ -209,7 +218,8 @@ const PrescriptionPage = () => {
   const getFileStreamUrl = (p) => {
     if (!p) return '';
     if (p.isFileDeleted) return null;
-    return `http://localhost:8080/api/v1/prescriptions/files/${p.storedFileName}`;
+    const path = p.fileUrl || (p.storedFileName ? `/api/v1/prescriptions/files/${p.storedFileName}` : `/api/v1/prescriptions/${p.id}/file`);
+    return resolveFileUrl(path);
   };
 
   return (

@@ -2,7 +2,7 @@ package com.mediorder.it25100979_delivery_management;
 
 import com.mediorder.it25100979_delivery_management.event.DeliveryEventType;
 import com.mediorder.it25100979_delivery_management.event.DeliveryLifecycleEvent;
-import com.mediorder.it25100979_delivery_management.observer.DeliveryObserver;
+import com.mediorder.it25100979_delivery_management.designe_patter.observer.DeliveryObserver;
 
 import java.util.ArrayList;
 import java.util.List;

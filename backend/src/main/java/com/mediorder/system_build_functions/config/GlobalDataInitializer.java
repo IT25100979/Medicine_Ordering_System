@@ -27,6 +27,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mediorder.it25101923_prescription_management.model.Prescription;
+import com.mediorder.it25101923_prescription_management.model.PrescriptionStatus;
+import com.mediorder.it25101923_prescription_management.repository.PrescriptionRepository;
+
 @Component
 @Order(1)
 public class GlobalDataInitializer implements CommandLineRunner {
@@ -41,6 +45,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
     private final MedicineRepository medicineRepository;
     private final InventoryBatchRepository inventoryBatchRepository;
     private final ColdChainTagRepository coldChainTagRepository;
+    private final PrescriptionRepository prescriptionRepository;
     private final JdbcTemplate jdbcTemplate;
 
     public GlobalDataInitializer(
@@ -52,6 +57,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
             MedicineRepository medicineRepository,
             InventoryBatchRepository inventoryBatchRepository,
             ColdChainTagRepository coldChainTagRepository,
+            PrescriptionRepository prescriptionRepository,
             JdbcTemplate jdbcTemplate) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -61,6 +67,7 @@ public class GlobalDataInitializer implements CommandLineRunner {
         this.medicineRepository = medicineRepository;
         this.inventoryBatchRepository = inventoryBatchRepository;
         this.coldChainTagRepository = coldChainTagRepository;
+        this.prescriptionRepository = prescriptionRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -111,20 +118,23 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
                 try { jdbcTemplate.execute("TRUNCATE TABLE cart_items"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE order_items"); } catch (Exception ignored) {}
+                try { jdbcTemplate.execute("TRUNCATE TABLE prescriptions"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE cold_chain_telemetry"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE cold_chain_tags"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE inventory_batches"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE stock_reservations"); } catch (Exception ignored) {}
                 try { jdbcTemplate.execute("TRUNCATE TABLE medicines"); } catch (Exception ignored) {}
                 jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
-                log.info("Successfully truncated all stock and catalog database tables.");
+                log.info("Successfully truncated all stock, catalog, and prescription database tables.");
             } else {
+                try { prescriptionRepository.deleteAll(); } catch (Exception ignored) {}
                 coldChainTagRepository.deleteAll();
                 inventoryBatchRepository.deleteAll();
                 medicineRepository.deleteAll();
             }
         } catch (Exception ex) {
             log.warn("Truncate failed, executing repository deleteAll: {}", ex.getMessage());
+            try { prescriptionRepository.deleteAll(); } catch (Exception ignored) {}
             try { coldChainTagRepository.deleteAll(); } catch (Exception ignored) {}
             try { inventoryBatchRepository.deleteAll(); } catch (Exception ignored) {}
             try { medicineRepository.deleteAll(); } catch (Exception ignored) {}
@@ -148,14 +158,16 @@ public class GlobalDataInitializer implements CommandLineRunner {
         }
 
         // Strictly seed only users from manualCodeEdits.md
-        seedUser("customer1@gmail.com", "customer1", Role.CUSTOMER, "555-010-0001", "admin123");
+        User customer1 = seedUser("customer1@gmail.com", "customer1", Role.CUSTOMER, "555-010-0001", "admin123");
         seedUser("systemadmin1@gmail.com", "systemadmin1", Role.SYSTEM_ADMIN, "555-010-0002", "admin123");
         seedUser("operationsmanager1@gmail.com", "operationsmanager1", Role.OPERATIONS_MANAGER, "555-010-0003", "admin123");
         seedUser("pharmacist1@gmail.com", "pharmacist1", Role.CHIEF_PHARMACIST, "555-010-0004", "admin123");
         seedUser("deliverycoordinator1@gmail.com", "deliverycoordinator1", Role.DELIVERY_COORDINATOR, "555-010-0005", "admin123");
+
+        seedSamplePrescriptions(customer1);
     }
 
-    private void seedUser(String email, String fullName, Role role, String phone, String rawPassword) {
+    private User seedUser(String email, String fullName, Role role, String phone, String rawPassword) {
         User user = User.builder()
                 .email(email)
                 .fullName(fullName)
@@ -166,8 +178,52 @@ public class GlobalDataInitializer implements CommandLineRunner {
                 .isDemo(false)
                 .createdAt(LocalDateTime.now())
                 .build();
-        userRepository.save(user);
+        User saved = userRepository.save(user);
         log.info("Seeded user from manualCodeEdits: {} ({}) with initial credentials.", email, role);
+        return saved;
+    }
+
+    private void seedSamplePrescriptions(User customer) {
+        if (prescriptionRepository == null || customer == null) return;
+        try {
+            // Sample Rx 1: Acute Amoxil 500mg (PENDING)
+            Prescription rx1 = Prescription.builder()
+                    .customer(customer)
+                    .fileUrl("https://images.unsplash.com/photo-1584308666744-24d5e4708709?auto=format&fit=crop&q=80&w=600")
+                    .originalFileName("Amoxil_500mg_Prescription_DrPerera.jpg")
+                    .storedFileName("sample_amoxil_rx.jpg")
+                    .contentType("image/jpeg")
+                    .fileSizeBytes(420500L)
+                    .doctorName("Dr. Samantha Perera (MBBS, MD - Colombo General Hospital)")
+                    .patientNotes("Amoxil 500mg - 1 capsule tid x 7 days for acute respiratory tract infection")
+                    .chronicSubscription(false)
+                    .status(PrescriptionStatus.PENDING)
+                    .isFileDeleted(false)
+                    .createdAt(LocalDateTime.now().minusHours(3))
+                    .build();
+            prescriptionRepository.save(rx1);
+
+            // Sample Rx 2: Chronic Lipitor 20mg (PENDING, Chronic Auto-Refill)
+            Prescription rx2 = Prescription.builder()
+                    .customer(customer)
+                    .fileUrl("https://images.unsplash.com/photo-1471864190281-a93a3070b6de?auto=format&fit=crop&q=80&w=600")
+                    .originalFileName("Lipitor_20mg_Chronic_Prescription_DrJayasuriya.jpg")
+                    .storedFileName("sample_lipitor_rx.jpg")
+                    .contentType("image/jpeg")
+                    .fileSizeBytes(385200L)
+                    .doctorName("Dr. K. Jayasuriya (Consultant Cardiologist)")
+                    .patientNotes("Lipitor 20mg - 1 tablet daily nocte (Chronic Care 90-Day Supply)")
+                    .chronicSubscription(true)
+                    .status(PrescriptionStatus.PENDING)
+                    .isFileDeleted(false)
+                    .createdAt(LocalDateTime.now().minusHours(6))
+                    .build();
+            prescriptionRepository.save(rx2);
+
+            log.info("Seeded 2 sample prescriptions for customer1@gmail.com (Amoxil acute + Lipitor chronic).");
+        } catch (Exception ex) {
+            log.warn("Could not seed sample prescriptions: {}", ex.getMessage());
+        }
     }
 
     private void seedFeatureFlags() {

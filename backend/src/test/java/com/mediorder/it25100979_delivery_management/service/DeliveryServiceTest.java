@@ -9,7 +9,7 @@ import com.mediorder.it25100979_delivery_management.enums.DeliveryStatus;
 import com.mediorder.it25100979_delivery_management.event.DeliveryEventType;
 import com.mediorder.it25100979_delivery_management.exception.InvalidDeliveryStateException;
 import com.mediorder.it25100979_delivery_management.exception.InvalidOtpException;
-import com.mediorder.it25100979_delivery_management.observer.DeliveryEventPublisher;
+import com.mediorder.it25100979_delivery_management.designe_patter.observer.DeliveryEventPublisher;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryRepository;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryTimelineRepository;
 import com.mediorder.system_build_functions.model.Role;

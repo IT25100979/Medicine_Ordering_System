@@ -1,7 +1,7 @@
-package com.mediorder.it25100979_delivery_management.observer.impl;
+package com.mediorder.it25100979_delivery_management.designe_patter.observer.impl;
 
+import com.mediorder.it25100979_delivery_management.designe_patter.observer.DeliveryObserver;
 import com.mediorder.it25100979_delivery_management.event.DeliveryLifecycleEvent;
-import com.mediorder.it25100979_delivery_management.observer.DeliveryObserver;
 import com.mediorder.it25103946_order_processing_and_workflow.model.OrderStatus;
 import com.mediorder.it25103946_order_processing_and_workflow.service.OrderService;
 import org.springframework.core.annotation.Order;

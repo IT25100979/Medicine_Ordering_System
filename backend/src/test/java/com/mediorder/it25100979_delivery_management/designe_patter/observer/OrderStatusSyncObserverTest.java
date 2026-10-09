@@ -1,10 +1,10 @@
-package com.mediorder.it25100979_delivery_management.observer;
+package com.mediorder.it25100979_delivery_management.designe_patter.observer;
 
+import com.mediorder.it25100979_delivery_management.designe_patter.observer.impl.OrderStatusSyncObserver;
 import com.mediorder.it25100979_delivery_management.entity.Delivery;
 import com.mediorder.it25100979_delivery_management.enums.DeliveryStatus;
 import com.mediorder.it25100979_delivery_management.event.DeliveryEventType;
 import com.mediorder.it25100979_delivery_management.event.DeliveryLifecycleEvent;
-import com.mediorder.it25100979_delivery_management.observer.impl.OrderStatusSyncObserver;
 import com.mediorder.it25103946_order_processing_and_workflow.model.OrderStatus;
 import com.mediorder.it25103946_order_processing_and_workflow.service.OrderService;
 import org.junit.jupiter.api.Test;

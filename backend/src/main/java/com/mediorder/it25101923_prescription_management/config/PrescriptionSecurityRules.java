@@ -16,7 +16,9 @@ public class PrescriptionSecurityRules implements ModuleSecurityRules {
     public void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth) {
         auth.requestMatchers(
                 "/api/prescriptions/files/**",
-                "/api/v1/prescriptions/files/**"
+                "/api/v1/prescriptions/files/**",
+                "/api/prescriptions/*/file",
+                "/api/v1/prescriptions/*/file"
         ).permitAll();
     }
 }

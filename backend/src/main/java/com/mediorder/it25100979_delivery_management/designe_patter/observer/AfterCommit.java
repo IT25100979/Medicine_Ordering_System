@@ -1,4 +1,4 @@
-package com.mediorder.it25100979_delivery_management.observer;
+package com.mediorder.it25100979_delivery_management.designe_patter.observer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

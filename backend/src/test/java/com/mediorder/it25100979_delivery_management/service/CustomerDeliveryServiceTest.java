@@ -8,7 +8,7 @@ import com.mediorder.it25100979_delivery_management.entity.Delivery;
 import com.mediorder.it25100979_delivery_management.entity.DeliveryZone;
 import com.mediorder.it25100979_delivery_management.event.DeliveryEventType;
 import com.mediorder.it25100979_delivery_management.exception.DeliveryNotFoundException;
-import com.mediorder.it25100979_delivery_management.observer.DeliveryEventPublisher;
+import com.mediorder.it25100979_delivery_management.designe_patter.observer.DeliveryEventPublisher;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryRepository;
 import com.mediorder.it25100979_delivery_management.repository.DeliveryTimelineRepository;
 import com.mediorder.it25102867_batchandstock_management.model.Medicine;
